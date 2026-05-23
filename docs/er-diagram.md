@@ -7,8 +7,8 @@ erDiagram
   users {
     uuid id PK "Supabase Auth の auth.users.id と一致"
     string email "unique"
-    string display_name
-    string default_region_code "例: 19_01 (山梨県・国中)"
+    string display_name "nullable"
+    string default_region_code "nullable: 例 19_01 (山梨県・国中)"
     string subscription_status "free / active / canceled"
     string stripe_customer_id "nullable"
     timestamp created_at
@@ -20,11 +20,11 @@ erDiagram
     uuid user_id FK "→ users.id (on delete cascade)"
     string name
     string category "tops / bottoms / outer / shoes / bag / accessory"
-    string color
-    string pattern "solid / stripe / check / dot / floral / other"
+    string color "nullable"
+    string pattern "nullable: solid / stripe / check / dot / floral / other"
     string size "nullable"
-    string season "spring / summer / autumn / winter / all"
-    string image_url "Supabase Storage 参照URL"
+    string season "配列（複数選択可）: spring / summer / autumn / winter / all"
+    string image_url "storage_path で保存（配信時に署名付きURLへ変換）"
     string thumbnail_url "nullable"
     string memo "nullable, max 200文字"
     boolean is_favorite "default: false"
@@ -141,3 +141,4 @@ REGIONS = {
 - 5/25まで：47都道府県の代表1地点（県庁所在地）で完成
 - 6/01まで：高・中優先度に2〜3地点を追加（合計60〜80件想定）
 - 以降：「使ってみて足りなければ追加」のスタンス
+
