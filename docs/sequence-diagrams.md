@@ -15,7 +15,7 @@ sequenceDiagram
 
     User->>FE: TPO・日付を選択して<br/>「コーデ提案」ボタン押下
 
-    FE->>BE: POST /api/v1/outfits/suggest<br/>{ tpo, date, region_code?, clothing_ids? }
+    FE->>BE: POST /api/v1/outfits/suggest<br/>{ tpo, date, region_code?, clothing_ids?: [id, ...] }
     Note over BE: JWT検証 → current_user 取得
 
     BE->>Redis: ユーザーのレート制限チェック<br/>（rate:{user_id}）
