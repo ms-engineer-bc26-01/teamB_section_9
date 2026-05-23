@@ -1,6 +1,6 @@
 # ER図 — クローゼット管理アプリ
 
-> 地域マスタ（regions）は `app/constants/regions.py` のPython定数で管理するため、**DBテーブルなし**。
+> 地域マスタ（regions）は `backend/app/constants/regions.py` のPython定数で管理するため、**DBテーブルなし**。
 
 ```mermaid
 erDiagram
@@ -95,7 +95,7 @@ erDiagram
 |------|------|
 | **認証** | `users.id` は Supabase Auth の UUID と一致。`password_hash` はアプリDBに持たない |
 | **画像** | DBには URL のみ保存。実体は Supabase Storage に署名付き URL で配信 |
-| **地域マスタ** | DBテーブルなし。`app/constants/regions.py` に Python 定数として管理（約60〜80件、固定） |
+| **地域マスタ** | DBテーブルなし。`backend/app/constants/regions.py` に Python 定数として管理（約60〜80件、固定） |
 | **TPO** | `clothes_tpo` で多対多を表現（1着の服に複数のTPOタグを付与可能） |
 | **コーデ保存** | 提案のたびに `outfits` にレコードを保存。LLM呼び出し結果のログとして遡れる |
 | **n:n 中間テーブル** | `outfit_items`（コーデ×服）と `clothes_tpo`（服×TPOタグ）の2つ |
@@ -108,7 +108,7 @@ erDiagram
 ## 地域マスタ（DBなし・定数管理）
 
 ```python
-# app/constants/regions.py
+# backend/app/constants/regions.py
 REGIONS = {
     "01_01": {"prefecture": "北海道", "name": "札幌・道央", "city": "札幌",
               "lat": 43.0618, "lng": 141.3545},
