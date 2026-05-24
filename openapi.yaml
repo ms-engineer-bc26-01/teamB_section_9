@@ -1,0 +1,1312 @@
+openapi: 3.0.3
+info:
+  title: クローゼット管理アプリ API
+  version: 1.1.0
+  description: |
+    クローゼット管理アプリのバックエンドAPI仕様。
+    - LLM: Google Gemini 2.5 Flash
+    - 天気: Open-Meteo
+    - 決済: Stripe Checkout / Webhook
+    - 認証・DB・Storage: Supabase
+
+tags:
+  - name: Auth
+    description: 認証・ユーザープロフィール関連
+  - name: Region
+    description: 地域マスタ関連（主にオンボーディング・天気連携用）
+  - name: Clothes
+    description: 服アイテム管理・画像アップロード・画像解析
+  - name: Outfit
+    description: コーデ提案・履歴管理
+  - name: Weather
+    description: 天気予報取得
+  - name: Billing
+    description: Stripe課金・Webhook処理
+
+servers:
+  - url: http://localhost:8000
+    description: ローカル開発
+  - url: https://api.example.com
+    description: 本番（努力目標）
+
+security:
+  - BearerAuth: []
+
+# ================================================================
+# 共通レスポンス定義
+# ================================================================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase Authが発行するJWT
+
+  responses:
+    Unauthorized:
+      description: 未認証（JWTが無効・期限切れ）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            detail: "認証が必要です"
+            code: "unauthorized"
+    Forbidden:
+      description: 認可エラー（他ユーザーのリソースへのアクセス）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            detail: "アクセス権限がありません"
+            code: "forbidden"
+    NotFound:
+      description: リソースが見つからない
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            detail: "リソースが見つかりません"
+            code: "not_found"
+    BadRequest:
+      description: バリデーションエラー
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: レート制限超過
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            detail: "リクエスト回数の上限に達しました。しばらく待ってから再試行してください"
+            code: "rate_limit_exceeded"
+
+  schemas:
+    # ===== Auth =====
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: bearer
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+          nullable: true
+        default_region_code:
+          type: string
+          example: "19_01"
+          description: |
+            ユーザーのデフォルト地域コード（{都道府県コード}_{連番} 形式）。
+            オンボーディング時に必須設定。コーデ提案や天気取得で region_code が
+            省略された場合のフォールバックとして使用される。
+          nullable: true
+        subscription_status:
+          type: string
+          enum: [free, active, canceled]
+          description: |
+            現在の課金状態。
+            - free: 無料プラン（デフォルト）
+            - active: 有料プラン契約中
+            - canceled: 解約済み（期間終了まで active 扱い）
+        stripe_customer_id:
+          type: string
+          nullable: true
+          description: Stripe Customer ID（課金ユーザーのみ設定）
+        created_at:
+          type: string
+          format: date-time
+
+    # ===== 地域マスタ =====
+    Region:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "19_02"
+          description: |
+            地域コード（{都道府県コード}_{連番}）。
+            都道府県コードは JIS X 0401 準拠。
+        prefecture_code:
+          type: string
+          example: "19"
+          description: JIS X 0401 都道府県コード（2桁）
+        prefecture_name:
+          type: string
+          example: 山梨県
+        name:
+          type: string
+          example: 富士五湖
+          description: 地域の通称（県内の細分化された地域名）
+        city:
+          type: string
+          example: 河口湖
+          description: 代表地点の市町村名
+        latitude:
+          type: number
+          format: float
+          example: 35.5103
+          description: 代表地点の緯度（Open-Meteo に渡す値）
+        longitude:
+          type: number
+          format: float
+          example: 138.7635
+          description: 代表地点の経度
+
+    RegionsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Region'
+
+    UpdateDefaultRegionRequest:
+      type: object
+      required: [region_code]
+      properties:
+        region_code:
+          type: string
+          example: "19_01"
+          description: 設定するデフォルト地域コード
+
+    # ===== 服 =====
+    # カテゴリ・パターン・季節 は複数箇所で使うため enum を定義
+    ClothingCategory:
+      type: string
+      enum: [tops, bottoms, outer, shoes, bag, accessory]
+      description: |
+        服のカテゴリ。
+        - tops: トップス
+        - bottoms: ボトムス
+        - outer: アウター
+        - shoes: 靴
+        - bag: バッグ
+        - accessory: アクセサリー
+
+    ClothingPattern:
+      type: string
+      enum: [solid, stripe, check, dot, floral, other]
+      description: |
+        服の柄。
+        - solid: 無地
+        - stripe: ストライプ
+        - check: チェック
+        - dot: ドット
+        - floral: 花柄
+        - other: その他
+
+    SeasonTag:
+      type: string
+      enum: [spring, summer, autumn, winter, all]
+
+    TpoTag:
+      type: string
+      enum: [casual, formal, ceremony, leisure, business]
+
+    ClothingItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: 白シャツ
+        category:
+          $ref: '#/components/schemas/ClothingCategory'
+        color:
+          type: string
+          example: white
+        pattern:
+          allOf:
+            - $ref: '#/components/schemas/ClothingPattern'
+          nullable: true
+        size:
+          type: string
+          example: M
+          nullable: true
+        season:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeasonTag'
+        tpo_tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TpoTag'
+          description: このアイテムが適したTPOタグ（clothes_tpo テーブルに対応）
+        image_url:
+          type: string
+          format: uri
+          description: Supabase Storage の署名付きURL
+          nullable: true
+        thumbnail_url:
+          type: string
+          format: uri
+          nullable: true
+        memo:
+          type: string
+          maxLength: 200
+          nullable: true
+        is_favorite:
+          type: boolean
+          default: false
+        wear_count:
+          type: integer
+          default: 0
+          description: 着用回数（MVPでは記録のみ、学習には未使用）
+        last_worn_at:
+          type: string
+          format: date-time
+          nullable: true
+        attributes:
+          type: object
+          description: LLMが画像から抽出した追加属性（素材・スタイルなど）
+          additionalProperties: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ClothingCreateRequest:
+      type: object
+      required: [name, category]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        category:
+          $ref: '#/components/schemas/ClothingCategory'
+        color:
+          type: string
+          nullable: true
+        pattern:
+          allOf:
+            - $ref: '#/components/schemas/ClothingPattern'
+          nullable: true
+        size:
+          type: string
+          nullable: true
+        season:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeasonTag'
+        tpo_tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TpoTag'
+        image_url:
+          type: string
+          format: uri
+          nullable: true
+          description: 署名付きURLでアップロード後の Storage パス
+        memo:
+          type: string
+          maxLength: 200
+          nullable: true
+
+    ClothingUpdateRequest:
+      type: object
+      description: 送信したフィールドのみ更新される（PATCH相当）
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        category:
+          $ref: '#/components/schemas/ClothingCategory'
+        color:
+          type: string
+        pattern:
+          $ref: '#/components/schemas/ClothingPattern'
+        size:
+          type: string
+        season:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeasonTag'
+        tpo_tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TpoTag'
+        memo:
+          type: string
+          maxLength: 200
+        is_favorite:
+          type: boolean
+
+    ClothesListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClothingItem'
+        total:
+          type: integer
+          description: フィルタ条件に合致する全件数（ページネーション用）
+
+    UploadUrlResponse:
+      type: object
+      properties:
+        upload_url:
+          type: string
+          format: uri
+          description: Supabase Storage の署名付きアップロードURL（フロントがこのURLに直接PUTする）
+        storage_path:
+          type: string
+          description: アップロード後の画像パス（ClothingCreateRequest.image_url に使う値）
+
+    # ===== 画像解析（LLM） =====
+    AnalyzeImageRequest:
+      type: object
+      required: [image_url]
+      properties:
+        image_url:
+          type: string
+          format: uri
+          description: 解析対象の画像URL（Supabase Storageにアップロード済みのパス）
+
+    AnalyzeImageResponse:
+      type: object
+      description: |
+        LLM（Gemini 2.5 Flash）が画像から推定した属性。
+        フロントエンドの服登録フォームの初期値として使用し、ユーザーが確認・修正する。
+      properties:
+        name:
+          type: string
+          example: 白シャツ
+          description: LLMが推定したアイテム名称
+        category:
+          $ref: '#/components/schemas/ClothingCategory'
+        color:
+          type: string
+          example: white
+        pattern:
+          $ref: '#/components/schemas/ClothingPattern'
+        season:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeasonTag'
+        tpo_tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TpoTag'
+        attributes:
+          type: object
+          description: その他LLMが抽出した属性（素材など）
+          additionalProperties: true
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: LLMの推定信頼度（0〜1）。低い場合はフロントで警告表示を推奨
+
+    # ===== コーデ（Outfit）=====
+    OutfitItem:
+      type: object
+      description: コーデを構成する1アイテムと、そのコーデ内での役割
+      properties:
+        clothes_id:
+          type: string
+          format: uuid
+        role:
+          allOf:
+            - $ref: '#/components/schemas/ClothingCategory'
+          description: このコーデ内でのアイテムの役割
+        display_order:
+          type: integer
+          description: 表示順
+        clothing_item:
+          allOf:
+            - $ref: '#/components/schemas/ClothingItem'
+          description: 服の詳細情報（outfit_items JOIN clothes）
+
+    Outfit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        tpo:
+          $ref: '#/components/schemas/TpoTag'
+        region_code:
+          type: string
+          example: "19_02"
+          description: 提案時に使用した地域コード
+        weather_summary:
+          type: string
+          description: 提案時の天気スナップショット
+          nullable: true
+        weather_temp_max:
+          type: number
+          nullable: true
+        weather_temp_min:
+          type: number
+          nullable: true
+        comment:
+          type: string
+          description: LLMのおすすめポイント（200字以内）
+          nullable: true
+        is_favorite:
+          type: boolean
+          default: false
+        source:
+          type: string
+          enum: [llm, manual]
+          description: llm = LLM提案, manual = ユーザーが手動で作成
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OutfitItem'
+        created_at:
+          type: string
+          format: date-time
+
+    OutfitsListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Outfit'
+        total:
+          type: integer
+
+    OutfitUpdateRequest:
+      type: object
+      description: お気に入りトグルなど、提案済みコーデの属性更新
+      properties:
+        is_favorite:
+          type: boolean
+
+    # ===== コーデ提案リクエスト／レスポンス =====
+    CoordinateSuggestRequest:
+      type: object
+      required: [tpo, date]
+      properties:
+        tpo:
+          $ref: '#/components/schemas/TpoTag'
+        date:
+          type: string
+          format: date
+          description: 着用日（天気取得に使用）
+        region_code:
+          type: string
+          example: "19_02"
+          description: |
+            提案で使用する地域コード。
+            省略時はユーザーの default_region_code を使用。
+            旅行先・帰省先など別地域での提案を受けたい場合に指定する。
+        clothing_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: 候補として使う服のID（省略時は全登録服から選択）
+        exclude_clothing_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: 提案から除外する服のID（「別の提案」時に前回のアイテムを除外するなど）
+
+    CoordinateSuggestResponse:
+      type: object
+      properties:
+        outfits:
+          type: array
+          items:
+            $ref: '#/components/schemas/Outfit'
+          description: 提案されたコーデ（1〜2件）。DBにも保存される
+        weather_summary:
+          type: string
+          description: 当日の天気要約
+        region_used:
+          allOf:
+            - $ref: '#/components/schemas/Region'
+          description: 提案で実際に使用した地域（リクエストで省略時はユーザーのデフォルト地域）
+        cached:
+          type: boolean
+          description: Redisキャッシュからの応答かどうか
+
+    # ===== 天気 =====
+    WeatherForecast:
+      type: object
+      properties:
+        region_code:
+          type: string
+          description: 取得した地域コード
+        current:
+          type: object
+          properties:
+            temperature_2m:
+              type: number
+              description: 現在気温（℃）
+            weather_code:
+              type: integer
+              description: WMO天気コード
+            precipitation_probability:
+              type: integer
+              description: 降水確率（%）
+        daily:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              temperature_max:
+                type: number
+              temperature_min:
+                type: number
+              weather_code:
+                type: integer
+              precipitation_probability_max:
+                type: integer
+                description: 日中最大降水確率（%）
+        cached:
+          type: boolean
+          description: Redisキャッシュ（TTL 30分）からの応答かどうか
+
+    # ===== 決済 =====
+    CheckoutSessionResponse:
+      type: object
+      properties:
+        checkout_url:
+          type: string
+          format: uri
+          description: Stripe Checkout のリダイレクト先URL
+
+    PortalSessionResponse:
+      type: object
+      properties:
+        portal_url:
+          type: string
+          format: uri
+          description: Stripe Customer Portal のリダイレクト先URL
+
+    # ===== 共通エラー =====
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+          description: エラーの説明（ユーザー向けメッセージ）
+        code:
+          type: string
+          description: エラーコード（フロントのハンドリング用）
+          example: "invalid_region_code"
+
+# ================================================================
+# パス定義
+# ================================================================
+paths:
+  # ================================================================
+  # 認証
+  # ================================================================
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      operationId: registerUser
+      summary: ユーザー登録
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: 登録成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      operationId: loginUser
+      summary: ログイン
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: ログイン成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      operationId: getCurrentUser
+      summary: 自分のユーザー情報を取得
+      description: プラン状態・デフォルト地域を含むプロフィール情報を返す
+      responses:
+        '200':
+          description: ユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/me/default-region:
+    put:
+      tags: [Auth]
+      operationId: updateDefaultRegion
+      summary: デフォルト地域の設定・更新
+      description: |
+        ユーザーが住んでいる地域を設定・更新する。
+        オンボーディング時の初回設定および設定画面からの変更時に使用する。
+        default_region_code が未設定のままコーデ提案を呼ぶと 400 が返るため、
+        オンボーディング完了前に必ずこのエンドポイントを呼ぶこと。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDefaultRegionRequest'
+      responses:
+        '200':
+          description: 更新後のユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: 不正な region_code（マスタに存在しない）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ================================================================
+  # 地域マスタ（認証不要）
+  # ================================================================
+  /api/v1/regions:
+    get:
+      tags: [Region]
+      operationId: listRegions
+      summary: 地域マスタ一覧
+      description: |
+        利用可能な地域の一覧を返す。
+        都道府県（47件）→ 各都道府県内の細分化された地域（2〜5件程度）の2階層構造。
+        フロントエンドの地域選択プルダウン構築に使用。
+        マスタは backend/app/constants/regions.py に Python 定数として管理される。
+      security: []
+      parameters:
+        - name: prefecture_code
+          in: query
+          description: |
+            都道府県コードで絞り込み（JIS X 0401, 2桁）。
+            省略時は全47都道府県の全地域を返す。
+          required: false
+          schema:
+            type: string
+            pattern: '^[0-9]{2}$'
+            example: "19"
+      responses:
+        '200':
+          description: 地域一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionsResponse'
+
+  # ================================================================
+  # 服管理
+  # ================================================================
+  /api/v1/clothes:
+    get:
+      tags: [Clothes]
+      operationId: listClothes
+      summary: 服一覧取得
+      description: ログインユーザーが登録した服の一覧を返す。フィルタ・ページネーション対応。
+      parameters:
+        - name: category
+          in: query
+          schema:
+            $ref: '#/components/schemas/ClothingCategory'
+        - name: season
+          in: query
+          schema:
+            $ref: '#/components/schemas/SeasonTag'
+        - name: tpo
+          in: query
+          schema:
+            $ref: '#/components/schemas/TpoTag'
+        - name: is_favorite
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: 服一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClothesListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Clothes]
+      operationId: createClothing
+      summary: 服を登録
+      description: |
+        服のメタ情報を登録する。
+        画像は事前に /api/v1/clothes/upload-url で発行した署名付きURLで
+        Supabase Storage に直接アップロードし、返却された storage_path を
+        image_url として渡す。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClothingCreateRequest'
+      responses:
+        '201':
+          description: 登録成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClothingItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/clothes/upload-url:
+    post:
+      tags: [Clothes]
+      operationId: createClothingUploadUrl
+      summary: 画像アップロード用署名付きURL発行
+      description: |
+        フロントエンドはこのURLに直接PUTリクエストで画像をアップロードする。
+        アップロード後、返却された storage_path を ClothingCreateRequest.image_url として渡す。
+        バックエンドを画像転送のプロキシにしない設計。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filename, content_type]
+              properties:
+                filename:
+                  type: string
+                  example: shirt.jpg
+                content_type:
+                  type: string
+                  enum: [image/jpeg, image/png, image/webp]
+                  example: image/jpeg
+      responses:
+        '200':
+          description: 署名付きURL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/clothes/analyze-image:
+    post:
+      tags: [Clothes]
+      operationId: analyzeClothingImage
+      summary: 画像からLLMで服の属性を推定
+      description: |
+        Supabase Storage にアップロード済みの服画像URLを受け取り、
+        Gemini 2.5 Flash に渡してカテゴリ・色・柄・季節などを推定して返す。
+        フロントエンドの服登録フォームの初期値として使用し、ユーザーが確認・修正する。
+
+        プロンプトインジェクション対策：
+        - 画像内の文字指示はシステムプロンプトで無視するよう指定
+        - 出力は responseSchema で固定済み（構造化出力）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyzeImageRequest'
+      responses:
+        '200':
+          description: LLMによる属性推定結果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyzeImageResponse'
+        '400':
+          description: 無効な画像URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/clothes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Clothes]
+      operationId: getClothingById
+      summary: 服の詳細取得
+      responses:
+        '200':
+          description: 服の詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClothingItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Clothes]
+      operationId: replaceClothingById
+      summary: 服情報の更新（全フィールド置換）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClothingUpdateRequest'
+      responses:
+        '200':
+          description: 更新後の服情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClothingItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Clothes]
+      operationId: updateClothingById
+      summary: 服情報の部分更新
+      description: 送信したフィールドのみ更新する（is_favorite トグルなど）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClothingUpdateRequest'
+      responses:
+        '200':
+          description: 更新後の服情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClothingItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Clothes]
+      operationId: deleteClothingById
+      summary: 服を削除
+      description: 服を削除する。関連する outfit_items も CASCADE で削除される。
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ================================================================
+  # コーデ（提案・履歴）
+  # ================================================================
+  /api/v1/outfits/suggest:
+    post:
+      tags: [Outfit]
+      operationId: suggestOutfits
+      summary: LLMによるコーデ提案
+      description: |
+        登録済みの服 × TPO × 天気情報を Gemini 2.5 Flash に渡してコーデを提案する。
+        提案結果は outfits テーブルにも保存され、後から /api/v1/outfits で参照できる。
+
+        キャッシュ戦略：
+        - 天気: Redis 30分キャッシュ（キー: weather:{region_code}:{yyyymmdd}）
+        - 提案結果: 同一条件（user_id × region_code × tpo × date）で24時間キャッシュ
+
+        レート制限: 1ユーザー1分10回 / 1日の上限はプランによる
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoordinateSuggestRequest'
+      responses:
+        '200':
+          description: コーデ提案結果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinateSuggestResponse'
+        '400':
+          description: 不正な region_code、またはユーザーの default_region_code 未設定
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/outfits:
+    get:
+      tags: [Outfit]
+      operationId: listOutfits
+      summary: 提案コーデ履歴一覧
+      description: ログインユーザーの過去の提案コーデ一覧を返す。
+      parameters:
+        - name: is_favorite
+          in: query
+          schema:
+            type: boolean
+          description: true の場合、お気に入りのみ返す
+        - name: tpo
+          in: query
+          schema:
+            $ref: '#/components/schemas/TpoTag'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: 取得開始日（created_at）
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: 取得終了日（created_at）
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: コーデ一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutfitsListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/outfits/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Outfit]
+      operationId: getOutfitById
+      summary: コーデ詳細取得
+      responses:
+        '200':
+          description: コーデ詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Outfit'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Outfit]
+      operationId: updateOutfitById
+      summary: コーデの属性更新（お気に入りトグルなど）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OutfitUpdateRequest'
+      responses:
+        '200':
+          description: 更新後のコーデ情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Outfit'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ================================================================
+  # 天気
+  # ================================================================
+  /api/v1/weather/forecast:
+    get:
+      tags: [Weather]
+      operationId: getWeatherForecast
+      summary: 天気予報取得（Open-Meteo）
+      description: |
+        指定された地域コードの代表地点の緯度経度で Open-Meteo から天気予報を取得する。
+        Redisに30分キャッシュ済みの場合はそちらを返す（キャッシュキー: weather:{region_code}:{yyyymmdd}）。
+        地域コードは /api/v1/regions で取得可能。
+      parameters:
+        - name: region_code
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "19_02"
+          description: 地域コード（{都道府県コード}_{連番}）
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 3
+            maximum: 7
+      responses:
+        '200':
+          description: 天気予報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherForecast'
+        '400':
+          description: 不正な region_code（マスタに存在しない）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ================================================================
+  # 決済（Stripe）
+  # ================================================================
+  /api/v1/billing/checkout:
+    post:
+      tags: [Billing]
+      operationId: createBillingCheckoutSession
+      summary: Stripe Checkout セッション作成
+      description: |
+        月額サブスクリプションの決済セッションを作成する。
+        フロントはこのURLにリダイレクトするだけで決済画面が表示される。
+        テストカード: 4242 4242 4242 4242
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [price_id]
+              properties:
+                price_id:
+                  type: string
+                  description: Stripeの月額プランのprice ID
+                  example: price_xxx
+                success_url:
+                  type: string
+                  format: uri
+                  description: 決済成功後のリダイレクト先
+                cancel_url:
+                  type: string
+                  format: uri
+                  description: 決済キャンセル後のリダイレクト先
+      responses:
+        '200':
+          description: Checkoutセッション作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/billing/portal:
+    get:
+      tags: [Billing]
+      operationId: createBillingPortalSession
+      summary: Stripe Customer Portal セッション取得
+      description: |
+        解約・支払い方法変更はPortalにリダイレクトするだけでStripe側が処理する。
+        有料プランのユーザーのみ利用可能。
+      parameters:
+        - name: return_url
+          in: query
+          schema:
+            type: string
+            format: uri
+          description: Portal終了後のリダイレクト先
+      responses:
+        '200':
+          description: Portalセッション作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortalSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 有料プランでないユーザーはアクセス不可
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/billing/webhook:
+    post:
+      tags: [Billing]
+      operationId: handleStripeWebhook
+      summary: Stripe Webhook 受信
+      description: |
+        Stripeからの課金状態変化通知を受け取る。
+        `Stripe-Signature` ヘッダーで署名検証（STRIPE_WEBHOOK_SECRET使用）。
+        ローカル開発は `stripe listen --forward-to localhost:8000/api/v1/billing/webhook` で転送。
+
+        処理するイベント:
+        - checkout.session.completed → subscription_status を active に更新、stripe_customer_id を保存
+        - customer.subscription.deleted → subscription_status を canceled に更新
+        - customer.subscription.updated → status 変化（past_due 等）を subscriptions テーブルに同期
+      security: []
+      parameters:
+        - name: Stripe-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Stripe Webhookイベントペイロード（Stripe仕様に準拠）
+      responses:
+        '200':
+          description: 受信・処理成功
+        '400':
+          description: 署名検証失敗
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
