@@ -1,0 +1,6 @@
+.venv/
+# 仮想環境をGit対象外にする
+__pycache__/
+# PythonのキャッシュファイルをGit対象外にする
+*.pyc
+# PythonのコンパイルされたファイルをGit対象外にする
