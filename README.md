@@ -2,33 +2,35 @@
 
 ## Docker Compose 起動方法
 
-このプロジェクトは `infra/docker-compose.yml` を使ってローカル開発環境を起動します。
+このプロジェクトはルートの `docker-compose.yml` を使ってローカル開発環境を起動します。
+
+### 0. 環境変数ファイルを作成
+
+```bash
+cp .env.example .env
+```
 
 ### 1. 起動
 
 ```bash
-cd infra
 docker compose up --build
 ```
 
 ### 2. バックグラウンド起動
 
 ```bash
-cd infra
 docker compose up -d --build
 ```
 
 ### 3. 停止
 
 ```bash
-cd infra
 docker compose down
 ```
 
 ### 4. ボリュームも含めて停止（DBデータ削除）
 
 ```bash
-cd infra
 docker compose down -v
 ```
 
