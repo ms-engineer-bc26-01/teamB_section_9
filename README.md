@@ -10,6 +10,32 @@
 cp .env.example .env
 ```
 
+### 起動に必要な環境変数
+
+現時点で `docker compose up --build` に必要な環境変数は、PostgreSQL コンテナ初期化用の以下 3 つです。
+
+```env
+POSTGRES_USER=app
+POSTGRES_PASSWORD=app
+POSTGRES_DB=closet
+```
+
+これらが未設定だと、`postgres` サービスの起動に必要な値が渡らず、結果として `backend` も起動できません。
+
+以下の値は `.env.example` に含まれていますが、現時点では起動に必須ではありません。
+
+- `DATABASE_URL`
+  - 将来アプリケーション側で DB 接続実装を追加する想定のための値です。
+  - 現在の backend 実装では参照していません。
+- `GOOGLE_API_KEY`
+- `LLM_MODEL`
+- `STRIPE_*`
+- `SUPABASE_*`
+- `REDIS_URL`
+- `STORAGE_*`
+
+まずは `.env.example` をそのままコピーすれば、起動に必要な最低限の値は揃います。
+
 ### 1. 起動
 
 ```bash
