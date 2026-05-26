@@ -137,7 +137,6 @@ docker compose down -v
 - Swagger UI: http://localhost:8000/docs
 - PostgreSQL: localhost:5432
 - Redis: localhost:6379
-- Supabase（Auth / Storage）: 外部サービス。`.env` の `SUPABASE_*` に実値を設定して利用
 
 ## 補足
 
