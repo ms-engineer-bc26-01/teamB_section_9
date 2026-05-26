@@ -30,9 +30,8 @@ POSTGRES_DB=closet
 - `GOOGLE_API_KEY`
 - `LLM_MODEL`
 - `STRIPE_*`
-- `SUPABASE_*`
+- `SUPABASE_*`（Auth・PostgreSQL・Storage を Supabase で管理。実装時に実値が必要）
 - `REDIS_URL`
-- `STORAGE_*`
 
 まずは `.env.example` をそのままコピーすれば、起動に必要な最低限の値は揃います。
 
@@ -67,5 +66,3 @@ docker compose down -v
 - Backend API Docs (Swagger): http://localhost:8000/docs
 - PostgreSQL: localhost:5432
 - Redis: localhost:6379
-- MinIO API: http://localhost:9000
-- MinIO Console: http://localhost:9001

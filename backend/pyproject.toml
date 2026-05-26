@@ -17,6 +17,8 @@ dev = [
     "mypy>=1.8",
     "pip-audit>=2.7",
     "ruff>=0.4.0",
+    "openapi-spec-validator>=0.7",
+    "pyyaml>=6.0",
 ]
 
 [build-system]
@@ -33,6 +35,9 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
 ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"app/constants/regions.py" = ["E501"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

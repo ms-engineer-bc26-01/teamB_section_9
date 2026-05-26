@@ -537,8 +537,8 @@ SUPABASE_URL=
 SUPABASE_ANON_KEY=           # フロント用（公開可）
 SUPABASE_SERVICE_ROLE_KEY=   # バック用（高権限。絶対に漏洩させない）
 SUPABASE_JWT_SECRET=         # JWT 検証用
+SUPABASE_STORAGE_BUCKET=clothes-images   # Storage バケット名（固定値）
 DATABASE_URL=postgresql+asyncpg://app:app@postgres:5432/closet   # ローカル docker
-STORAGE_BUCKET=clothes-images
 
 # ===== Open-Meteo — キー不要 =====
 

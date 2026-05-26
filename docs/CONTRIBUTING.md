@@ -19,7 +19,7 @@
 
 | type | 用途 |
 |---|---|
-| `feat` | 新機能の追加 |
+| `feat` `feature`| 新機能の追加 |
 | `fix` | バグ修正 |
 | `refactor` | 動作変更を伴わないリファクタリング |
 | `test` | テストの追加・修正 |
@@ -187,3 +187,25 @@ docker compose up
 | `deploy.yml` | `main` にマージ時 | 本番デプロイ（ADVANCE。達成した段階で追加） |
 
 CI が RED のままマージしない。修正できない場合は Slack で相談する。
+
+---
+
+## 8. API コントラクトチェック（CI `api-contract` ジョブ）
+
+### 判定ルール
+
+| 状態 | CI 結果 |
+|---|---|
+| FastAPI に `docs/openapi.yaml` にないエンドポイントが存在する | **FAIL**（マージ不可） |
+| `docs/openapi.yaml` に定義されているがまだ未実装 | WARN（通過） |
+| `docs/openapi.yaml` の YAML が不正 | **FAIL** |
+| PR ブランチ名が命名規則に違反 | **FAIL** |
+
+### ルーターを追加するときのフロー
+
+1. **先に `docs/openapi.yaml` を更新**（同じ PR に含める）
+2. FastAPI ルーターを実装
+3. `make check` でローカル確認 → PR 作成
+
+> 内部プローブ（`GET /api/v1/health`）はチェック対象外。新しい内部プローブを追加する場合は
+> `backend/scripts/check_api_contract.py` の `EXCLUDED_PATHS` に追記すること。

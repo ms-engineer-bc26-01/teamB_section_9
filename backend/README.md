@@ -108,15 +108,15 @@ cp .env.example .env
 ### 3. backend と依存サービスを起動
 
 ```bash
-docker compose up --build backend postgres redis minio
+docker compose up --build backend postgres redis
 ```
 
-バックエンドは `postgres`、`redis`、`minio` に依存しているため、あわせて起動します。
+バックエンドは `postgres`、`redis` に依存しているため、あわせて起動します。
 
 ### 4. バックグラウンドで起動
 
 ```bash
-docker compose up -d --build backend postgres redis minio
+docker compose up -d --build backend postgres redis
 ```
 
 ### 5. 停止
@@ -137,8 +137,7 @@ docker compose down -v
 - Swagger UI: http://localhost:8000/docs
 - PostgreSQL: localhost:5432
 - Redis: localhost:6379
-- MinIO API: http://localhost:9000
-- MinIO Console: http://localhost:9001
+- Supabase（Auth / Storage）: 外部サービス。`.env` の `SUPABASE_*` に実値を設定して利用
 
 ## 補足
 

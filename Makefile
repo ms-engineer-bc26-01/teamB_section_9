@@ -1,3 +1,5 @@
+SHELL := bash
+
 .PHONY: check lint test secret-scan
 
 check: lint test  ## ローカルで全チェックを実行（PR 前に走らせる）
