@@ -1,14 +1,20 @@
+import importlib
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-
-from app.db.base import Base
-from app.db.models import *
-
 from app.core.config import settings
+from app.db.base import Base
+
+for module_name in (
+    "app.db.models.clothes",
+    "app.db.models.outfit",
+    "app.db.models.subscription",
+    "app.db.models.usage_log",
+    "app.db.models.user",
+):
+    importlib.import_module(module_name)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -16,7 +22,7 @@ config = context.config
 
 config.set_main_option(
     "sqlalchemy.url",
-    settings.DATABASE_URL
+    settings.DATABASE_URL,
 )
 
 # Interpret the config file for Python logging.

@@ -33,12 +33,23 @@ class User(Base):
         onupdate=func.now(),
     )
 
-    clothes = relationship("Clothes", back_populates="user", cascade="all, delete-orphan")
-    outfits = relationship("Outfit", back_populates="user", cascade="all, delete-orphan")
-    usage_logs = relationship("UsageLog", back_populates="user", cascade="all, delete-orphan")
+    clothes = relationship(
+        "Clothes",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    outfits = relationship(
+        "Outfit",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    usage_logs = relationship(
+        "UsageLog",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
     subscriptions = relationship(
         "Subscription",
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    

@@ -11,7 +11,11 @@ from app.db.base import Base
 class Outfit(Base):
     __tablename__ = "outfits"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -36,7 +40,11 @@ class Outfit(Base):
     )
 
     user = relationship("User", back_populates="outfits")
-    items = relationship("OutfitItem", back_populates="outfit", cascade="all, delete-orphan")
+    items = relationship(
+        "OutfitItem",
+        back_populates="outfit",
+        cascade="all, delete-orphan",
+    )
 
 
 class OutfitItem(Base):
