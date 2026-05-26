@@ -1,1 +1,62 @@
+# ===== 環境変数（絶対にコミットしない） =====
 .env
+.env.*
+!.env.example
+*.env.local
+.env.production
+.env.development
+.env.test
+
+# ===== OS 固有ファイル =====
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ===== IDE / エディタ =====
+.vscode/settings.json
+.vscode/*.code-workspace
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+dist/
+build/
+.eggs/
+.uv/
+.venv/
+venv/
+env/
+
+# ===== Node / Next.js =====
+node_modules/
+.next/
+out/
+.vercel/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ===== Docker =====
+*.pid
+
+# ===== ログ =====
+*.log
+logs/

@@ -6,6 +6,19 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi==0.136.1",
     "uvicorn==0.47.0",
+    "pydantic>=2.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.27",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.8",
+    "pip-audit>=2.7",
+    "ruff>=0.4.0",
+    "openapi-spec-validator>=0.7",
+    "pyyaml>=6.0",
 ]
 
 [build-system]
@@ -14,3 +27,18 @@ build-backend = "hatchling.build"
 
 [tool.uv]
 package = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"app/constants/regions.py" = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
