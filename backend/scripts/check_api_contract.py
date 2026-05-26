@@ -26,6 +26,37 @@ EXCLUDED_PATHS: set[str] = {
 HTTP_METHODS = {"get", "post", "put", "patch", "delete", "head", "options"}
 
 
+def compute_drift(
+    spec_paths: dict[str, set[str]],
+    app_paths: dict[str, set[str]],
+) -> tuple[int, list[str]]:
+    """Compare spec paths vs app paths. Returns (exit_code, messages)."""
+    messages: list[str] = []
+    exit_code = 0
+
+    for path, methods in sorted(app_paths.items()):
+        if path not in spec_paths:
+            for method in sorted(methods):
+                messages.append(
+                    f"[FAIL] Undocumented: {method.upper()} {path}"
+                    " — docs/openapi.yaml に追加するかルートを削除してください"
+                )
+            exit_code = 1
+        else:
+            for method in sorted(methods - spec_paths[path]):
+                messages.append(f"[FAIL] Undocumented method: {method.upper()} {path}")
+                exit_code = 1
+
+    for path, methods in sorted(spec_paths.items()):
+        if path not in app_paths:
+            messages.append(f"[WARN] Not yet implemented: {path}")
+        else:
+            for method in sorted(methods - app_paths[path]):
+                messages.append(f"[WARN] Not yet implemented: {method.upper()} {path}")
+
+    return exit_code, messages
+
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parent.parent.parent
     spec_path = repo_root / "docs" / "openapi.yaml"
@@ -38,6 +69,10 @@ def main() -> int:
         return 1
     except yaml.YAMLError as e:
         print(f"[FAIL] docs/openapi.yaml のパースに失敗しました: {e}")
+        return 1
+
+    if not isinstance(spec, dict):
+        print("[FAIL] docs/openapi.yaml の形式が不正です（マッピングが期待されます）")
         return 1
 
     spec_paths: dict[str, set[str]] = {
@@ -60,27 +95,9 @@ def main() -> int:
         methods = {m.lower() for m in (route.methods or set())}
         app_paths.setdefault(path, set()).update(methods)
 
-    exit_code = 0
-
-    for path, methods in sorted(app_paths.items()):
-        if path not in spec_paths:
-            for method in sorted(methods):
-                print(
-                    f"[FAIL] Undocumented: {method.upper()} {path}"
-                    " — docs/openapi.yaml に追加するかルートを削除してください"
-                )
-            exit_code = 1
-        else:
-            for method in sorted(methods - spec_paths[path]):
-                print(f"[FAIL] Undocumented method: {method.upper()} {path}")
-                exit_code = 1
-
-    for path, methods in sorted(spec_paths.items()):
-        if path not in app_paths:
-            print(f"[WARN] Not yet implemented: {path}")
-        else:
-            for method in sorted(methods - app_paths[path]):
-                print(f"[WARN] Not yet implemented: {method.upper()} {path}")
+    exit_code, messages = compute_drift(spec_paths, app_paths)
+    for msg in messages:
+        print(msg)
 
     if exit_code == 0:
         print("Contract check passed.")
