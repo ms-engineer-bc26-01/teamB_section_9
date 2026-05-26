@@ -14,8 +14,7 @@ services:
     env_file: .env
     depends_on:
       - postgres
-  #      - redis
-  #      - minio
+      - redis
 
   postgres:
     image: postgres:16-alpine
@@ -28,10 +27,10 @@ services:
     ports:
       - "5432:5432"
 
-  # redis:
-  #   image: redis:7-alpine
-  #   ports:
-  #     - "6379:6379"
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
 
   # minio:
   #   image: minio/minio:latest
