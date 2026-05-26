@@ -62,6 +62,26 @@ uv sync
 
 `uv.lock` に基づいて依存関係が同期されます。
 
+### 5. マイグレーションを実行
+
+DB スキーマを最新化するには、`DATABASE_URL` が設定された状態で以下を実行します。
+
+```bash
+uv run alembic upgrade head
+```
+
+現在のリビジョン確認:
+
+```bash
+uv run alembic current
+```
+
+1つ前のリビジョンへ戻す場合:
+
+```bash
+uv run alembic downgrade -1
+```
+
 ## 仮想環境での backend 起動手順
 
 仮想環境を有効化した状態で、以下を実行します。
