@@ -3,7 +3,7 @@ from fastapi import APIRouter, FastAPI
 from app.schemas.health import HealthResponse
 
 app = FastAPI(
-    title="Closet Management API", # TODO:アプリ名のAPIに変更
+    title="Closet Management API",  # TODO:アプリ名のAPIに変更
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -18,4 +18,3 @@ def health_check() -> HealthResponse:
 
 
 app.include_router(api_v1)
-
