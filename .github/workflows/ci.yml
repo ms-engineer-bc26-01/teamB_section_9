@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  # ===== シークレット漏洩スキャン =====
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ===== バックエンド =====
+  backend:
+    name: Backend (FastAPI)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: closet_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      - name: Install dependencies
+        run: |
+          cd backend
+          uv sync --dev
+      - name: Lint (ruff)
+        run: cd backend && uv run ruff check .
+      - name: Format check (ruff)
+        run: cd backend && uv run ruff format --check .
+      - name: Type check (mypy)
+        run: cd backend && uv run mypy app
+        continue-on-error: true
+      - name: Run tests (pytest)
+        env:
+          APP_ENV: test
+          DATABASE_URL: postgresql+asyncpg://app:app@localhost:5432/closet_test
+          REDIS_URL: redis://localhost:6379/0
+          GOOGLE_API_KEY: test_dummy
+          STRIPE_SECRET_KEY: sk_test_dummy
+          STRIPE_WEBHOOK_SECRET: whsec_dummy
+        run: cd backend && uv run pytest -v --tb=short
+      - name: Dependency vulnerability check
+        run: cd backend && uv run pip-audit
+        continue-on-error: true
+
+  # ===== フロントエンド =====
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: cd frontend && npm ci
+      - name: Lint (ESLint)
+        run: cd frontend && npm run lint
+      - name: Type check (tsc)
+        run: cd frontend && npm run type-check
+        continue-on-error: true
+      - name: Build check
+        run: cd frontend && npm run build
+      - name: Dependency vulnerability check
+        run: cd frontend && npm audit --audit-level=high
+        continue-on-error: true
+
+  # ===== Docker ビルド確認 =====
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -t closet-backend ./backend
+      - name: Build frontend image
+        run: docker build -t closet-frontend ./frontend
