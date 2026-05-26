@@ -67,5 +67,3 @@ docker compose down -v
 - Backend API Docs (Swagger): http://localhost:8000/docs
 - PostgreSQL: localhost:5432
 - Redis: localhost:6379
-- MinIO API: http://localhost:9000
-- MinIO Console: http://localhost:9001
