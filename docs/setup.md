@@ -18,8 +18,8 @@
 ### 1. リポジトリをクローン
 
 ```bash
-git clone git@github.com:ms-engineer-bc26-01/closet-app.git
-cd closet-app
+git clone git@github.com:ms-engineer-bc26-01/teamB_section_9.git
+cd teamB_section_9
 ```
 
 ### 2. pre-commit をインストール（コミット前自動チェック）
@@ -93,5 +93,5 @@ diff .env.example .env
 make check
 ```
 
-GitHub Actions と同じ Lint・テストがローカルで実行されます。
+GitHub Actions と同じ Lint・テスト（backend）・ビルド（frontend）がローカルで実行されます。
 CI で弾かれる前にローカルで確認する習慣をつけてください。

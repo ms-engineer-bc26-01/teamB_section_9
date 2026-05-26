@@ -10,7 +10,7 @@ lint:  ## Linter を実行
 
 test:  ## テストを実行
 	cd backend && uv run pytest -v --tb=short
-	cd frontend && npm test -- --passWithNoTests
+	cd frontend && npm run build
 
 secret-scan:  ## シークレット漏洩チェック（要: gitleaks インストール）
 	gitleaks detect --source . --verbose

@@ -30,8 +30,15 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parent.parent.parent
     spec_path = repo_root / "docs" / "openapi.yaml"
 
-    with spec_path.open(encoding="utf-8") as f:
-        spec = yaml.safe_load(f)
+    try:
+        with spec_path.open(encoding="utf-8") as f:
+            spec = yaml.safe_load(f)
+    except FileNotFoundError:
+        print(f"[FAIL] docs/openapi.yaml が見つかりません: {spec_path}")
+        return 1
+    except yaml.YAMLError as e:
+        print(f"[FAIL] docs/openapi.yaml のパースに失敗しました: {e}")
+        return 1
 
     spec_paths: dict[str, set[str]] = {
         path: {m.lower() for m in methods if m.lower() in HTTP_METHODS}
