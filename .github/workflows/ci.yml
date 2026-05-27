@@ -160,11 +160,11 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           BRANCH="${{ github.head_ref }}"
-          PATTERN='^(feat|feature|fix|refactor|test|docs|chore|infra)/(fe|be|db|llm|ci|docs)-[a-z0-9][a-z0-9-]*$'
+          PATTERN='^(dependabot/.+|(feat|feature|fix|refactor|test|docs|chore|infra)/(fe|be|db|llm|ci|docs)-[a-z0-9][a-z0-9-]*)$'
           if echo "$BRANCH" | grep -qE "$PATTERN"; then
             echo "Branch name '$BRANCH' follows convention."
           else
-            echo "ERROR: Branch '$BRANCH' does not match <type>/<scope>-<description>"
+            echo "ERROR: Branch '$BRANCH' does not match <type>/<scope>-<description> or dependabot/*"
             echo "Valid types: feat feature fix refactor test docs chore infra"
             echo "Valid scopes: fe be db llm ci docs"
             exit 1
