@@ -160,7 +160,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           BRANCH="${{ github.head_ref }}"
-          PATTERN='^(dependabot/[a-z0-9_-]+/[a-z0-9._/-]+|(feat|feature|fix|refactor|test|docs|chore|infra)/(fe|be|db|llm|ci|docs)-[a-z0-9][a-z0-9-]*)$'
+          PATTERN='^(dependabot/.+|(feat|feature|fix|refactor|test|docs|chore|infra)/(fe|be|db|llm|ci|docs)-[a-z0-9][a-z0-9-]*)$'
           if echo "$BRANCH" | grep -qE "$PATTERN"; then
             echo "Branch name '$BRANCH' follows convention."
           else
