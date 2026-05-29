@@ -48,7 +48,7 @@ https://app.notion.com/p/ms-engineer/35d8f7a03628810ba4c9d98941e9d9a2
 
 ## CONTRIBUTING.md — 開発運用ガイド
 
-https://github.com/ms-engineer-bc26-01/teamB_section_9/blob/main/docs/CONTRIBUTING.md
+Contributing を参照。
 
 ## 開発環境セットアップガイド
 
