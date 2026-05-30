@@ -43,7 +43,7 @@
 
 | レイヤ | 採用 | バージョン | 備考 |
 |---|---|---|---|
-| フロントエンド | Next.js (App Router) + TypeScript | 15系 | Tailwind CSS + shadcn/ui |
+| フロントエンド | Next.js (App Router) + TypeScript | 24.15.0 | Tailwind CSS + shadcn/ui |
 | 状態管理 | TanStack Query + Zustand | — | サーバ状態とUI状態を分離 |
 | バックエンド | FastAPI + Pydantic v2 | Python 3.12 | OpenAPI スキーマ自動生成。FE側の型は openapi-typescript で生成 |
 | DB | PostgreSQL | 16 | Supabase マネージド |
