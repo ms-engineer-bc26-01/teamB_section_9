@@ -52,40 +52,40 @@ async def create_clothing(
     return await crud.create_clothing(db, current_user.id, payload)
 
 
-@router.get("/{clothing_id}", response_model=ClothingItem)
+@router.get("/{clothes_id}", response_model=ClothingItem)
 async def get_clothing(
-    clothing_id: uuid.UUID,
+    clothes_id: uuid.UUID,
     db: DbSession,
     current_user: AuthenticatedUser,
 ) -> ClothingItem:
-    return await crud.get_clothing(db, current_user.id, clothing_id)
+    return await crud.get_clothing(db, current_user.id, clothes_id)
 
 
-@router.put("/{clothing_id}", response_model=ClothingItem)
+@router.put("/{clothes_id}", response_model=ClothingItem)
 async def replace_clothing(
-    clothing_id: uuid.UUID,
+    clothes_id: uuid.UUID,
     payload: ClothingUpdateRequest,
     db: DbSession,
     current_user: AuthenticatedUser,
 ) -> ClothingItem:
-    return await crud.update_clothing(db, current_user.id, clothing_id, payload)
+    return await crud.update_clothing(db, current_user.id, clothes_id, payload)
 
 
-@router.patch("/{clothing_id}", response_model=ClothingItem)
+@router.patch("/{clothes_id}", response_model=ClothingItem)
 async def patch_clothing(
-    clothing_id: uuid.UUID,
+    clothes_id: uuid.UUID,
     payload: ClothingUpdateRequest,
     db: DbSession,
     current_user: AuthenticatedUser,
 ) -> ClothingItem:
-    return await crud.update_clothing(db, current_user.id, clothing_id, payload)
+    return await crud.update_clothing(db, current_user.id, clothes_id, payload)
 
 
-@router.delete("/{clothing_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{clothes_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_clothing(
-    clothing_id: uuid.UUID,
+    clothes_id: uuid.UUID,
     db: DbSession,
     current_user: AuthenticatedUser,
 ) -> Response:
-    await crud.delete_clothing(db, current_user.id, clothing_id)
+    await crud.delete_clothing(db, current_user.id, clothes_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

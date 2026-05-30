@@ -71,7 +71,7 @@ jobs:
       - name: Run tests (pytest)
         env:
           APP_ENV: test
-          DATABASE_URL: postgresql+asyncpg://app:app@localhost:5432/closet_test
+          DATABASE_URL: postgresql+psycopg://app:app@localhost:5432/closet_test
           REDIS_URL: redis://localhost:6379/0
           GOOGLE_API_KEY: test_dummy
           STRIPE_SECRET_KEY: sk_test_dummy
@@ -150,7 +150,7 @@ jobs:
       - name: Check for undocumented endpoints (spec drift)
         env:
           APP_ENV: test
-          DATABASE_URL: postgresql+asyncpg://app:app@localhost:5432/closet_test
+          DATABASE_URL: postgresql+psycopg://app:app@localhost:5432/closet_test
           REDIS_URL: redis://localhost:6379/0
           GOOGLE_API_KEY: test_dummy
           STRIPE_SECRET_KEY: sk_test_dummy
