@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.v1.schemas.clothes import (
+    ClothesListResponse,
     ClothingCreateRequest,
     ClothingItem,
     ClothingUpdateRequest,
-    ClothesListResponse,
 )
 from app.db.models.clothes import Clothes, ClothesTpo
 
@@ -65,15 +65,17 @@ async def list_clothes(
     if is_favorite is not None:
         filters.append(Clothes.is_favorite == is_favorite)
 
-    total = await db.scalar(select(func.count()).select_from(Clothes).where(*filters)) or 0
+    total = (
+        await db.scalar(select(func.count()).select_from(Clothes).where(*filters)) or 0
+    )
     items = (
         await db.scalars(
-        select(Clothes)
-        .where(*filters)
-        .options(selectinload(Clothes.tpo_tags))
-        .order_by(Clothes.created_at.desc())
-        .limit(limit)
-        .offset(offset)
+            select(Clothes)
+            .where(*filters)
+            .options(selectinload(Clothes.tpo_tags))
+            .order_by(Clothes.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
     ).all()
 
@@ -85,9 +87,7 @@ async def get_clothing_or_404(
     user_id: uuid.UUID,
     clothing_id: uuid.UUID,
 ) -> Clothes:
-    item = await db.scalar(
-        _base_query(user_id).where(Clothes.id == clothing_id)
-    )
+    item = await db.scalar(_base_query(user_id).where(Clothes.id == clothing_id))
     if item is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

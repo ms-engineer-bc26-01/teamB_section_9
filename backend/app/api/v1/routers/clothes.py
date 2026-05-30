@@ -5,10 +5,10 @@ from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.schemas.clothes import (
+    ClothesListResponse,
     ClothingCreateRequest,
     ClothingItem,
     ClothingUpdateRequest,
-    ClothesListResponse,
 )
 from app.core.deps import CurrentUser, get_current_user, get_db
 from app.domain.clothes import crud
