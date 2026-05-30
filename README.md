@@ -1,6 +1,60 @@
 # teamB_section_9
 
-## Docker Compose 起動方法
+最終課題(TeamB)
+
+https://app.notion.com/p/ms-engineer/TeamB-35d8f7a036288067bdd4de4c99ea980d
+
+# 設計
+
+### PRD
+
+https://app.notion.com/p/ms-engineer/PRD-35d8f7a0362881b59cb7c235855b89a7?pvs=25
+
+### 要件定義書
+
+Notion　https://app.notion.com/p/ms-engineer/35d8f7a0362881fc9812f317d1cc392c
+
+Github　クローゼット管理アプリ　要件定義書
+
+https://github.com/ms-engineer-bc26-01/teamB_section_9/blob/main/docs/requirements.md
+
+### 技術選定
+
+https://app.notion.com/p/ms-engineer/35d8f7a0362881dd9ac3cce2305dfdc3?pvs=25
+
+### DB設計
+
+4. データモデル 以降の部分　※URL含めて清書予定
+
+https://app.notion.com/p/requirements-368f18761305805e948df4902f71d3c9#368f187613058194ba17ed13ac6843ea
+
+### ER図
+
+https://github.com/ms-engineer-bc26-01/teamB_section_9/blob/main/docs/er-diagram.md
+
+### シーケンス図
+
+https://github.com/ms-engineer-bc26-01/teamB_section_9/blob/main/docs/sequence-diagrams.md
+
+### API設計
+
+https://portal.swaggerhub.com/apis/tokyoelectron/GeneratedAPI_2026-05-19-1506/1.0.0?source=catalog
+
+### テスト設計書
+
+https://app.notion.com/p/ms-engineer/35d8f7a03628810ba4c9d98941e9d9a2
+
+# 開発環境
+
+## CONTRIBUTING.md — 開発運用ガイド
+
+Contributing を参照。
+
+## 開発環境セットアップガイド
+
+https://github.com/ms-engineer-bc26-01/teamB_section_9/blob/main/docs/setup.md
+
+# Docker Compose 起動方法
 
 このプロジェクトはルートの `docker-compose.yml` を使ってローカル開発環境を起動します。
 
