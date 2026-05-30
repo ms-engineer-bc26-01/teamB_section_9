@@ -926,9 +926,9 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
-  /api/v1/clothes/{id}:
+  /api/v1/clothes/{clothes_id}:
     parameters:
-      - name: id
+      - name: clothes_id
         in: path
         required: true
         schema:
@@ -1107,9 +1107,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/outfits/{id}:
+  /api/v1/outfits/{outfit_id}:
     parameters:
-      - name: id
+      - name: outfit_id
         in: path
         required: true
         schema:

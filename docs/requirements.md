@@ -43,7 +43,7 @@
 
 | レイヤ | 採用 | バージョン | 備考 |
 |---|---|---|---|
-| フロントエンド | Next.js (App Router) + TypeScript | 15系 | Tailwind CSS + shadcn/ui |
+| フロントエンド | Next.js (App Router) + TypeScript | 24.15.0 | Tailwind CSS + shadcn/ui |
 | 状態管理 | TanStack Query + Zustand | — | サーバ状態とUI状態を分離 |
 | バックエンド | FastAPI + Pydantic v2 | Python 3.12 | OpenAPI スキーマ自動生成。FE側の型は openapi-typescript で生成 |
 | DB | PostgreSQL | 16 | Supabase マネージド |
@@ -422,7 +422,7 @@ stripe listen --forward-to localhost:8000/api/v1/billing/webhook
 
 | 項目 | 実装方針 |
 |---|---|
-| SQL Injection | SQLAlchemy ORM / asyncpg パラメータバインドを使用。生 SQL 文字列連結を `ruff` / `bandit` で禁止 |
+| SQL Injection | SQLAlchemy ORM / psycopg パラメータバインドを使用。生 SQL 文字列連結を `ruff` / `bandit` で禁止 |
 | XSS | React の自動エスケープを前提。`dangerouslySetInnerHTML` を ESLint `react/no-danger: error` で禁止 |
 | CSRF | JWT を Authorization ヘッダで送付するため Cookie 起点の CSRF は原則発生しない |
 | 認可 | 全エンドポイントで `resource.user_id == current_user.id` を検証。他人のリソースは 403 または 404 |
@@ -538,7 +538,7 @@ SUPABASE_ANON_KEY=           # フロント用（公開可）
 SUPABASE_SERVICE_ROLE_KEY=   # バック用（高権限。絶対に漏洩させない）
 SUPABASE_JWT_SECRET=         # JWT 検証用
 SUPABASE_STORAGE_BUCKET=clothes-images   # Storage バケット名（固定値）
-DATABASE_URL=postgresql+asyncpg://app:app@postgres:5432/closet   # ローカル docker
+DATABASE_URL=postgresql+psycopg://app:app@postgres:5432/closet   # ローカル docker
 
 # ===== Open-Meteo — キー不要 =====
 

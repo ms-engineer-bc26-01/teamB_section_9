@@ -1,0 +1,1 @@
+"""Application logging configuration entrypoint."""
