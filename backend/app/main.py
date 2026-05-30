@@ -1,6 +1,6 @@
-from fastapi import APIRouter, FastAPI
+from fastapi import FastAPI
 
-from app.schemas.health import HealthResponse
+from app.api.v1.router import router as api_v1_router
 
 app = FastAPI(
     title="Closet Management API",  # TODO:アプリ名のAPIに変更
@@ -9,12 +9,4 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-api_v1 = APIRouter(prefix="/api/v1")
-
-
-@api_v1.get("/health", response_model=HealthResponse, tags=["health"])
-def health_check() -> HealthResponse:
-    return HealthResponse(status="ok", service="backend")
-
-
-app.include_router(api_v1)
+app.include_router(api_v1_router)
