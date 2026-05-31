@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Figtree } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
+import { BottomNavigation } from "@/components/layout/BottomNavigation";
 
-const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
+const figtree = Figtree({ subsets: ['latin'], variable: '--font-sans' });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,7 +33,25 @@ export default function RootLayout({
       lang="en"
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", figtree.variable)}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body
+        className={cn(
+          "min-h-full",
+          "bg-[#FAF8F5]",
+          "text-[#2B2926]",
+          "flex",
+          "flex-col"
+        )
+        }
+      >
+        <Header />
+
+        <main className="mx-auto w-full max-w-[390px] flex-1 px-4 pt-4 pb-20 md:pb-6">
+          {children}
+        </main>
+
+        <Footer />
+        <BottomNavigation />
+      </body>
     </html>
   );
 }
