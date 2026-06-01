@@ -663,44 +663,66 @@ closet-app/
 ├── backend/                      # FastAPI + Python 3.12
 │   ├── Dockerfile
 │   ├── pyproject.toml
+│   ├── uv.lock
 │   ├── alembic.ini
+│   ├── README.md
+│   ├── alembic/
+│   │   ├── env.py
+│   │   ├── README
+│   │   ├── script.py.mako
+│   │   └── versions/
+│   ├── scripts/
+│   │   └── check_api_contract.py
+│   ├── tests/
+│   │   ├── conftest.py
+│   │   ├── test_api_contract.py
+│   │   ├── test_auth.py
+│   │   ├── test_clothes.py
+│   │   ├── test_health.py
+│   │   └── test_security.py
 │   └── app/
 │       ├── main.py
-│       ├── core/
-│       │   ├── config.py         # 環境変数（Pydantic Settings）
-│       │   ├── logging.py        # 環境別ログ設定（structlog）
-│       │   ├── security.py       # JWT 検証
-│       │   └── deps.py           # 共通 DI（get_current_user 等）
 │       ├── api/
 │       │   └── v1/
+│       │       ├── router.py
 │       │       ├── routers/
 │       │       │   ├── auth.py
+│       │       │   ├── billing.py
 │       │       │   ├── clothes.py
 │       │       │   ├── outfits.py
-│       │       │   ├── weather.py
 │       │       │   ├── regions.py
-│       │       │   └── billing.py
-│       │       └── schemas/      # Pydantic request / response スキーマ
+│       │       │   └── weather.py
+│       │       └── schemas/      # API v1 用 request / response スキーマ
 │       ├── constants/
 │       │   └── regions.py        # 地域マスタ定数（DB なし）
-│       ├── domain/               # ビジネスロジック層
-│       │   ├── clothes/
-│       │   ├── outfits/
-│       │   ├── weather/
-│       │   └── billing/
-│       ├── services/             # 外部 API クライアント
-│       │   ├── llm_client.py     # LLM プロバイダ抽象化レイヤ
-│       │   ├── weather_client.py
-│       │   ├── storage_client.py
-│       │   └── stripe_client.py
+│       ├── core/
+│       │   ├── config.py         # 環境変数（Pydantic Settings）
+│       │   ├── deps.py           # 共通 DI
+│       │   ├── logging.py        # 環境別ログ設定
+│       │   └── security.py       # JWT 検証
 │       ├── db/
 │       │   ├── base.py
 │       │   ├── session.py
-│       │   ├── models/           # SQLAlchemy モデル
-│       │   └── migrations/       # Alembic
+│       │   ├── migrations/
+│       │   └── models/           # SQLAlchemy モデル
+│       ├── dependencies/
+│       │   └── auth.py           # 認証依存関係
+│       ├── domain/               # ビジネスロジック層
+│       │   ├── billing/
+│       │   ├── clothes/
+│       │   ├── outfits/
+│       │   ├── users/
+│       │   ├── weather/
 │       └── prompts/              # LLM プロンプト（バージョン管理対象）
-│           ├── outfit_suggest.md
-│           └── analyze_image.md
+│           ├── analyze_image.md
+│           └── outfit_suggest.md
+│       ├── schemas/
+│       │   └── health.py         # 共通スキーマ
+│       └── services/             # 外部 API クライアント
+│           ├── llm_client.py     # LLM プロバイダ抽象化レイヤ
+│           ├── storage_client.py
+│           ├── stripe_client.py
+│           └── weather_client.py
 │
 ├── infra/
 │   ├── render.yaml               # 本番デプロイ定義（ADVANCE）
