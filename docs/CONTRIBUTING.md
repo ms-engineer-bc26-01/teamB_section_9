@@ -85,6 +85,10 @@ free: 3 回/日, premium: 無制限。超過時 429 を返す。
 Closes #42
 ```
 
+コミットメッセージの自動生成方法
+
+https://github.com/ms-engineer-bc26-01/teamB_section_9/blob/main/.github/copilot-instructions.md
+
 ---
 
 ## 3. PR の作り方
