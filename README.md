@@ -22,6 +22,12 @@ https://github.com/ms-engineer-bc26-01/teamB_section_9/blob/main/docs/requiremen
 
 https://app.notion.com/p/ms-engineer/35d8f7a0362881dd9ac3cce2305dfdc3?pvs=25
 
+### ディレクトリ構成
+
+https://github.com/ms-engineer-bc26-01/teamB_section_9/blob/main/docs/requirements.md#section-9-directory-structure
+
+###
+
 ### DB設計
 
 4. データモデル 以降の部分　※URL含めて清書予定
