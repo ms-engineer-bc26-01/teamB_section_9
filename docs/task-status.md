@@ -1,6 +1,6 @@
 # タスク実績・担当状況記録
 
-> 作成：2026-05-22 / 最終更新：2026-05-26 / 管理：C（バックリード）
+> 作成：2026-05-22 / 最終更新：2026-05-26 / 管理：Meg（バックリード）
 >
 > **このファイルの目的**
 > 提案書（`closet_app_proposal`）に記載された担当割り当てと、実際に作業した人の乖離を記録する。
@@ -16,30 +16,30 @@
 | カテゴリ | タスク | 提案書の主担当 | 実際の作業者 | 完了日 | 備考 |
 |---|---|---|---|---|---|
 | 要件確定 | 要件定義提案書の作成・精緻化 | 全員（レビュー） | **C** | 2026-05-19 | チームレビューを経て確定 |
-| 設計 | ER図（`docs/er-diagram.md`） | C + D | **C** | 2026-05-19 | シーケンス図も同日作成 |
-| 設計 | API仕様書（`docs/openapi.yaml`）精緻化・Swagger反映 | C + D | **C** | 2026-05-21 | |
-| 設計 | 地域マスタ初期データ（47都道府県 + 細分化・Open-Meteo疎通確認済 `.py`） | **D**（提案書の指定） | **C** | 2026-05-21 | 提案書ではDの担当と明記されていたタスク |
-| 要件確定 | `requirements.md`（GitHub用定義書）作成 | — | **C** | 2026-05-22 | 提案書・Swagger・ER図を統合して新規作成 |
-| インフラ | GitHub 安全対策セットアップ（Secret Scanning・Push Protection・Dependabot・ブランチ保護） | C | **Miwa** | 2026-05-25 | ブロッカー解消後にMiwaが対応 |
-| インフラ | Docker 環境構築（frontend / backend / postgres / redis）| C | **Miwa** | 2026-05-25 | `docker-compose.yml` 作成・疎通確認済み |
-| インフラ | `.gitignore` 強化（8.4節準拠） | C | **C** | 2026-05-26 | `.env.*`・OS/IDE・Python/Node 成果物を追加 |
-| インフラ | `.pre-commit-config.yaml` 作成（gitleaks/ruff/ESLint） | C | **C** | 2026-05-26 | ローカル commit 前自動チェック体制を整備 |
-| インフラ | `.github/workflows/ci.yml` 作成（4ジョブ構成） | C | **C** | 2026-05-26 | secret-scan / backend / frontend / docker-build |
-| インフラ | `.github/dependabot.yml` 作成 | C | **C** | 2026-05-26 | pip・npm・github-actions の週次/月次監視 |
-| 開発体験 | `Makefile` 作成 | C | **C** | 2026-05-26 | `make check` でローカルCIと同等チェックを実行 |
-| 開発体験 | `docs/setup.md` 作成（メンバー向けセットアップ手順書） | C | **C** | 2026-05-26 | |
-| テスト | `backend/tests/` 作成・health check テスト追加 | C | **C** | 2026-05-26 | CI でのテスト実行を可能にするための最小実装 |
-| 設計 | Figmaモック（①+②ハイブリッド WF確定） | A + B | A・B | 進行中 | |
-| 要件確定 | PRD作成（`docs/PRD.md`） | B + D | リーダー主導で進行中 | 進行中 | |
+| 設計 | ER図（`docs/er-diagram.md`） | Meg + D | **C** | 2026-05-19 | シーケンス図も同日作成 |
+| 設計 | API仕様書（`docs/openapi.yaml`）精緻化・Swagger反映 | Meg + D | **C** | 2026-05-21 | |
+| 設計 | 地域マスタ初期データ（47都道府県 + 細分化・Open-Meteo疎通確認済 `.py`） | **D**（提案書の指定） | **Meg** | 2026-05-21 | 提案書ではDの担当と明記されていたタスク |
+| 要件確定 | `requirements.md`（GitHub用定義書）作成 | — | **Meg** | 2026-05-22 | 提案書・Swagger・ER図を統合して新規作成 |
+| インフラ | GitHub 安全対策セットアップ（Secret Scanning・Push Protection・Dependabot・ブランチ保護） | Meg | **Miwa** | 2026-05-25 | ブロッカー解消後にMiwaが対応 |
+| インフラ | Docker 環境構築（frontend / backend / postgres / redis）| Meg | **Miwa** | 2026-05-25 | `docker-compose.yml` 作成・疎通確認済み |
+| インフラ | `.gitignore` 強化（8.4節準拠） | Meg | **Meg** | 2026-05-26 | `.env.*`・OS/IDE・Python/Node 成果物を追加 |
+| インフラ | `.pre-commit-config.yaml` 作成（gitleaks/ruff/ESLint） | Meg | **Meg** | 2026-05-26 | ローカル commit 前自動チェック体制を整備 |
+| インフラ | `.github/workflows/ci.yml` 作成（4ジョブ構成） | Meg | **Meg** | 2026-05-26 | secret-scan / backend / frontend / docker-build |
+| インフラ | `.github/dependabot.yml` 作成 | Meg | **Meg** | 2026-05-26 | pip・npm・github-actions の週次/月次監視 |
+| 開発体験 | `Makefile` 作成 | Meg | **Meg** | 2026-05-26 | `make check` でローカルCIと同等チェックを実行 |
+| 開発体験 | `docs/setup.md` 作成（メンバー向けセットアップ手順書） | Meg | **Meg** | 2026-05-26 | |
+| テスト | `backend/tests/` 作成・health check テスト追加 | Meg | **Meg** | 2026-05-26 | CI でのテスト実行を可能にするための最小実装 |
+| 設計 | Figmaモック（①+②ハイブリッド WF確定） | yuiko + sayo | yuiko・sayo | 進行中 | |
+| 要件確定 | PRD作成（`docs/PRD.md`） | sayo + Miwa | リーダー主導で進行中 | 進行中 | |
 
 ### 1.2 未着手・対応待ち
 
 | カテゴリ | タスク | 提案書の主担当 | 状態 | 備考 |
 |---|---|---|---|---|
-| キー管理 | Google Gemini・Stripe・Supabase アカウント作成、キー取得 | C | **対応待ち** | OpenAI キー配布の確認が必要 |
-| キー管理 | チームメンバーへのキー配布 | C → 全員 | **対応待ち** | キー取得後に実施 |
+| キー管理 | Google Gemini・Stripe・Supabase アカウント作成、キー取得 | Meg | **対応待ち** | OpenAI キー配布の確認が必要 |
+| キー管理 | チームメンバーへのキー配布 | Meg → 全員 | **対応待ち** | キー取得後に実施 |
 | キー管理 | `.env.example` の実値確認・全員のローカルで動作確認 | 全員 | **マージ待ち** | Miwa 作成済み・PR マージ後に全員が `.env` を更新 |
-| インフラ | API 疎通確認（frontend → backend → DB → Redis） | C | **後回し** | キー取得・Docker 起動確認後に実施 |
+| インフラ | API 疎通確認（frontend → backend → DB → Redis） | Meg | **後回し** | キー取得・Docker 起動確認後に実施 |
 | 運営 | LLM 共有会 #1（Gemini 初体験） | 全員 | **後回し** | S1 開始前に実施予定 |
 
 ---
@@ -50,8 +50,8 @@
 
 | 観点 | 内容 |
 |---|---|
-| C が単独で完了したタスク | ER 図・openapi.yaml（提案書: C + D）、インフラ CI 系一式（2026-05-26） |
-| C が他担当分を引き取ったタスク | 地域マスタ初期データ（提案書: D 担当）、要件定義提案書本体 |
+| Meg が単独で完了したタスク | ER 図・openapi.yaml（提案書: Meg + Mwa）、インフラ CI 系一式（2026-05-26） |
+| Meg が他担当分を引き取ったタスク | 地域マスタ初期データ（提案書: Miwa 担当）、要件定義提案書本体 |
 | Miwa（C）がブロック解消後に完了 | GitHub 安全対策・Docker 環境構築（2026-05-25） |
 | 対応待ち | キー取得・配布・LLM 共有会（外部依存あり） |
 
@@ -62,28 +62,28 @@
 S0 で生じた負荷の偏りを踏まえ、S1 以降の担当割り当ての見直しが必要。
 以下は調整案の叩き台。チームで合意の上、更新すること。
 
-### 3.1 C の負荷を減らすために移管を検討するタスク
+### 3.1 Meg の負荷を減らすために移管を検討するタスク
 
 | タスク | 提案書の担当 | 移管候補 | 理由 |
 |---|---|---|---|
-| Alembic マイグレーション初版 | C + D | **D 主担当に変更** | S0 で D 担当のタスクを C が引き取った分の返却 |
-| バック単体テスト（服 CRUD） | C + D | **D 主担当に変更** | 同上 |
-| テスト設計書（`docs/test-plan.md`） | D（QA 担当） | **D が主導、C はレビューのみ** | 提案書通りの担当設定 |
-| LLM コスト試算（`docs/llm-cost.md`） | C + D | **D 主担当に変更** | C の設計負荷が既に高い |
+| Alembic マイグレーション初版 | Meg + Miwa | **Miwa 主担当に変更** | S0 で Miwa 担当のタスクを Meg が引き取った分の返却 |
+| バック単体テスト（服 CRUD） | Meg + Miwa| **Miwa 主担当に変更** | 同上 |
+| テスト設計書（`docs/test-plan.md`） | Miwa（QA 担当） | **Miwa が主導、Meg はレビューのみ** | 提案書通りの担当設定 |
+| LLM コスト試算（`docs/llm-cost.md`） | Meg + Miwa | **Miwa 主担当に変更** | Meg の設計負荷が既に高い |
 
 ### 3.2 変えない担当
 
 | タスク | 担当 | 理由 |
 |---|---|---|
-| JWT 検証 DI（`core/deps.py`） | C | API 設計の根幹。C の意思決定が必要 |
-| FastAPI 基盤構築（ルーティング・DI） | C | 同上 |
-| DB スキーマ最終判断 | C | バックリードの主責務 |
-| インフラ（Docker・CI）維持 | C | 既存の知識・権限を活かす |
+| JWT 検証 DI（`core/deps.py`） | Meg | API 設計の根幹。Meg の意思決定が必要 |
+| FastAPI 基盤構築（ルーティング・DI） | Meg | 同上 |
+| DB スキーマ最終判断 | Meg | バックリードの主責務 |
+| インフラ（Docker・CI）維持 | Meg | 既存の知識・権限を活かす |
 
-### 3.3 D に確認が必要な事項
+### 3.3 Miwa に確認が必要な事項
 
-- S0 で地域マスタ・ER 図・openapi.yaml が C により完了済みであることの共有
-- S1 の Alembic マイグレーションを D 主担当として進められるか確認
+- S0 で地域マスタ・ER 図・openapi.yaml が Meg により完了済みであることの共有
+- S1 の Alembic マイグレーションを Miwa 主担当として進められるか確認
 - テスト設計書の着手時期と進め方の確認
 
 ---
