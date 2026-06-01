@@ -1,6 +1,10 @@
 from fastapi.testclient import TestClient
 
-from app.constants.regions import REGIONS, get_regions_by_prefecture
+from app.constants.regions import (
+    REGIONS,
+    get_region_coordinates,
+    get_regions_by_prefecture,
+)
 
 
 def test_list_regions_returns_all_regions(client: TestClient) -> None:
@@ -37,3 +41,11 @@ def test_list_regions_rejects_invalid_prefecture_code(client: TestClient) -> Non
     response = client.get("/api/v1/regions", params={"prefecture_code": "abc"})
 
     assert response.status_code == 422
+
+
+def test_get_region_coordinates_returns_lat_lng() -> None:
+    assert get_region_coordinates("13_01") == (35.6895, 139.6917)
+
+
+def test_get_region_coordinates_returns_none_for_unknown_code() -> None:
+    assert get_region_coordinates("99_99") is None

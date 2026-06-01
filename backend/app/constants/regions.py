@@ -704,6 +704,14 @@ def get_region(region_code: str) -> RegionInfo | None:
     return REGIONS.get(region_code)
 
 
+def get_region_coordinates(region_code: str) -> tuple[float, float] | None:
+    """地域コードから緯度経度を返す。存在しない場合は None。"""
+    region = get_region(region_code)
+    if region is None:
+        return None
+    return region["lat"], region["lng"]
+
+
 def get_regions_by_prefecture(prefecture_code: str) -> dict[str, RegionInfo]:
     """都道府県コード（2桁）に一致する地域をすべて返す。"""
     return {
