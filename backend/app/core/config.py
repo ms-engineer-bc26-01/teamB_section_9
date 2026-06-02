@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     SUPABASE_JWT_AUDIENCE: str = "authenticated"
     SUPABASE_JWKS_CACHE_TTL_SECONDS: int = 600
     LLM_PROVIDER: str = "openai"
-    OPENAI_API_KEY: str
+    OPENAI_API_KEY: str | None = None
     OPENAI_MODEL: str = "gpt-5"
 
     model_config = SettingsConfigDict(env_file=".env", populate_by_name=True)
