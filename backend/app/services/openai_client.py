@@ -1,0 +1,17 @@
+from openai import AsyncOpenAI
+
+from app.core.config import settings
+from app.services.base_llm import BaseLLMClient
+
+
+class OpenAIClient(BaseLLMClient):
+    def __init__(self):
+        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+
+    async def generate(self, prompt: str) -> str:
+        response = await self.client.responses.create(
+            model=settings.OPENAI_MODEL,
+            input=prompt,
+        )
+
+        return response.output_text
