@@ -1,6 +1,6 @@
 # 開発環境セットアップガイド
 
-> 対象：チームメンバー全員 / 最終更新：2026-05-26
+> 対象：チームメンバー全員 / 最終更新：2026-06-02
 
 ---
 
@@ -9,7 +9,8 @@
 - Docker Desktop がインストール済みであること
 - Git がインストール済みであること
 - Python 3.12 以上がインストール済みであること（pre-commit のインストールに使用）
-- Node.js 20 以上がインストール済みであること
+- Node.js 24.15.x がインストール済みであること（CI と同じ前提）
+- npm 11.12.x を使用すること（frontend は npm / package-lock.json 前提）
 
 ---
 
@@ -29,7 +30,7 @@ pip install pre-commit
 pre-commit install
 ```
 
-これで `git commit` のたびに APIキー漏洩・Lint・フォーマットチェックが自動実行されます。
+これで `git commit` のたびに APIキー漏洩・Lint・フォーマットチェックに加え、frontend の package.json と package-lock.json の整合チェックが自動実行されます。
 
 ### 3. `.env` ファイルを作成
 
@@ -93,5 +94,5 @@ diff .env.example .env
 make check
 ```
 
-GitHub Actions と同じ Lint・テスト（backend）・ビルド（frontend）がローカルで実行されます。
+GitHub Actions と同じ依存整合チェック・Lint・テスト（backend）・ビルド（frontend）がローカルで実行されます。
 CI で弾かれる前にローカルで確認する習慣をつけてください。
