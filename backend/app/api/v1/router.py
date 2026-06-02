@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.api.v1.routers.auth import router as auth_router
 from app.api.v1.routers.clothes import router as clothes_router
 from app.api.v1.schemas.health import HealthResponse
 
@@ -11,4 +12,5 @@ def health_check() -> HealthResponse:
     return HealthResponse(status="ok", service="backend")
 
 
+router.include_router(auth_router)
 router.include_router(clothes_router)
