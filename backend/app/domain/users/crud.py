@@ -2,6 +2,7 @@ import uuid
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.user import User
@@ -31,7 +32,14 @@ async def get_or_create_user(
     if user is None:
         user = User(id=user_id, email=email)
         db.add(user)
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            user = await get_user(db, user_id)
+            if user is None:
+                raise
+            return user
         await db.refresh(user)
         return user
 
