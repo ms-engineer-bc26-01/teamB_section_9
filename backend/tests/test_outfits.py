@@ -84,13 +84,14 @@ def test_suggest_outfit_returns_bad_gateway_on_llm_failure(
     client: TestClient,
     monkeypatch,
 ) -> None:
-    async def fake_suggest(self, clothes: list[str], weather: str) -> str:
-        del self, clothes, weather
-        raise OutfitSuggestionError("failed to generate outfit suggestion")
+    class FakeOutfitService:
+        async def suggest(self, clothes: list[str], weather: str) -> str:
+            del clothes, weather
+            raise OutfitSuggestionError("failed to generate outfit suggestion")
 
     monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", True)
     monkeypatch.setattr(settings, "APP_ENV", "development")
-    monkeypatch.setattr(OutfitService, "suggest", fake_suggest)
+    monkeypatch.setattr("app.api.v1.routers.outfits.OutfitService", FakeOutfitService)
 
     response = client.post(
         "/api/v1/outfits/suggest",
