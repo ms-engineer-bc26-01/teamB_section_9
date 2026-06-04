@@ -10,7 +10,8 @@ from app.api.v1.schemas.clothes import (
     ClothingItem,
     ClothingUpdateRequest,
 )
-from app.core.deps import CurrentUser, get_current_user, get_db
+from app.core.deps import get_db
+from app.dependencies.auth import CurrentUser, get_current_user
 from app.domain.clothes import crud
 
 router = APIRouter(prefix="/clothes", tags=["Clothes"])
