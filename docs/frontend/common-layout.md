@@ -79,8 +79,7 @@ PC表示時のみ表示。
 
 対象
 
-* Mobile: md 未満
-* Desktop: md 以上（768px〜）
+* Mobile: md 未満 (～767px)
 
 表示
 
@@ -96,7 +95,7 @@ Footer は非表示
 
 対象
 
-* 769px〜
+* Desktop: md 以上（768px〜）
 
 表示
 
