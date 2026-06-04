@@ -20,13 +20,13 @@ Climo フロントエンドにおける共通レイアウトを定義する。
 
 表示内容
 
-* アプリロゴ（Climo）
+* アプリロゴ（Climo、将来追加予定）
 * 画面タイトル（将来追加予定）
 
 役割
 
-* アプリ全体のブランド表示
-* 上部ナビゲーション
+* アプリ全体のブランド表示（将来追加予定）
+* 上部ナビゲーション（将来追加予定）
 
 ---
 
@@ -40,16 +40,16 @@ Next.js App Router の children を描画する。
 
 ### Bottom Navigation
 
-スマホ向け固定ナビゲーション。
+モバイルでは画面下部、デスクトップでは画面右側に固定表示するナビゲーション。
 
 表示項目
 
 | メニュー    | 遷移先      |
 | ------- | -------- |
-| Home    | /        |
-| Clothes | /clothes |
-| Outfit  | /outfit  |
-| MyPage  | /mypage  |
+| ホーム    | /        |
+| 登録      | /clothes/new |
+| お気に入り | /favorites |
+| マイページ | /mypage  |
 
 役割
 
@@ -101,8 +101,9 @@ Footer は非表示
 * Header
 * Main
 * Footer
+* Bottom Navigation
 
-Bottom Navigation は非表示
+Bottom Navigation は画面右側に縦配置で表示
 
 ---
 
