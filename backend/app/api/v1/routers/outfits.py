@@ -21,6 +21,7 @@ router = APIRouter(prefix="/outfits", tags=["Outfits"])
 AuthenticatedUser = Annotated[CurrentUser, Depends(get_current_user)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 DEFAULT_REGION_CODE = "13_01"
+CLOTHES_FETCH_LIMIT = 1000
 
 
 @router.post(
@@ -61,7 +62,7 @@ async def suggest_outfit(
         await clothes_crud.list_clothes(
             db,
             current_user.id,
-            limit=1000,
+            limit=CLOTHES_FETCH_LIMIT,
             offset=0,
         )
     ).items

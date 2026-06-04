@@ -4,7 +4,13 @@ from openai import APIError
 from app.api.v1.schemas.clothes import ClothingItem
 from app.services.llm_client import get_llm_client
 
-PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "outfit_suggest.md"
+_PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "outfit_suggest.md"
+try:
+    _PROMPT_TEMPLATE: str = _PROMPT_PATH.read_text(encoding="utf-8")
+except OSError as exc:
+    raise RuntimeError(
+        f"outfit_suggest.md が見つかりません: {_PROMPT_PATH}"
+    ) from exc
 
 
 class OutfitSuggestionError(Exception):
@@ -26,8 +32,7 @@ class OutfitService:
         weather_summary = self._format_weather(weather)
 
         prompt = (
-            PROMPT_PATH.read_text(encoding="utf-8")
-            .replace(
+            _PROMPT_TEMPLATE.replace(
                 "{{ clothes }}",
                 clothes_summary,
             )
