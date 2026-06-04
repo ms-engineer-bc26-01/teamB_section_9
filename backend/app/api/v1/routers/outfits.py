@@ -20,7 +20,7 @@ router = APIRouter(prefix="/outfits", tags=["Outfits"])
 
 AuthenticatedUser = Annotated[CurrentUser, Depends(get_current_user)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
-DEFAULT_REGION_CODE = "19_02"
+DEFAULT_REGION_CODE = "13_01"
 
 
 @router.post(

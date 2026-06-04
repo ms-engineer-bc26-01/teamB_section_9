@@ -227,7 +227,7 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
     async def fake_fetch_weather_forecast(
         *, latitude: float, longitude: float, days: int
     ):
-        expected_coordinates = get_region_coordinates("19_02")
+        expected_coordinates = get_region_coordinates("13_01")
         assert expected_coordinates is not None
         assert (latitude, longitude) == expected_coordinates
         return {
