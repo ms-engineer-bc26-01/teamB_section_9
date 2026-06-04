@@ -1,7 +1,9 @@
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
+from app.core.config import settings
 from app.domain.outfits.service import OutfitService
 
 
@@ -31,3 +33,19 @@ async def test_outfit_service_uses_prompt_template_independent_of_cwd(
     assert result == "generated-coordinate"
     assert "white shirt, black pants" in captured["prompt"]
     assert "sunny" in captured["prompt"]
+
+
+def test_suggest_outfit_requires_authentication(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", False)
+    monkeypatch.setattr(settings, "APP_ENV", "development")
+
+    response = client.post(
+        "/api/v1/outfits/suggest",
+        json={"clothes": ["white shirt"], "weather": "sunny"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Not authenticated"
