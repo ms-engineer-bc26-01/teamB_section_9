@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from openai import APIError
+
 from app.api.v1.schemas.clothes import ClothingItem
 from app.services.llm_client import get_llm_client
 

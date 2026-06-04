@@ -460,11 +460,15 @@ def test_suggest_outfit_returns_bad_gateway_on_llm_failure(
     monkeypatch,
 ) -> None:
     class FakeOutfitService:
-        async def suggest(self, *, tpo: str, clothes: list[ClothingItem], weather: dict) -> str:
+        async def suggest(
+            self, *, tpo: str, clothes: list[ClothingItem], weather: dict
+        ) -> str:
             del tpo, clothes, weather
             raise OutfitSuggestionError("failed to generate outfit suggestion")
 
-    async def fake_fetch_weather_forecast(*, latitude: float, longitude: float, days: int):
+    async def fake_fetch_weather_forecast(
+        *, latitude: float, longitude: float, days: int
+    ):
         del latitude, longitude, days
         return {
             "current": {
