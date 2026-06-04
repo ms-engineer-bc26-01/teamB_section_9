@@ -1,8 +1,14 @@
 from pathlib import Path
 
+from openai import APIError
+
 from app.services.llm_client import get_llm_client
 
 PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "outfit_suggest.md"
+
+
+class OutfitSuggestionError(Exception):
+    pass
 
 
 class OutfitService:
@@ -27,4 +33,7 @@ class OutfitService:
             )
         )
 
-        return await self.llm.generate(prompt)
+        try:
+            return await self.llm.generate(prompt)
+        except APIError as exc:
+            raise OutfitSuggestionError("failed to generate outfit suggestion") from exc

@@ -1,13 +1,13 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.v1.schemas.outfits import (
     OutfitSuggestRequest,
     OutfitSuggestResponse,
 )
 from app.dependencies.auth import CurrentUser, get_current_user
-from app.domain.outfits.service import OutfitService
+from app.domain.outfits.service import OutfitService, OutfitSuggestionError
 
 router = APIRouter(prefix="/outfits", tags=["Outfits"])
 
@@ -27,9 +27,15 @@ async def suggest_outfit(
 
     service = OutfitService()
 
-    result = await service.suggest(
-        clothes=request.clothes,
-        weather=request.weather,
-    )
+    try:
+        result = await service.suggest(
+            clothes=request.clothes,
+            weather=request.weather,
+        )
+    except OutfitSuggestionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="failed to generate outfit suggestion",
+        ) from exc
 
     return OutfitSuggestResponse(coordinate=result)
