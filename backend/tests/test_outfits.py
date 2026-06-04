@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -72,10 +73,12 @@ async def test_outfit_service_uses_prompt_template_independent_of_cwd(
         },
     )
 
-    assert result == "generated-coordinate"
+    assert result.comment == "generated-coordinate"
     assert "casual" in captured["prompt"]
     assert "tops - white shirt - color=white" in captured["prompt"]
     assert "current: temp=25.0C" in captured["prompt"]
+    assert result.weather_summary.startswith("current: temp=25.0C")
+    assert [item.role for item in result.items] == ["tops"]
 
 
 def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
@@ -161,6 +164,36 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
             },
         )()
 
+    async def fake_create_suggested_outfit(
+        db,
+        *,
+        user_id,
+        tpo,
+        region_code,
+        weather_summary,
+        weather_temp_max,
+        weather_temp_min,
+        comment,
+        items,
+    ):
+        assert user_id == resolved_user_id
+        assert tpo == "casual"
+        assert region_code == "13_01"
+        assert weather_temp_max == 27.1
+        assert weather_temp_min == 19.8
+        assert comment == "generated-coordinate"
+        assert [item.role for item in items] == ["tops"]
+        return type(
+            "Outfit",
+            (),
+            {
+                "id": uuid.UUID("00000000-0000-0000-0000-000000000777"),
+                "is_favorite": False,
+                "source": "llm",
+                "created_at": datetime(2026, 6, 4, tzinfo=UTC),
+            },
+        )()
+
     class FakeLLMClient:
         async def generate(self, prompt: str) -> str:
             assert "casual" in prompt
@@ -180,6 +213,11 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
     )
     monkeypatch.setattr(outfits_router.clothes_crud, "list_clothes", fake_list_clothes)
     monkeypatch.setattr(
+        outfits_router.outfits_crud,
+        "create_suggested_outfit",
+        fake_create_suggested_outfit,
+    )
+    monkeypatch.setattr(
         "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
     )
 
@@ -195,7 +233,69 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"coordinate": "generated-coordinate"}
+    assert response.json() == {
+        "outfits": [
+            {
+                "id": "00000000-0000-0000-0000-000000000777",
+                "user_id": str(resolved_user_id),
+                "tpo": "casual",
+                "region_code": "13_01",
+                "weather_summary": (
+                    "current: temp=25.4C, weather_code=1, "
+                    "precipitation_probability=10%\n"
+                    "2026-06-04: max=27.1C, min=19.8C, weather_code=1, "
+                    "precipitation_probability_max=10%"
+                ),
+                "weather_temp_max": 27.1,
+                "weather_temp_min": 19.8,
+                "comment": "generated-coordinate",
+                "is_favorite": False,
+                "source": "llm",
+                "items": [
+                    {
+                        "clothes_id": "00000000-0000-0000-0000-000000000010",
+                        "role": "tops",
+                        "display_order": 1,
+                        "clothing_item": {
+                            "id": "00000000-0000-0000-0000-000000000010",
+                            "user_id": str(resolved_user_id),
+                            "name": "white shirt",
+                            "category": "tops",
+                            "color": "white",
+                            "pattern": None,
+                            "size": "M",
+                            "season": ["spring", "summer"],
+                            "tpo_tags": ["casual"],
+                            "image_url": "https://example.com/shirt.jpg",
+                            "thumbnail_url": None,
+                            "memo": None,
+                            "is_favorite": False,
+                            "wear_count": 0,
+                            "last_worn_at": None,
+                            "created_at": "2026-06-04T00:00:00Z",
+                            "updated_at": "2026-06-04T00:00:00Z",
+                        },
+                    }
+                ],
+                "created_at": "2026-06-04T00:00:00Z",
+            }
+        ],
+        "weather_summary": (
+            "current: temp=25.4C, weather_code=1, precipitation_probability=10%\n"
+            "2026-06-04: max=27.1C, min=19.8C, weather_code=1, "
+            "precipitation_probability_max=10%"
+        ),
+        "region_used": {
+            "code": "13_01",
+            "prefecture_code": "13",
+            "prefecture_name": "東京都",
+            "name": "23区",
+            "city": "新宿区",
+            "latitude": 35.6895,
+            "longitude": 139.6917,
+        },
+        "cached": False,
+    }
 
 
 def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
@@ -243,6 +343,31 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
     async def fake_list_clothes(db, user_id, **kwargs):
         return type("ClothesListResponse", (), {"items": []})()
 
+    async def fake_create_suggested_outfit(
+        db,
+        *,
+        user_id,
+        tpo,
+        region_code,
+        weather_summary,
+        weather_temp_max,
+        weather_temp_min,
+        comment,
+        items,
+    ):
+        assert region_code == "13_01"
+        assert items == []
+        return type(
+            "Outfit",
+            (),
+            {
+                "id": uuid.UUID("00000000-0000-0000-0000-000000000888"),
+                "is_favorite": False,
+                "source": "llm",
+                "created_at": datetime(2026, 6, 4, tzinfo=UTC),
+            },
+        )()
+
     class FakeLLMClient:
         async def generate(self, prompt: str) -> str:
             assert "服の登録はありません。" in prompt
@@ -259,6 +384,11 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
     )
     monkeypatch.setattr(outfits_router.clothes_crud, "list_clothes", fake_list_clothes)
     monkeypatch.setattr(
+        outfits_router.outfits_crud,
+        "create_suggested_outfit",
+        fake_create_suggested_outfit,
+    )
+    monkeypatch.setattr(
         "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
     )
 
@@ -269,7 +399,9 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"coordinate": "generated-coordinate"}
+    assert response.json()["region_used"]["code"] == "13_01"
+    assert response.json()["outfits"][0]["items"] == []
+    assert response.json()["outfits"][0]["comment"] == "generated-coordinate"
 
 
 @pytest.mark.asyncio

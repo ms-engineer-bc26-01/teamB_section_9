@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 
 from openai import APIError
@@ -8,9 +9,7 @@ _PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "outfit_suggest
 try:
     _PROMPT_TEMPLATE: str = _PROMPT_PATH.read_text(encoding="utf-8")
 except OSError as exc:
-    raise RuntimeError(
-        f"outfit_suggest.md が見つかりません: {_PROMPT_PATH}"
-    ) from exc
+    raise RuntimeError(f"outfit_suggest.md が見つかりません: {_PROMPT_PATH}") from exc
 
 
 class OutfitSuggestionError(Exception):
@@ -27,7 +26,7 @@ class OutfitService:
         tpo: str,
         clothes: list[ClothingItem],
         weather: dict,
-    ) -> str:
+    ) -> "OutfitSuggestion":
         clothes_summary = self._format_clothes(clothes)
         weather_summary = self._format_weather(weather)
 
@@ -47,9 +46,58 @@ class OutfitService:
         )
 
         try:
-            return await self.llm.generate(prompt)
+            comment = await self.llm.generate(prompt)
         except APIError as exc:
             raise OutfitSuggestionError("failed to generate outfit suggestion") from exc
+
+        return OutfitSuggestion(
+            comment=comment.strip(),
+            weather_summary=weather_summary,
+            items=self._select_clothes(tpo=tpo, clothes=clothes),
+        )
+
+    @staticmethod
+    def _select_clothes(
+        *,
+        tpo: str,
+        clothes: list[ClothingItem],
+    ) -> list["SuggestedClothingSelection"]:
+        selected: list[SuggestedClothingSelection] = []
+        selected_ids: set = set()
+        display_order = 1
+
+        for category in ("outer", "tops", "bottoms", "shoes", "bag", "accessory"):
+            candidates = [
+                item
+                for item in clothes
+                if item.category == category and item.id not in selected_ids
+            ]
+            if not candidates:
+                continue
+
+            best_item = max(
+                candidates, key=lambda item: OutfitService._score_item(item, tpo)
+            )
+            selected.append(
+                SuggestedClothingSelection(
+                    clothing_item=best_item,
+                    role=category,
+                    display_order=display_order,
+                )
+            )
+            selected_ids.add(best_item.id)
+            display_order += 1
+
+        return selected
+
+    @staticmethod
+    def _score_item(item: ClothingItem, tpo: str) -> tuple[int, int, int, int]:
+        return (
+            1 if tpo in item.tpo_tags else 0,
+            1 if item.is_favorite else 0,
+            1 if "all" in item.season else 0,
+            item.wear_count,
+        )
 
     @staticmethod
     def _format_clothes(clothes: list[ClothingItem]) -> str:
@@ -103,3 +151,17 @@ class OutfitService:
             )
 
         return "\n".join(lines)
+
+
+@dataclass(frozen=True, slots=True)
+class SuggestedClothingSelection:
+    clothing_item: ClothingItem
+    role: str
+    display_order: int
+
+
+@dataclass(frozen=True, slots=True)
+class OutfitSuggestion:
+    comment: str
+    weather_summary: str
+    items: list[SuggestedClothingSelection]
