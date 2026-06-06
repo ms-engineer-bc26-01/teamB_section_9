@@ -11,13 +11,13 @@ from app.api.v1.schemas.outfits import (
     SuggestedOutfitItem,
 )
 from app.api.v1.schemas.regions import Region
-from app.constants.regions import get_region, get_region_coordinates
+from app.constants.regions import get_region
 from app.core.deps import get_db
 from app.dependencies.auth import CurrentUser, get_current_user
 from app.domain.clothes import crud as clothes_crud
 from app.domain.outfits import crud as outfits_crud
 from app.domain.outfits.service import OutfitService, OutfitSuggestionError
-from app.services.weather_client import fetch_weather_forecast
+from app.services.weather_client import WeatherForecastResponseError, fetch_weather_forecast
 
 router = APIRouter(prefix="/outfits", tags=["Outfits"])
 
@@ -41,14 +41,14 @@ async def suggest_outfit(
         request.region_code or current_user.default_region_code or DEFAULT_REGION_CODE
     )
 
-    coordinates = get_region_coordinates(region_code)
-    if coordinates is None:
+    region = get_region(region_code)
+    if region is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="invalid region_code",
         )
 
-    latitude, longitude = coordinates
+    latitude, longitude = region["lat"], region["lng"]
 
     try:
         weather = await fetch_weather_forecast(
@@ -61,13 +61,11 @@ async def suggest_outfit(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="failed to fetch weather forecast",
         ) from exc
-
-    region = get_region(region_code)
-    if region is None:
+    except WeatherForecastResponseError as exc:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="invalid region_code",
-        )
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="failed to fetch weather forecast",
+        ) from exc
 
     clothes = (
         await clothes_crud.list_clothes(

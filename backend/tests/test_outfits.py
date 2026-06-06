@@ -12,6 +12,7 @@ from app.api.v1.schemas.clothes import ClothingItem
 from app.constants.regions import get_region_coordinates
 from app.core.config import settings
 from app.domain.outfits.service import OutfitService, OutfitSuggestionError
+from app.services.weather_client import WeatherForecastResponseError
 
 
 @pytest.mark.asyncio
@@ -498,3 +499,28 @@ def test_suggest_outfit_returns_bad_gateway_on_llm_failure(
 
     assert response.status_code == 502
     assert response.json()["detail"] == "failed to generate outfit suggestion"
+
+
+def test_suggest_outfit_returns_bad_gateway_on_weather_parse_error(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    async def fake_fetch_weather_forecast(
+        *, latitude: float, longitude: float, days: int
+    ):
+        del latitude, longitude, days
+        raise WeatherForecastResponseError("invalid weather forecast response")
+
+    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", True)
+    monkeypatch.setattr(settings, "APP_ENV", "development")
+    monkeypatch.setattr(
+        outfits_router, "fetch_weather_forecast", fake_fetch_weather_forecast
+    )
+
+    response = client.post(
+        "/api/v1/outfits/suggest",
+        json={"tpo": "casual"},
+    )
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "failed to fetch weather forecast"
