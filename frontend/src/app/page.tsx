@@ -1,18 +1,26 @@
 import Link from "next/link";
-import { CalendarDays, CloudSun, Shirt, Sparkles } from "lucide-react";
+import { CalendarDays, ChevronRight, CloudSun, Shirt, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 
+const today = new Date();
+
+const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
+
+const todayLabel = `${today.getMonth() + 1}月${today.getDate()}日(${weekdayLabels[today.getDay()]})`;
+
 const mockHomeData = {
-  weather: "曇り時々晴れ / 22度 / 仕事",
+  weatherLabel: "くもり時々晴れ",
+  highTemperature: 18,
+  lowTemperature: 12,
+  precipitationProbability: 30,
+  sceneLabel: "お仕事",
   clothesCount: 18,
   weeklyOutfitCount: 5,
 };
@@ -39,13 +47,41 @@ export default function Home() {
         </p>
       </section>
 
+            <section aria-label="今日の天気" className="space-y-3">
+        <p className="text-center text-lg font-semibold text-[#2B2926]">
+          {todayLabel}
+        </p>
+
+        <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
+          <CardContent className="flex items-center gap-8 px-5 py-5">
+            <div className="flex size-24 shrink-0 items-center justify-center rounded-full bg-[#F6FAF8] text-[#2F6F63]">
+              <CloudSun aria-hidden="true" size={56} />
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-lg font-bold text-[#2B2926]">
+                {mockHomeData.weatherLabel}
+              </p>
+              <p className="text-2xl font-bold text-[#2B2926]">
+                {mockHomeData.highTemperature}℃ / {mockHomeData.lowTemperature}℃
+              </p>
+              <p className="text-sm font-semibold text-[#4B3A2F]">
+                降水確率 {mockHomeData.precipitationProbability}%
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
       <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles aria-hidden="true" size={18} className="text-[#C0784A]" />
             おすすめコーデ
           </CardTitle>
-          <CardDescription>{mockHomeData.weather}</CardDescription>
+          <Badge className="w-fit bg-[#F4EEE8] px-4 py-1 text-sm font-semibold text-[#6B4F3A]">
+            {mockHomeData.sceneLabel}
+          </Badge>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-2">
@@ -65,19 +101,24 @@ export default function Home() {
             <Badge variant="outline">羽織りあり</Badge>
           </div>
 
-          <Button
-            asChild
-            className="h-11 w-full bg-[#5A4333] text-white hover:bg-[#4A372A]"
+          <Link
+            href="/outfits/preview"
+            aria-label={`${mockHomeData.sceneLabel}のコーデのポイントを見る`}
+            className="flex items-center justify-center gap-3 py-3 text-sm font-bold text-[#2B2926]"
           >
-            <Link
-              href="/outfits/preview"
-              aria-label={`${mockHomeData.weather}におすすめのコーデ詳細を見る`}
-            >
-              このコーデを見る
-            </Link>
-          </Button>
+            コーデのポイントを見る
+            <ChevronRight aria-hidden="true" size={20} />
+          </Link>
         </CardContent>
       </Card>
+
+      <Link
+        href="/scenes"
+        aria-label="別のシーンで提案を見る"
+        className="flex h-14 items-center justify-center gap-3 rounded-lg border border-[#E8DED4] bg-white text-base font-bold text-[#2B2926] shadow-sm hover:bg-[#FFFCF8]"
+      >
+        別のシーンで提案を見る
+      </Link>
 
       <section aria-label="クローゼットサマリー" className="grid grid-cols-2 gap-3">
         <Card className="rounded-lg border border-[#E8DED4]">
@@ -110,15 +151,6 @@ export default function Home() {
           </CardContent>
         </Card>
       </section>
-
-      <div className="flex gap-2">
-        <Button asChild variant="outline" className="h-10 flex-1 border-[#D9C9BA] bg-white">
-          <Link href="/clothes/new">服を登録</Link>
-        </Button>
-        <Button asChild variant="outline" className="h-10 flex-1 border-[#D9C9BA] bg-white">
-          <Link href="/login">ログイン</Link>
-        </Button>
-      </div>
     </div>
   );
 }
