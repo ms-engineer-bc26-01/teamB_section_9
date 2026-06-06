@@ -27,10 +27,21 @@ export async function apiFetch<T>(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => null);
+    const errorBody = await response.json().catch(() => null);
+    const detail =
+      typeof errorBody?.detail === "string"
+        ? errorBody.detail
+        : Array.isArray(errorBody?.detail)
+          ? JSON.stringify(errorBody.detail)
+          : null;
 
-    throw new Error(error?.message ?? `API Error: ${response.status}`);
+    throw new Error(
+      errorBody?.message ?? detail ?? `API Error: ${response.status}`,
+    );
+  }
+
+  if (response.status === 204) {
+    return undefined as unknown as T;
   }
 
   return response.json();
-}

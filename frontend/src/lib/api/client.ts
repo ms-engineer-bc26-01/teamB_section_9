@@ -1,22 +1,23 @@
 import { apiFetch } from "./fetcher";
 
 export const apiClient = {
-  get: <T>(url: string) => apiFetch<T>(url),
+  get: <T>(path: string) => apiFetch<T>(path),
 
-  post: <T>(url: string, body?: unknown) =>
-    apiFetch<T>(url, {
+  post: <T>(path: string, body?: unknown) =>
+    apiFetch<T>(path, {
       method: "POST",
       body: JSON.stringify(body),
     }),
 
-  put: <T>(url: string, body?: unknown) =>
-    apiFetch<T>(url, {
+  put: <T>(path: string, body?: unknown) =>
+    apiFetch<T>(path, {
       method: "PUT",
       body: JSON.stringify(body),
     }),
 
-  delete: <T>(url: string) =>
-    apiFetch<T>(url, {
+  delete: <T>(path: string) =>
+    apiFetch<T>(path, {
       method: "DELETE",
+    }),
     }),
 };
