@@ -17,7 +17,10 @@ from app.dependencies.auth import CurrentUser, get_current_user
 from app.domain.clothes import crud as clothes_crud
 from app.domain.outfits import crud as outfits_crud
 from app.domain.outfits.service import OutfitService, OutfitSuggestionError
-from app.services.weather_client import WeatherForecastResponseError, fetch_weather_forecast
+from app.services.weather_client import (
+    WeatherForecastResponseError,
+    fetch_weather_forecast,
+)
 
 router = APIRouter(prefix="/outfits", tags=["Outfits"])
 
