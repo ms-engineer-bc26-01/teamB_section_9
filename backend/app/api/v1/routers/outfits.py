@@ -79,9 +79,8 @@ async def suggest_outfit(
         )
     ).items
 
-    service = OutfitService()
-
     try:
+        service = OutfitService()
         result = await service.suggest(
             tpo=request.tpo,
             clothes=clothes,

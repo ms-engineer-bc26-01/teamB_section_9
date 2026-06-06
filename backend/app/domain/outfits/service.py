@@ -19,7 +19,10 @@ class OutfitSuggestionError(Exception):
 
 class OutfitService:
     def __init__(self):
-        self.llm = get_llm_client()
+        try:
+            self.llm = get_llm_client()
+        except ValueError as exc:
+            raise OutfitSuggestionError("failed to generate outfit suggestion") from exc
 
     async def suggest(
         self,

@@ -501,6 +501,48 @@ def test_suggest_outfit_returns_bad_gateway_on_llm_failure(
     assert response.json()["detail"] == "failed to generate outfit suggestion"
 
 
+def test_suggest_outfit_returns_bad_gateway_on_service_initialization_failure(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    class FakeOutfitService:
+        def __init__(self) -> None:
+            raise OutfitSuggestionError("failed to generate outfit suggestion")
+
+    async def fake_fetch_weather_forecast(
+        *, latitude: float, longitude: float, days: int
+    ):
+        del latitude, longitude, days
+        return {
+            "current": {
+                "temperature_2m": 25.0,
+                "weather_code": 1,
+                "precipitation_probability": 10,
+            },
+            "daily": [],
+        }
+
+    async def fake_list_clothes(db, user_id, **kwargs):
+        del db, user_id, kwargs
+        return type("ClothesListResponse", (), {"items": []})()
+
+    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", True)
+    monkeypatch.setattr(settings, "APP_ENV", "development")
+    monkeypatch.setattr("app.api.v1.routers.outfits.OutfitService", FakeOutfitService)
+    monkeypatch.setattr(
+        outfits_router, "fetch_weather_forecast", fake_fetch_weather_forecast
+    )
+    monkeypatch.setattr(outfits_router.clothes_crud, "list_clothes", fake_list_clothes)
+
+    response = client.post(
+        "/api/v1/outfits/suggest",
+        json={"tpo": "casual"},
+    )
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "failed to generate outfit suggestion"
+
+
 def test_suggest_outfit_returns_bad_gateway_on_weather_parse_error(
     client: TestClient,
     monkeypatch,
