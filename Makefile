@@ -16,10 +16,10 @@ test:  ## テストを実行
 	cd frontend && npm run build
 
 seed-bypass-user:  ## BYPASSモード用のモックユーザーseedを投入
-	cd backend && uv run python scripts/seed_bypass_user.py
+	cd backend && PYTHONPATH=. uv run python scripts/seed_bypass_user.py
 
 seed-bypass-clothes:  ## BYPASSモード用の服seedを投入
-	cd backend && uv run python scripts/seed_bypass_clothes.py
+	cd backend && PYTHONPATH=. uv run python scripts/seed_bypass_clothes.py
 
 secret-scan:  ## シークレット漏洩チェック（要: gitleaks インストール）
 	gitleaks detect --source . --verbose

@@ -1,9 +1,5 @@
 import asyncio
-import sys
 import uuid
-from pathlib import Path
-
-sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.db.models.user import User
 from app.db.session import SessionLocal

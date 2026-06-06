@@ -1,14 +1,10 @@
 import asyncio
-import sys
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-
-sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.db.models.clothes import Clothes, ClothesTpo
 from app.db.session import SessionLocal
