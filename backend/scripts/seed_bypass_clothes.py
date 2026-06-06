@@ -11,12 +11,12 @@ from sqlalchemy.orm import selectinload
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.db.models.clothes import Clothes, ClothesTpo
-from app.db.models.user import User
 from app.db.session import SessionLocal
+from scripts.seed_bypass_user import (
+    BYPASS_USER_ID,
+    ensure_bypass_user,
+)
 
-BYPASS_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
-BYPASS_USER_EMAIL = "test@example.com"
-DEFAULT_REGION_CODE = "19_02"
 BASE_IMAGE_URL = "https://example.com/seed"
 
 
@@ -318,32 +318,6 @@ SEED_CLOTHES: list[SeedClothing] = [
         last_worn_at=datetime(2026, 2, 18, 7, 35, tzinfo=UTC),
     ),
 ]
-
-
-async def ensure_bypass_user() -> None:
-    async with SessionLocal() as db:
-        user = await db.get(User, BYPASS_USER_ID)
-        if user is None:
-            db.add(
-                User(
-                    id=BYPASS_USER_ID,
-                    email=BYPASS_USER_EMAIL,
-                    default_region_code=DEFAULT_REGION_CODE,
-                )
-            )
-            await db.commit()
-            return
-
-        changed = False
-        if user.email != BYPASS_USER_EMAIL:
-            user.email = BYPASS_USER_EMAIL
-            changed = True
-        if user.default_region_code is None:
-            user.default_region_code = DEFAULT_REGION_CODE
-            changed = True
-        if changed:
-            db.add(user)
-            await db.commit()
 
 
 async def reseed_clothes() -> None:

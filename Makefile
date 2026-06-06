@@ -1,6 +1,6 @@
 SHELL := bash
 
-.PHONY: check install-check lint test secret-scan seed-bypass-clothes
+.PHONY: check install-check lint test secret-scan seed-bypass-user seed-bypass-clothes
 
 check: install-check lint test  ## ローカルで全チェックを実行（PR 前に走らせる）
 
@@ -14,6 +14,9 @@ lint:  ## Linter を実行
 test:  ## テストを実行
 	cd backend && uv run pytest -v --tb=short
 	cd frontend && npm run build
+
+seed-bypass-user:  ## BYPASSモード用のモックユーザーseedを投入
+	cd backend && uv run python scripts/seed_bypass_user.py
 
 seed-bypass-clothes:  ## BYPASSモード用の服seedを投入
 	cd backend && uv run python scripts/seed_bypass_clothes.py
