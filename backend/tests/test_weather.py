@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.api.v1.routers import weather as weather_router
 from app.dependencies import auth
+from app.services.weather_client import WeatherForecastResponseError
 
 
 def _auth_headers(token: str = "supabase-test-token") -> dict[str, str]:
@@ -139,6 +140,29 @@ def test_get_weather_forecast_returns_400_for_unknown_region(
 
     assert response.status_code == 400
     assert response.json()["detail"] == "invalid region_code"
+
+
+def test_get_weather_forecast_returns_502_for_invalid_open_meteo_response(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    _mock_supabase_user(monkeypatch)
+
+    async def fake_fetch_weather_forecast(**kwargs):
+        raise WeatherForecastResponseError("invalid weather forecast response")
+
+    monkeypatch.setattr(
+        weather_router, "fetch_weather_forecast", fake_fetch_weather_forecast
+    )
+
+    response = client.get(
+        "/api/v1/weather/forecast",
+        params={"region_code": "13_01"},
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "failed to fetch weather forecast"
 
 
 def test_get_weather_forecast_rejects_days_over_maximum(

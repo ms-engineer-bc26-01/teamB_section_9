@@ -6,7 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.api.v1.schemas.weather import WeatherForecast
 from app.constants.regions import get_region_coordinates
 from app.dependencies.auth import CurrentUser, get_current_user
-from app.services.weather_client import fetch_weather_forecast
+from app.services.weather_client import (
+    WeatherForecastResponseError,
+    fetch_weather_forecast,
+)
 
 router = APIRouter(prefix="/weather", tags=["Weather"])
 
@@ -37,7 +40,7 @@ async def get_weather_forecast(
             longitude=longitude,
             days=days,
         )
-    except httpx.HTTPError as exc:
+    except (httpx.HTTPError, WeatherForecastResponseError) as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="failed to fetch weather forecast",
