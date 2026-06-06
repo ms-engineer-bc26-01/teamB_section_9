@@ -45,3 +45,4 @@ export async function apiFetch<T>(
   }
 
   return response.json();
+}

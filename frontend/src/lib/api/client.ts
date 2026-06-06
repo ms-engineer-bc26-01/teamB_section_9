@@ -19,5 +19,4 @@ export const apiClient = {
     apiFetch<T>(path, {
       method: "DELETE",
     }),
-    }),
 };
