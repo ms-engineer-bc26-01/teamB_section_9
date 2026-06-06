@@ -40,6 +40,12 @@ async def suggest_outfit(
     current_user: AuthenticatedUser,
     db: DbSession,
 ):
+    if request.clothing_ids or request.exclude_clothing_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="clothing_ids and exclude_clothing_ids are not supported",
+        )
+
     region_code = (
         request.region_code or current_user.default_region_code or DEFAULT_REGION_CODE
     )

@@ -228,8 +228,6 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
         json={
             "tpo": "casual",
             "date": "2026-06-04",
-            "clothing_ids": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"],
-            "exclude_clothing_ids": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"],
         },
     )
 
@@ -403,6 +401,33 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
     assert response.json()["region_used"]["code"] == "13_01"
     assert response.json()["outfits"][0]["items"] == []
     assert response.json()["outfits"][0]["comment"] == "generated-coordinate"
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"tpo": "casual", "clothing_ids": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"]},
+        {
+            "tpo": "casual",
+            "exclude_clothing_ids": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"],
+        },
+    ],
+)
+def test_suggest_outfit_rejects_unsupported_clothing_filters(
+    client: TestClient,
+    monkeypatch,
+    payload: dict[str, object],
+) -> None:
+    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", True)
+    monkeypatch.setattr(settings, "APP_ENV", "development")
+
+    response = client.post("/api/v1/outfits/suggest", json=payload)
+
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "clothing_ids and exclude_clothing_ids are not supported"
+    )
 
 
 @pytest.mark.asyncio
