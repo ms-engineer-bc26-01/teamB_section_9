@@ -5,6 +5,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     DATABASE_URL: str
     APP_ENV: str = Field(default="development", alias="APP_ENV")
+    BACKEND_CORS_ORIGINS: list[str] = Field(
+        default_factory=lambda: ["http://localhost:3000"]
+    )
     AUTH_BYPASS_ENABLED: bool = False
     SUPABASE_URL: str | None = None
     SUPABASE_ANON_KEY: str | None = None
