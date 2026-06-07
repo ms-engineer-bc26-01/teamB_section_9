@@ -1,5 +1,3 @@
-// frontend/src/app/outfits/loading/outfit-loading-content.tsx
-
 "use client";
 
 import { useEffect } from "react";
@@ -8,14 +6,24 @@ import { Sparkles } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 
+const allowedTpos = ["business", "casual", "home", "rain"] as const;
+
+function normalizeTpo(value: string | null) {
+    if (value && allowedTpos.includes(value as (typeof allowedTpos)[number])) {
+        return value;
+    }
+
+    return "business";
+}
+
 export function OutfitLoadingContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const tpo = searchParams.get("tpo") ?? "business";
+    const tpo = normalizeTpo(searchParams.get("tpo"));
 
     useEffect(() => {
         const timer = window.setTimeout(() => {
-            router.push(`/outfits/detail?tpo=${tpo}`);
+            router.push(`/outfits/detail?tpo=${encodeURIComponent(tpo)}`);
         }, 1600);
 
         return () => window.clearTimeout(timer);
