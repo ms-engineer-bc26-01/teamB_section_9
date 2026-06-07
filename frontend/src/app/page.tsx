@@ -9,11 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-const today = new Date();
-
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
-
-const todayLabel = `${today.getMonth() + 1}月${today.getDate()}日(${weekdayLabels[today.getDay()]})`;
 
 const mockHomeData = {
   weatherLabel: "くもり時々晴れ",
@@ -28,6 +24,10 @@ const mockHomeData = {
 const outfitItems = ["白シャツ", "ベージュのカーディガン", "濃紺デニム", "ローファー"];
 
 export default function Home() {
+  const today = new Date();
+  const todayLabel = `${today.getMonth() + 1}月${today.getDate()}日(${weekdayLabels[today.getDay()]})`;
+  const todayDateTime = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
   return (
     <div className="space-y-5">
       <section aria-labelledby="home-heading" className="space-y-3">
@@ -47,10 +47,16 @@ export default function Home() {
         </p>
       </section>
 
-            <section aria-label="今日の天気" className="space-y-3">
-        <p className="text-center text-lg font-semibold text-[#2B2926]">
+      <section aria-labelledby="weather-heading" className="space-y-3">
+        <h2 id="weather-heading" className="sr-only">
+          今日の天気
+        </h2>
+        <time
+          dateTime={todayDateTime}
+          className="block text-center text-lg font-semibold text-[#2B2926]"
+        >
           {todayLabel}
-        </p>
+        </time>
 
         <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
           <CardContent className="flex items-center gap-8 px-5 py-5">
