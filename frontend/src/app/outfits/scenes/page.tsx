@@ -1,7 +1,13 @@
 // frontend/src/app/outfits/scenes/page.tsx
 
 import Link from "next/link";
-import { BriefcaseBusiness, Home, Shirt, Umbrella } from "lucide-react";
+import {
+  BadgeCheck,
+  BriefcaseBusiness,
+  Shirt,
+  Sparkles,
+  Umbrella,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,30 +20,36 @@ import {
 } from "@/components/ui/card";
 
 const scenes = [
-    {
-        label: "オフィス",
-        description: "きちんと感を出したい出勤・客先訪問向け",
-        href: "/outfits/loading?tpo=business",
-        icon: BriefcaseBusiness,
-    },
-    {
-        label: "カジュアル",
-        description: "休日・買い物・保育園送迎に使いやすい服装",
-        href: "/outfits/loading?tpo=casual",
-        icon: Shirt,
-    },
-    {
-        label: "在宅",
-        description: "楽だけど急な外出にも対応できるコーデ",
-        href: "/outfits/loading?tpo=home",
-        icon: Home,
-    },
-    {
-        label: "雨の日",
-        description: "濡れにくさ・歩きやすさを重視",
-        href: "/outfits/loading?tpo=rain",
-        icon: Umbrella,
-    },
+  {
+    label: "ビジネス",
+    description: "出勤・客先訪問など、きちんと感を出したい日向け",
+    href: "/outfits/loading?tpo=business",
+    icon: BriefcaseBusiness,
+  },
+  {
+    label: "カジュアル",
+    description: "休日・買い物・送迎など、動きやすさを重視した日向け",
+    href: "/outfits/loading?tpo=casual",
+    icon: Shirt,
+  },
+  {
+    label: "フォーマル",
+    description: "会食・きれいめな外出など、上品に整えたい日向け",
+    href: "/outfits/loading?tpo=formal",
+    icon: Sparkles,
+  },
+  {
+    label: "セレモニー",
+    description: "式典・行事など、特別感と清潔感が必要な日向け",
+    href: "/outfits/loading?tpo=ceremony",
+    icon: BadgeCheck,
+  },
+  {
+    label: "レジャー",
+    description: "公園・旅行・屋外のお出かけなど、快適さを重視した日向け",
+    href: "/outfits/loading?tpo=leisure",
+    icon: Umbrella,
+  },
 ];
 
 export default function OutfitScenesPage() {
