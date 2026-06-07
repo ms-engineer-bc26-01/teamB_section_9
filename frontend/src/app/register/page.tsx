@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation"; メール確認ON/OFF時の挙動をまだ確定していないため、ルーターは一旦保留とする
 import { FormEvent, useState } from "react";
 
 import { supabase } from "@/lib/auth";
@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 
 export default function RegisterPage() {
-    const router = useRouter();
+    // const router = useRouter();
 
     const [displayName, setDisplayName] = useState("");
     const [email, setEmail] = useState("");
@@ -28,6 +28,7 @@ export default function RegisterPage() {
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+
         setErrorMessage("");
         setSuccessMessage("");
 
@@ -48,32 +49,38 @@ export default function RegisterPage() {
 
         setIsSubmitting(true);
 
-        const { error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: {
-                    display_name: displayName,
+        try {
+            const { error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        display_name: displayName,
+                    },
                 },
-            },
-        });
+            });
 
-        setIsSubmitting(false);
+            if (error) {
+                setErrorMessage(
+                    "アカウント登録に失敗しました。入力内容を確認してください。",
+                );
+                return;
+            }
 
-        if (error) {
-            setErrorMessage("アカウント登録に失敗しました。入力内容を確認してください。");
-            return;
+            setSuccessMessage(
+                "確認メールを送信しました。メール内のリンクを確認してください。",
+            );
+        } catch {
+            setErrorMessage(
+                "通信エラーが発生しました。時間をおいて再度お試しください。",
+            );
+        } finally {
+            setIsSubmitting(false);
         }
-
-        setSuccessMessage("登録が完了しました。ログイン画面へ移動します。");
-
-        setTimeout(() => {
-            router.push("/login");
-        }, 1200);
     };
 
     return (
-        <main className="min-h-screen bg-[#FAF8F5] px-5 py-10 text-[#222222]">
+        <div className="min-h-screen bg-[#FAF8F5] px-5 py-10 text-[#222222]">
             <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-[390px] items-center">
                 <Card className="w-full border-[#E8DED4] bg-white shadow-sm">
                     <CardHeader className="space-y-2">
@@ -176,6 +183,6 @@ export default function RegisterPage() {
                     </CardContent>
                 </Card>
             </div>
-        </main>
+        </div>
     );
 }
