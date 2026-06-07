@@ -7,17 +7,20 @@ import type { ClothingItem } from "@/features/clothes/types";
 
 export default async function ClothesPage() {
     let items: ClothingItem[] = [];
-    let hasError = false;
+    let errorMessage = "";
 
     try {
         const data = await fetchClothes();
         items = data.items;
-    } catch {
-        hasError = true;
+    } catch (error) {
+        errorMessage =
+            error instanceof Error
+                ? error.message
+                : "服一覧の取得に失敗しました";
     }
 
     return (
-        <main className="min-h-screen bg-[#FAF8F5] px-4 py-6">
+        <div className="space-y-6">
             <div className="mx-auto max-w-md space-y-6">
                 <header className="space-y-3">
                     <div>
@@ -33,12 +36,10 @@ export default async function ClothesPage() {
                     </Button>
                 </header>
 
-                {hasError ? (
+                {errorMessage ? (
                     <div className="rounded-2xl bg-white p-6">
                         <h2 className="font-bold">服一覧を取得できませんでした</h2>
-                        <p className="mt-2 text-sm text-stone-500">
-                            APIサーバーが起動しているか確認してください。
-                        </p>
+                        <p className="mt-2 text-sm text-stone-500">{errorMessage}</p>
                     </div>
                 ) : (
                     <section aria-label="登録済みの服一覧">
@@ -46,6 +47,6 @@ export default async function ClothesPage() {
                     </section>
                 )}
             </div>
-        </main>
+        </div>
     );
 }
