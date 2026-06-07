@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { apiFetch } from "@/lib/api/fetcher";
+import { apiClient } from "@/lib/api/client";
 
 type HealthResponse = {
   status: string;
@@ -23,63 +23,78 @@ export default function ApiCallSamplePage() {
   const [healthError, setHealthError] = useState<string | null>(null);
   const [isLoadingHealth, setIsLoadingHealth] = useState(true);
 
-  const loadHealth = async () => {
+  const fetchHealth = useCallback(
+    (signal?: AbortSignal) =>
+      apiClient.get<HealthResponse>("/health", {
+        signal,
+      }),
+    [],
+  );
+
+  const loadHealth = useCallback(async () => {
     setIsLoadingHealth(true);
     setHealthError(null);
 
     try {
-      const response = await apiFetch<HealthResponse>("/health");
+      const response = await fetchHealth();
+
       console.log("GET /api/v1/health success", response);
       setHealthData(response);
+      setHealthError(null);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unknown error occurred";
+
       console.error("GET /api/v1/health failed", error);
       setHealthData(null);
       setHealthError(message);
     } finally {
       setIsLoadingHealth(false);
     }
-  };
+  }, [fetchHealth]);
 
   useEffect(() => {
-    let isActive = true;
+    const controller = new AbortController();
 
-    const fetchInitialHealth = async () => {
+    const loadInitialHealth = async () => {
       try {
-        const response = await apiFetch<HealthResponse>("/health");
-        console.log("GET /api/v1/health success", response);
+        const response = await fetchHealth(controller.signal);
 
-        if (!isActive) {
+        if (controller.signal.aborted) {
           return;
         }
 
+        console.log("GET /api/v1/health success", response);
         setHealthData(response);
         setHealthError(null);
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown error occurred";
-        console.error("GET /api/v1/health failed", error);
-
-        if (!isActive) {
+        if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
 
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        const message =
+          error instanceof Error ? error.message : "Unknown error occurred";
+
+        console.error("GET /api/v1/health failed", error);
         setHealthData(null);
         setHealthError(message);
       } finally {
-        if (isActive) {
+        if (!controller.signal.aborted) {
           setIsLoadingHealth(false);
         }
       }
     };
 
-    void fetchInitialHealth();
+    void loadInitialHealth();
 
     return () => {
-      isActive = false;
+      controller.abort();
     };
-  }, []);
+  }, [fetchHealth]);
 
   return (
     <main className="min-h-screen bg-[#FAF8F5] px-4 py-6 text-[#2B2926]">

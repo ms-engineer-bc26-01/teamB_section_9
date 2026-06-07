@@ -1,12 +1,13 @@
+// frontend/src/lib/api/fetcher.ts
 import { env } from "@/lib/env";
 
-type RequestOptions = RequestInit & {
+export type ApiRequestOptions = RequestInit & {
   token?: string;
 };
 
 export async function apiFetch<T>(
   path: string,
-  options: RequestOptions = {},
+  options: ApiRequestOptions = {},
 ): Promise<T> {
   const { token, headers, ...rest } = options;
   const normalizedHeaders = new Headers(headers);
@@ -44,5 +45,11 @@ export async function apiFetch<T>(
     return undefined as unknown as T;
   }
 
-  return response.json();
+  const contentType = response.headers.get("Content-Type");
+
+  if (!contentType?.includes("application/json")) {
+    return undefined as T;
+  }
+
+  return response.json() as Promise<T>;
 }
