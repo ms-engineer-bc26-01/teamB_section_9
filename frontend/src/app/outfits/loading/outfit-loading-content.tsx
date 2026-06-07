@@ -30,7 +30,7 @@ export function OutfitLoadingContent() {
     }, [router, tpo]);
 
     return (
-        <main className="flex min-h-screen items-center justify-center bg-[#FAF8F5] px-5 text-[#2F2925]">
+        <div className="flex min-h-screen items-center justify-center bg-[#FAF8F5] px-5 text-[#2F2925]">
             <Card className="w-full max-w-[390px] border-[#E7DDD3] bg-white/90 shadow-sm">
                 <CardContent className="flex flex-col items-center gap-5 px-6 py-12 text-center">
                     <div className="rounded-full bg-[#F0E8E0] p-5 text-[#6B4F3A]">
@@ -49,6 +49,6 @@ export function OutfitLoadingContent() {
                     </div>
                 </CardContent>
             </Card>
-        </main>
+        </div>
     );
 }

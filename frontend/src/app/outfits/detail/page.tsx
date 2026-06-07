@@ -96,7 +96,7 @@ export default async function OutfitDetailPage({ searchParams }: Props) {
     const currentOutfit = outfitData[currentTpo];
 
     return (
-        <main className="min-h-screen bg-[#FAF8F5] px-5 py-6 text-[#2F2925]">
+        <div className="min-h-screen bg-[#FAF8F5] px-5 py-6 text-[#2F2925]">
             <div className="mx-auto flex w-full max-w-[390px] flex-col gap-5">
                 <section className="space-y-2">
                     <Badge className="bg-[#E8DDD3] text-[#6B4F3A] hover:bg-[#E8DDD3]">
@@ -185,6 +185,6 @@ export default async function OutfitDetailPage({ searchParams }: Props) {
                     <Link href="/">ホームへ戻る</Link>
                 </Button>
             </div>
-        </main>
+        </div>
     );
 }
