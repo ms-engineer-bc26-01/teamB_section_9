@@ -15,6 +15,7 @@ from app.domain.users import crud as user_crud
 class CurrentUser:
     id: uuid.UUID
     email: str
+    default_region_code: str | None = None
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
@@ -24,6 +25,7 @@ def _mock_current_user() -> CurrentUser:
     return CurrentUser(
         id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
         email="test@example.com",
+        default_region_code="13_01",
     )
 
 
@@ -67,4 +69,8 @@ async def get_current_user(
         user = await user_crud.get_or_create_user(db, user_id=user_id, email=email)
 
     email = user.email
-    return CurrentUser(id=user_id, email=email)
+    return CurrentUser(
+        id=user_id,
+        email=email,
+        default_region_code=getattr(user, "default_region_code", None),
+    )

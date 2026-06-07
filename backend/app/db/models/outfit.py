@@ -23,7 +23,7 @@ class Outfit(Base):
     )
     tpo: Mapped[str] = mapped_column(String(20), nullable=False)
     region_code: Mapped[str] = mapped_column(String(5), nullable=False)
-    weather_summary: Mapped[str] = mapped_column(String(255), nullable=False)
+    weather_summary: Mapped[str] = mapped_column(Text, nullable=False)
     weather_temp_max: Mapped[float | None] = mapped_column(Float, nullable=True)
     weather_temp_min: Mapped[float | None] = mapped_column(Float, nullable=True)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)

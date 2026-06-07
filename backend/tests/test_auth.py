@@ -46,6 +46,8 @@ def test_get_me_returns_current_user_profile(
     client: TestClient,
     monkeypatch,
 ) -> None:
+    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", False)
+    monkeypatch.setattr(settings, "APP_ENV", "development")
     expected_user_id = _mock_supabase_user(monkeypatch)
     captured: dict[str, object] = {}
 
@@ -83,6 +85,8 @@ def test_update_default_region_updates_profile(
     client: TestClient,
     monkeypatch,
 ) -> None:
+    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", False)
+    monkeypatch.setattr(settings, "APP_ENV", "development")
     expected_user_id = _mock_supabase_user(monkeypatch)
 
     async def fake_update_default_region(db, user_id, region_code):
@@ -110,6 +114,8 @@ def test_update_default_region_returns_400_for_unknown_region(
     client: TestClient,
     monkeypatch,
 ) -> None:
+    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", False)
+    monkeypatch.setattr(settings, "APP_ENV", "development")
     _mock_supabase_user(monkeypatch)
 
     async def fail_if_called(db, user_id, region_code):
@@ -125,3 +131,14 @@ def test_update_default_region_returns_400_for_unknown_region(
 
     assert response.status_code == 400
     assert response.json()["detail"] == "invalid region_code"
+
+
+async def test_get_current_user_returns_13_01_in_bypass_mode(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", True)
+    monkeypatch.setattr(settings, "APP_ENV", "development")
+
+    current_user = await auth.get_current_user(token=None)
+
+    assert current_user.id == uuid.UUID("00000000-0000-0000-0000-000000000001")
+    assert current_user.email == "test@example.com"
+    assert current_user.default_region_code == "13_01"
