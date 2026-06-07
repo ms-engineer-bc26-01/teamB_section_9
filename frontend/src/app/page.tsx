@@ -119,7 +119,7 @@ export default function Home() {
       </Card>
 
       <Link
-        href="/scenes"
+        href="/outfits/scenes"
         aria-label="別のシーンで提案を見る"
         className="flex h-14 items-center justify-center gap-3 rounded-lg border border-[#E8DED4] bg-white text-base font-bold text-[#2B2926] shadow-sm hover:bg-[#FFFCF8]"
       >
