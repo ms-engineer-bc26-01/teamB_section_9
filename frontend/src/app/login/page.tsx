@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LogIn } from "lucide-react";
 
 import { supabase } from "@/lib/auth";
@@ -12,6 +12,16 @@ import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const redirectParam = searchParams.get("redirect");
+  const redirectTo =
+    redirectParam &&
+    redirectParam.startsWith("/") &&
+    !redirectParam.startsWith("//") &&
+    !redirectParam.startsWith("/login")
+      ? redirectParam
+      : "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +49,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.replace("/");
+      router.replace(redirectTo);
     } catch {
       setErrorMessage(
         "通信エラーが発生しました。時間をおいて再度お試しください。",
