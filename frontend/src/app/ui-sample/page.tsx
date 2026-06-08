@@ -175,7 +175,6 @@ export default function UiSamplePage() {
           </h2>
 
           <OutfitSummaryCard
-            id="sample"
             tpo="business"
             weatherSummary="晴れ 22℃"
             comment="朝晩の寒暖差に対応できる軽めの羽織りを取り入れたコーデです。"

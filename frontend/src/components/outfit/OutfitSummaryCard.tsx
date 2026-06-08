@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 
 type OutfitSummaryCardProps = {
-    id: string;
+    // id: string;
     tpo: string;
     comment?: string | null;
     weatherSummary?: string | null;
@@ -20,7 +20,7 @@ type OutfitSummaryCardProps = {
 };
 
 export function OutfitSummaryCard({
-    id,
+    // id,
     tpo,
     comment,
     weatherSummary,
@@ -54,7 +54,9 @@ export function OutfitSummaryCard({
 
             <CardFooter>
                 <Button asChild className="w-full">
-                    <Link href={`/outfits/${id}`}>このコーデを見る</Link>
+                    <Link href="/outfits/detail">
+                        このコーデを見る
+                    </Link>
                 </Button>
             </CardFooter>
         </Card>
