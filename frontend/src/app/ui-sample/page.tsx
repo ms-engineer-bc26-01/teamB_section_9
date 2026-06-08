@@ -33,6 +33,9 @@ import {
 } from "@/components/ui/drawer";
 import { Home, Shirt, User } from "lucide-react";
 
+import { ClothingCard } from "@/components/clothes/ClothingCard";
+import { OutfitSummaryCard } from "@/components/outfit/OutfitSummaryCard";
+
 export default function UiSamplePage() {
   return (
     <main className="min-h-screen bg-[#FAF8F5] px-4 py-6 text-[#2B2926]">
@@ -151,6 +154,33 @@ export default function UiSamplePage() {
             </nav>
           </CardContent>
         </Card>
+
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">
+            ClothingCard
+          </h2>
+
+          <ClothingCard
+            name="白シャツ"
+            category="tops"
+            color="white"
+            season={["spring", "summer"]}
+            imageUrl={null}
+            isFavorite
+          />
+        </section>
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">
+            OutfitSummaryCard
+          </h2>
+
+          <OutfitSummaryCard
+            tpo="business"
+            weatherSummary="晴れ 22℃"
+            comment="朝晩の寒暖差に対応できる軽めの羽織りを取り入れたコーデです。"
+            isFavorite
+          />
+        </section>
       </div>
     </main>
   );
