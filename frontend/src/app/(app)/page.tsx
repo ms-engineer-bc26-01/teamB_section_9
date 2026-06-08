@@ -29,7 +29,7 @@ const outfitItems = [
   "ローファー",
 ];
 
-export default function Home() {
+export function HomeDashboard() {
   const today = new Date();
   const todayLabel = `${today.getMonth() + 1}月${today.getDate()}日(${weekdayLabels[today.getDay()]})`;
   const todayDateTime = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -78,8 +78,7 @@ export default function Home() {
                 {mockHomeData.weatherLabel}
               </p>
               <p className="text-2xl font-bold text-[#2B2926]">
-                {mockHomeData.highTemperature}℃ /{" "}
-                {mockHomeData.lowTemperature}℃
+                {mockHomeData.highTemperature}℃ / {mockHomeData.lowTemperature}℃
               </p>
               <p className="text-sm font-semibold text-[#4B3A2F]">
                 降水確率 {mockHomeData.precipitationProbability}%
@@ -92,11 +91,7 @@ export default function Home() {
       <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Sparkles
-              aria-hidden="true"
-              size={18}
-              className="text-[#C0784A]"
-            />
+            <Sparkles aria-hidden="true" size={18} className="text-[#C0784A]" />
             おすすめコーデ
           </CardTitle>
           <Badge className="w-fit bg-[#F4EEE8] px-4 py-1 text-sm font-semibold text-[#6B4F3A]">
@@ -147,11 +142,7 @@ export default function Home() {
         <Card className="rounded-lg border border-[#E8DED4]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
-              <Shirt
-                aria-hidden="true"
-                size={16}
-                className="text-[#6B4F3A]"
-              />
+              <Shirt aria-hidden="true" size={16} className="text-[#6B4F3A]" />
               登録済み
             </CardTitle>
           </CardHeader>

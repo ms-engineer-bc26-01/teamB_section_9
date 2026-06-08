@@ -182,7 +182,7 @@ export default async function OutfitDetailPage({ searchParams }: Props) {
         </div>
 
         <Button asChild variant="ghost" className="text-[#6B4F3A]">
-          <Link href="/home">ホームへ戻る</Link>
+          <Link href="/">ホームへ戻る</Link>
         </Button>
       </div>
     </div>
