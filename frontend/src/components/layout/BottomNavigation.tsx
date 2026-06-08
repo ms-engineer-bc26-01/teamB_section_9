@@ -3,7 +3,7 @@ import { Heart, Home, PencilLine, User } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "ホーム", icon: Home, active: true },
-  { href: "/clothes/new", label: "登録", icon: PencilLine, active: false },
+  { href: "/clothes/register", label: "登録", icon: PencilLine, active: false },
   { href: "/favorites", label: "お気に入り", icon: Heart, active: false },
   { href: "/mypage", label: "マイページ", icon: User, active: false },
 ];
