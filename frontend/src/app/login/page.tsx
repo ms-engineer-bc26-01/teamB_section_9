@@ -30,7 +30,7 @@ export default function LoginPage() {
       });
 
       if (error) {
-        setErrorMessage("メールアドレスまたはパスワードが正しくありません。");
+        setErrorMessage("ログインに失敗しました。入力内容を確認してください。");
         return;
       }
 
@@ -106,7 +106,11 @@ export default function LoginPage() {
               </div>
 
               {errorMessage && (
-                <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p
+                  role="alert"
+                  aria-live="polite"
+                  className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700"
+                >
                   {errorMessage}
                 </p>
               )}
