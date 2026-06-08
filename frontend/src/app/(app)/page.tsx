@@ -29,7 +29,7 @@ const outfitItems = [
   "ローファー",
 ];
 
-export function HomeDashboard() {
+export default function HomeDashboard() {
   const today = new Date();
   const todayLabel = `${today.getMonth() + 1}月${today.getDate()}日(${weekdayLabels[today.getDay()]})`;
   const todayDateTime = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;

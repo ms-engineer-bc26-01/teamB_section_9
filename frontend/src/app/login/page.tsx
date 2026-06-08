@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
 
 import { supabase } from "@/lib/auth";
@@ -10,18 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-export default function LoginPage() {
+export default function LoginPageClient({
+  redirectTo,
+}: {
+  redirectTo: string;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const redirectParam = searchParams.get("redirect");
-  const redirectTo =
-    redirectParam &&
-    redirectParam.startsWith("/") &&
-    !redirectParam.startsWith("//") &&
-    !redirectParam.startsWith("/login")
-      ? redirectParam
-      : "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
