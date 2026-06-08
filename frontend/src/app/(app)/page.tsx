@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { CalendarDays, ChevronRight, CloudSun, Shirt, Sparkles } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronRight,
+  CloudSun,
+  Shirt,
+  Sparkles,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -21,9 +22,14 @@ const mockHomeData = {
   weeklyOutfitCount: 5,
 };
 
-const outfitItems = ["白シャツ", "ベージュのカーディガン", "濃紺デニム", "ローファー"];
+const outfitItems = [
+  "白シャツ",
+  "ベージュのカーディガン",
+  "濃紺デニム",
+  "ローファー",
+];
 
-export default function Home() {
+export default function HomeDashboard() {
   const today = new Date();
   const todayLabel = `${today.getMonth() + 1}月${today.getDate()}日(${weekdayLabels[today.getDay()]})`;
   const todayDateTime = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -34,7 +40,10 @@ export default function Home() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-[#8C715C]">Climo</p>
-            <h1 id="home-heading" className="mt-1 text-2xl font-bold leading-tight text-[#2B2926]">
+            <h1
+              id="home-heading"
+              className="mt-1 text-2xl font-bold leading-tight text-[#2B2926]"
+            >
               今日の天気に合う服を選びましょう
             </h1>
           </div>
@@ -126,7 +135,10 @@ export default function Home() {
         別のシーンで提案を見る
       </Link>
 
-      <section aria-label="クローゼットサマリー" className="grid grid-cols-2 gap-3">
+      <section
+        aria-label="クローゼットサマリー"
+        className="grid grid-cols-2 gap-3"
+      >
         <Card className="rounded-lg border border-[#E8DED4]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
@@ -145,7 +157,11 @@ export default function Home() {
         <Card className="rounded-lg border border-[#E8DED4]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
-              <CalendarDays aria-hidden="true" size={16} className="text-[#6B4F3A]" />
+              <CalendarDays
+                aria-hidden="true"
+                size={16}
+                className="text-[#6B4F3A]"
+              />
               今週
             </CardTitle>
           </CardHeader>
