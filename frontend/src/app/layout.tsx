@@ -5,8 +5,9 @@ import { cn } from "@/lib/utils";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { BottomNavigation } from "@/components/layout/BottomNavigation";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 
-const figtree = Figtree({ subsets: ['latin'], variable: '--font-sans' });
+const figtree = Figtree({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,7 +32,14 @@ export default function RootLayout({
   return (
     <html
       lang="ja"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", figtree.variable)}
+      className={cn(
+        "h-full",
+        "antialiased",
+        geistSans.variable,
+        geistMono.variable,
+        "font-sans",
+        figtree.variable,
+      )}
     >
       <body
         className={cn(
@@ -39,18 +47,19 @@ export default function RootLayout({
           "bg-[#FAF8F5]",
           "text-[#2B2926]",
           "flex",
-          "flex-col"
-        )
-        }
+          "flex-col",
+        )}
       >
-        <Header />
+        <AuthProvider>
+          <Header />
 
-        <main className="mx-auto w-full max-w-[390px] flex-1 px-4 pt-4 pb-20 md:pb-6">
-          {children}
-        </main>
+          <main className="mx-auto w-full max-w-[390px] flex-1 px-4 pt-4 pb-20 md:pb-6">
+            {children}
+          </main>
 
-        <Footer />
-        <BottomNavigation />
+          <Footer />
+          <BottomNavigation />
+        </AuthProvider>
       </body>
     </html>
   );
