@@ -59,7 +59,7 @@ export function ClothesPageClient() {
           </div>
 
           <Button asChild className="w-full">
-            <Link href="/clothes/new">服を登録する</Link>
+            <Link href="/clothes/register">服を登録する</Link>
           </Button>
         </header>
 

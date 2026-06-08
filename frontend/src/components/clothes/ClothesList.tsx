@@ -19,7 +19,7 @@ export function ClothesList({ items }: ClothesListProps) {
           まずは1着登録して、クローゼットを作りましょう。
         </p>
         <Button asChild className="mt-5">
-          <Link href="/clothes/new">服を登録する</Link>
+          <Link href="/clothes/register">服を登録する</Link>
         </Button>
       </section>
     );
