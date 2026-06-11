@@ -592,6 +592,7 @@ def test_suggest_outfit_returns_bad_gateway_on_weather_parse_error(
     assert response.status_code == 502
     assert response.json()["detail"] == "failed to fetch weather forecast"
 
+
 def test_list_outfits_returns_items_and_total(
     client: TestClient,
     monkeypatch,
