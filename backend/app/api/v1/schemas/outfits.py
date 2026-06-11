@@ -42,3 +42,8 @@ class OutfitSuggestResponse(BaseModel):
     weather_summary: str
     region_used: Region
     cached: bool
+
+
+class OutfitsListResponse(BaseModel):
+    items: list[SuggestedOutfit]
+    total: int
