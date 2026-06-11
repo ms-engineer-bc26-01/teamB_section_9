@@ -1,10 +1,11 @@
 from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.schemas.outfits import (
+    OutfitsListResponse,
     OutfitSuggestRequest,
     OutfitSuggestResponse,
     SuggestedOutfit,
@@ -29,6 +30,23 @@ AuthenticatedUser = Annotated[CurrentUser, Depends(get_current_user)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 DEFAULT_REGION_CODE = "13_01"
 CLOTHES_FETCH_LIMIT = 1000
+
+
+@router.get("", response_model=OutfitsListResponse)
+async def list_outfits(
+    current_user: AuthenticatedUser,
+    db: DbSession,
+    is_favorite: bool | None = None,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+) -> OutfitsListResponse:
+    return await outfits_crud.list_outfits(
+        db,
+        current_user.id,
+        is_favorite=is_favorite,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.post(

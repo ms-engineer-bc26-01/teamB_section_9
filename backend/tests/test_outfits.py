@@ -591,3 +591,63 @@ def test_suggest_outfit_returns_bad_gateway_on_weather_parse_error(
 
     assert response.status_code == 502
     assert response.json()["detail"] == "failed to fetch weather forecast"
+
+
+def test_list_outfits_returns_items_and_total(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", True)
+    monkeypatch.setattr(settings, "APP_ENV", "development")
+
+    async def fake_list_outfits(db, user_id, **kwargs):
+        assert user_id == uuid.UUID("00000000-0000-0000-0000-000000000001")
+        assert kwargs == {"is_favorite": True, "limit": 1, "offset": 0}
+        return type(
+            "OutfitsListResponse",
+            (),
+            {
+                "items": [
+                    {
+                        "id": uuid.UUID("00000000-0000-0000-0000-000000000777"),
+                        "user_id": user_id,
+                        "tpo": "casual",
+                        "region_code": "13_01",
+                        "weather_summary": "晴れ",
+                        "weather_temp_max": 27.1,
+                        "weather_temp_min": 19.8,
+                        "comment": "generated-coordinate",
+                        "is_favorite": True,
+                        "source": "llm",
+                        "items": [],
+                        "created_at": datetime(2026, 6, 4, tzinfo=UTC),
+                    }
+                ],
+                "total": 3,
+            },
+        )()
+
+    monkeypatch.setattr(outfits_router.outfits_crud, "list_outfits", fake_list_outfits)
+
+    response = client.get("/api/v1/outfits", params={"limit": 1, "is_favorite": True})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "items": [
+            {
+                "id": "00000000-0000-0000-0000-000000000777",
+                "user_id": "00000000-0000-0000-0000-000000000001",
+                "tpo": "casual",
+                "region_code": "13_01",
+                "weather_summary": "晴れ",
+                "weather_temp_max": 27.1,
+                "weather_temp_min": 19.8,
+                "comment": "generated-coordinate",
+                "is_favorite": True,
+                "source": "llm",
+                "items": [],
+                "created_at": "2026-06-04T00:00:00Z",
+            }
+        ],
+        "total": 3,
+    }
