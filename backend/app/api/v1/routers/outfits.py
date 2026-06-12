@@ -30,8 +30,6 @@ AuthenticatedUser = Annotated[CurrentUser, Depends(get_current_user)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 DEFAULT_REGION_CODE = "13_01"
 CLOTHES_FETCH_LIMIT = 1000
-SECONDARY_REGION_CODE = "13_02"
-CLOTHES_FETCH_LIMIT = 1000
 
 
 @router.get("", response_model=OutfitsListResponse)

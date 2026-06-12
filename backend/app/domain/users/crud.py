@@ -59,9 +59,9 @@ async def update_user_profile(
     db: AsyncSession,
     user_id: uuid.UUID,
     *,
-    display_name: str | None | Any = _UNSET,
-    default_region_code: str | None | Any = _UNSET,
-    secondary_region_code: str | None | Any = _UNSET,
+    display_name: str | None | object = _UNSET,
+    default_region_code: str | None | object = _UNSET,
+    secondary_region_code: str | None | object = _UNSET,
 ) -> User:
     user = await get_user_or_404(db, user_id)
 

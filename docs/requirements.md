@@ -343,7 +343,8 @@ REGIONS: dict[str, dict] = {
 | POST     | `/auth/register`          | ※不要 | ユーザー登録 → 201 + AuthResponse                                        |
 | POST     | `/auth/login`             | ※不要 | ログイン → 200 + AuthResponse                                            |
 | GET      | `/auth/me`                | 必須  | 自分のプロフィール取得（プラン状態・デフォルト地域含む）                 |
-| PUT      | `/auth/me/default-region` | 必須  | デフォルト地域の設定・更新。未設定のまま `/outfits/suggest` を呼ぶと 400 |
+| PUT      | `/auth/me`                | 必須  | 自分のプロフィール情報を置き換え（display_name / default_region_code / secondary_region_code） |
+| PATCH    | `/auth/me`                | 必須  | 自分のプロフィール情報を部分更新                                       |
 
 ### 地域マスタ
 
