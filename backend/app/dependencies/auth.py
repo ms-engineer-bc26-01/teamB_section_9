@@ -75,4 +75,5 @@ async def get_current_user(
         id=user_id,
         email=email,
         default_region_code=getattr(user, "default_region_code", None),
+        secondary_region_code=getattr(user, "secondary_region_code", None),
     )
