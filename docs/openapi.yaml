@@ -157,9 +157,9 @@ components:
           type: string
           example: "13_02"
           description: |
-            ユーザーのセカンダリ地域コード（{都道府県コード}_{連番} 形式）。
-            オンボーディング時に必須設定。コーデ提案や天気取得で region_code が
-            省略された場合のフォールバックとして使用される。
+            ユーザーの副地域コード（{都道府県コード}_{連番} 形式）。
+            勤務先・旅行先など「第2の地点」として任意で保存する。
+            利用する場合はリクエストの region_code で明示する。
           nullable: true
         subscription_status:
           type: string
