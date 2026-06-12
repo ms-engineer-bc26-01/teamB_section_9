@@ -16,6 +16,7 @@ class CurrentUser:
     id: uuid.UUID
     email: str
     default_region_code: str | None = None
+    secondary_region_code: str | None = None
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
@@ -26,6 +27,7 @@ def _mock_current_user() -> CurrentUser:
         id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
         email="test@example.com",
         default_region_code="13_01",
+        secondary_region_code="13_02",
     )
 
 
@@ -73,4 +75,5 @@ async def get_current_user(
         id=user_id,
         email=email,
         default_region_code=getattr(user, "default_region_code", None),
+        secondary_region_code=getattr(user, "secondary_region_code", None),
     )

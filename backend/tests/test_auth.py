@@ -36,6 +36,7 @@ def _sample_user(user_id: uuid.UUID | None = None) -> SimpleNamespace:
         email="jwt-user@example.com",
         display_name=None,
         default_region_code=None,
+        secondary_region_code=None,
         subscription_status="free",
         stripe_customer_id=None,
         created_at=datetime(2026, 6, 1, tzinfo=UTC),
@@ -71,6 +72,7 @@ def test_get_me_returns_current_user_profile(
         "email": "jwt-user@example.com",
         "display_name": None,
         "default_region_code": None,
+        "secondary_region_code": None,
         "subscription_status": "free",
         "stripe_customer_id": None,
         "created_at": "2026-06-01T00:00:00Z",
@@ -81,7 +83,7 @@ def test_get_me_returns_current_user_profile(
     }
 
 
-def test_update_default_region_updates_profile(
+def test_replace_me_updates_profile(
     client: TestClient,
     monkeypatch,
 ) -> None:
@@ -89,48 +91,114 @@ def test_update_default_region_updates_profile(
     monkeypatch.setattr(settings, "APP_ENV", "development")
     expected_user_id = _mock_supabase_user(monkeypatch)
 
-    async def fake_update_default_region(db, user_id, region_code):
+    async def fake_update_user_profile(db, user_id, **kwargs):
         assert user_id == expected_user_id
-        assert region_code == "13_01"
+        assert kwargs == {
+            "display_name": "Miwa",
+            "default_region_code": "13_01",
+            "secondary_region_code": "13_02",
+        }
         user = _sample_user(user_id)
-        user.default_region_code = region_code
+        user.display_name = "Miwa"
+        user.default_region_code = "13_01"
+        user.secondary_region_code = "13_02"
         return user
 
     monkeypatch.setattr(
-        auth_router.crud, "update_default_region", fake_update_default_region
+        auth_router.crud,
+        "update_user_profile",
+        fake_update_user_profile,
     )
 
     response = client.put(
-        "/api/v1/auth/me/default-region",
-        json={"region_code": "13_01"},
+        "/api/v1/auth/me",
+        json={
+            "display_name": "Miwa",
+            "default_region_code": "13_01",
+            "secondary_region_code": "13_02",
+        },
         headers=_auth_headers(),
     )
 
     assert response.status_code == 200
+    assert response.json()["display_name"] == "Miwa"
     assert response.json()["default_region_code"] == "13_01"
+    assert response.json()["secondary_region_code"] == "13_02"
 
 
-def test_update_default_region_returns_400_for_unknown_region(
+def test_patch_me_updates_only_display_name(
     client: TestClient,
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", False)
     monkeypatch.setattr(settings, "APP_ENV", "development")
-    _mock_supabase_user(monkeypatch)
+    expected_user_id = _mock_supabase_user(monkeypatch)
 
-    async def fail_if_called(db, user_id, region_code):
-        raise AssertionError("update_default_region should not be called")
+    async def fake_get_user_or_404(db, user_id):
+        assert user_id == expected_user_id
+        user = _sample_user(user_id)
+        user.default_region_code = "13_01"
+        user.secondary_region_code = "13_02"
+        return user
 
-    monkeypatch.setattr(auth_router.crud, "update_default_region", fail_if_called)
+    async def fake_update_user_profile(db, user_id, **kwargs):
+        assert user_id == expected_user_id
+        assert kwargs == {"display_name": "Renamed"}
+        user = _sample_user(user_id)
+        user.display_name = "Renamed"
+        user.default_region_code = "13_01"
+        user.secondary_region_code = "13_02"
+        return user
 
-    response = client.put(
-        "/api/v1/auth/me/default-region",
-        json={"region_code": "99_99"},
+    monkeypatch.setattr(auth_router.crud, "get_user_or_404", fake_get_user_or_404)
+    monkeypatch.setattr(
+        auth_router.crud,
+        "update_user_profile",
+        fake_update_user_profile,
+    )
+
+    response = client.patch(
+        "/api/v1/auth/me",
+        json={"display_name": "Renamed"},
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["display_name"] == "Renamed"
+
+
+def test_patch_me_returns_400_for_duplicate_region_codes(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", False)
+    monkeypatch.setattr(settings, "APP_ENV", "development")
+    expected_user_id = _mock_supabase_user(monkeypatch)
+
+    async def fake_get_user_or_404(db, user_id):
+        assert user_id == expected_user_id
+        user = _sample_user(user_id)
+        user.default_region_code = "13_01"
+        user.secondary_region_code = "13_02"
+        return user
+
+    async def fail_if_called(db, user_id, **kwargs):
+        raise AssertionError("update_user_profile should not be called")
+
+    monkeypatch.setattr(auth_router.crud, "get_user_or_404", fake_get_user_or_404)
+    monkeypatch.setattr(auth_router.crud, "update_user_profile", fail_if_called)
+
+    response = client.patch(
+        "/api/v1/auth/me",
+        json={"secondary_region_code": "13_01"},
         headers=_auth_headers(),
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "invalid region_code"
+    assert (
+        response.json()["detail"]
+        == "secondary region must be different from default region"
+    )
 
 
 async def test_get_current_user_returns_13_01_in_bypass_mode(monkeypatch) -> None:
@@ -142,3 +210,4 @@ async def test_get_current_user_returns_13_01_in_bypass_mode(monkeypatch) -> Non
     assert current_user.id == uuid.UUID("00000000-0000-0000-0000-000000000001")
     assert current_user.email == "test@example.com"
     assert current_user.default_region_code == "13_01"
+    assert current_user.secondary_region_code == "13_02"

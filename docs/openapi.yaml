@@ -49,7 +49,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             detail: "認証が必要です"
             code: "unauthorized"
@@ -58,7 +58,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             detail: "アクセス権限がありません"
             code: "forbidden"
@@ -67,7 +67,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             detail: "リソースが見つかりません"
             code: "not_found"
@@ -76,18 +76,30 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
     TooManyRequests:
       description: レート制限超過
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             detail: "リクエスト回数の上限に達しました。しばらく待ってから再試行してください"
             code: "rate_limit_exceeded"
 
   schemas:
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+          description: エラー内容
+        code:
+          type: string
+          nullable: true
+          description: アプリケーション側のエラーコード
+
     # ===== Auth =====
     RegisterRequest:
       type: object
@@ -119,7 +131,7 @@ components:
           type: string
           example: bearer
         user:
-          $ref: '#/components/schemas/User'
+          $ref: "#/components/schemas/User"
 
     User:
       type: object
@@ -135,11 +147,19 @@ components:
           nullable: true
         default_region_code:
           type: string
-          example: "19_01"
+          example: "13_01"
           description: |
             ユーザーのデフォルト地域コード（{都道府県コード}_{連番} 形式）。
             オンボーディング時に必須設定。コーデ提案や天気取得で region_code が
             省略された場合のフォールバックとして使用される。
+          nullable: true
+        secondary_region_code:
+          type: string
+          example: "13_02"
+          description: |
+            ユーザーの副地域コード（{都道府県コード}_{連番} 形式）。
+            勤務先・旅行先など「第2の地点」として任意で保存する。
+            利用する場合はリクエストの region_code で明示する。
           nullable: true
         subscription_status:
           type: string
@@ -163,34 +183,34 @@ components:
       properties:
         code:
           type: string
-          example: "19_02"
+          example: "13_01"
           description: |
             地域コード（{都道府県コード}_{連番}）。
             都道府県コードは JIS X 0401 準拠。
         prefecture_code:
           type: string
-          example: "19"
+          example: "13"
           description: JIS X 0401 都道府県コード（2桁）
         prefecture_name:
           type: string
-          example: 山梨県
+          example: 東京都
         name:
           type: string
-          example: 富士五湖
+          example: 23区
           description: 地域の通称（県内の細分化された地域名）
         city:
           type: string
-          example: 河口湖
+          example: 新宿区
           description: 代表地点の市町村名
         latitude:
           type: number
           format: float
-          example: 35.5103
+          example: 35.6895
           description: 代表地点の緯度（Open-Meteo に渡す値）
         longitude:
           type: number
           format: float
-          example: 138.7635
+          example: 139.6917
           description: 代表地点の経度
 
     RegionsResponse:
@@ -199,16 +219,45 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Region'
+            $ref: "#/components/schemas/Region"
 
-    UpdateDefaultRegionRequest:
+    ReplaceUserProfileRequest:
       type: object
-      required: [region_code]
+      required: [display_name, default_region_code, secondary_region_code]
       properties:
-        region_code:
+        display_name:
           type: string
-          example: "19_01"
-          description: 設定するデフォルト地域コード
+          nullable: true
+          description: 表示名。未設定に戻す場合は null を送る。
+        default_region_code:
+          type: string
+          nullable: true
+          example: "13_01"
+          description: 主に利用する地域コード。未設定に戻す場合は null を送る。
+        secondary_region_code:
+          type: string
+          nullable: true
+          example: "13_02"
+          description: 副地域コード。未設定に戻す場合は null を送る。
+
+    PatchUserProfileRequest:
+      type: object
+      description: 送信したフィールドのみ更新する。
+      properties:
+        display_name:
+          type: string
+          nullable: true
+          description: 表示名。null を送ると未設定に戻す。
+        default_region_code:
+          type: string
+          nullable: true
+          example: "13_01"
+          description: 主に利用する地域コード。null を送ると未設定に戻す。
+        secondary_region_code:
+          type: string
+          nullable: true
+          example: "13_02"
+          description: 副地域コード。null を送ると未設定に戻す。
 
     # ===== 服 =====
     # カテゴリ・パターン・季節 は複数箇所で使うため enum を定義
@@ -257,13 +306,13 @@ components:
           type: string
           example: 白シャツ
         category:
-          $ref: '#/components/schemas/ClothingCategory'
+          $ref: "#/components/schemas/ClothingCategory"
         color:
           type: string
           example: white
         pattern:
           allOf:
-            - $ref: '#/components/schemas/ClothingPattern'
+            - $ref: "#/components/schemas/ClothingPattern"
           nullable: true
         size:
           type: string
@@ -272,11 +321,11 @@ components:
         season:
           type: array
           items:
-            $ref: '#/components/schemas/SeasonTag'
+            $ref: "#/components/schemas/SeasonTag"
         tpo_tags:
           type: array
           items:
-            $ref: '#/components/schemas/TpoTag'
+            $ref: "#/components/schemas/TpoTag"
           description: このアイテムが適したTPOタグ（clothes_tpo テーブルに対応）
         image_url:
           type: string
@@ -322,13 +371,13 @@ components:
           type: string
           maxLength: 100
         category:
-          $ref: '#/components/schemas/ClothingCategory'
+          $ref: "#/components/schemas/ClothingCategory"
         color:
           type: string
           nullable: true
         pattern:
           allOf:
-            - $ref: '#/components/schemas/ClothingPattern'
+            - $ref: "#/components/schemas/ClothingPattern"
           nullable: true
         size:
           type: string
@@ -336,11 +385,11 @@ components:
         season:
           type: array
           items:
-            $ref: '#/components/schemas/SeasonTag'
+            $ref: "#/components/schemas/SeasonTag"
         tpo_tags:
           type: array
           items:
-            $ref: '#/components/schemas/TpoTag'
+            $ref: "#/components/schemas/TpoTag"
         image_url:
           type: string
           format: uri
@@ -359,21 +408,21 @@ components:
           type: string
           maxLength: 100
         category:
-          $ref: '#/components/schemas/ClothingCategory'
+          $ref: "#/components/schemas/ClothingCategory"
         color:
           type: string
         pattern:
-          $ref: '#/components/schemas/ClothingPattern'
+          $ref: "#/components/schemas/ClothingPattern"
         size:
           type: string
         season:
           type: array
           items:
-            $ref: '#/components/schemas/SeasonTag'
+            $ref: "#/components/schemas/SeasonTag"
         tpo_tags:
           type: array
           items:
-            $ref: '#/components/schemas/TpoTag'
+            $ref: "#/components/schemas/TpoTag"
         memo:
           type: string
           maxLength: 200
@@ -386,7 +435,7 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/ClothingItem'
+            $ref: "#/components/schemas/ClothingItem"
         total:
           type: integer
           description: フィルタ条件に合致する全件数（ページネーション用）
@@ -423,20 +472,20 @@ components:
           example: 白シャツ
           description: LLMが推定したアイテム名称
         category:
-          $ref: '#/components/schemas/ClothingCategory'
+          $ref: "#/components/schemas/ClothingCategory"
         color:
           type: string
           example: white
         pattern:
-          $ref: '#/components/schemas/ClothingPattern'
+          $ref: "#/components/schemas/ClothingPattern"
         season:
           type: array
           items:
-            $ref: '#/components/schemas/SeasonTag'
+            $ref: "#/components/schemas/SeasonTag"
         tpo_tags:
           type: array
           items:
-            $ref: '#/components/schemas/TpoTag'
+            $ref: "#/components/schemas/TpoTag"
         attributes:
           type: object
           description: その他LLMが抽出した属性（素材など）
@@ -458,14 +507,14 @@ components:
           format: uuid
         role:
           allOf:
-            - $ref: '#/components/schemas/ClothingCategory'
+            - $ref: "#/components/schemas/ClothingCategory"
           description: このコーデ内でのアイテムの役割
         display_order:
           type: integer
           description: 表示順
         clothing_item:
           allOf:
-            - $ref: '#/components/schemas/ClothingItem'
+            - $ref: "#/components/schemas/ClothingItem"
           description: 服の詳細情報（outfit_items JOIN clothes）
 
     Outfit:
@@ -478,7 +527,7 @@ components:
           type: string
           format: uuid
         tpo:
-          $ref: '#/components/schemas/TpoTag'
+          $ref: "#/components/schemas/TpoTag"
         region_code:
           type: string
           example: "19_02"
@@ -507,7 +556,7 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/OutfitItem'
+            $ref: "#/components/schemas/OutfitItem"
         created_at:
           type: string
           format: date-time
@@ -518,7 +567,7 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Outfit'
+            $ref: "#/components/schemas/Outfit"
         total:
           type: integer
 
@@ -535,7 +584,7 @@ components:
       required: [tpo, date]
       properties:
         tpo:
-          $ref: '#/components/schemas/TpoTag'
+          $ref: "#/components/schemas/TpoTag"
         date:
           type: string
           format: date
@@ -566,14 +615,14 @@ components:
         outfits:
           type: array
           items:
-            $ref: '#/components/schemas/Outfit'
+            $ref: "#/components/schemas/Outfit"
           description: 提案されたコーデ（1〜2件）。DBにも保存される
         weather_summary:
           type: string
           description: 当日の天気要約
         region_used:
           allOf:
-            - $ref: '#/components/schemas/Region'
+            - $ref: "#/components/schemas/Region"
           description: 提案で実際に使用した地域（リクエストで省略時はユーザーのデフォルト地域）
         cached:
           type: boolean
@@ -614,70 +663,28 @@ components:
                 type: integer
               precipitation_probability_max:
                 type: integer
-                description: 日中最大降水確率（%）
         cached:
           type: boolean
-          description: Redisキャッシュ（TTL 30分）からの応答かどうか
 
-    # ===== 決済 =====
     CheckoutSessionResponse:
       type: object
+      required: [checkout_url]
       properties:
         checkout_url:
           type: string
           format: uri
-          description: Stripe Checkout のリダイレクト先URL
+          description: Stripe Checkout へリダイレクトするURL
 
     PortalSessionResponse:
       type: object
+      required: [portal_url]
       properties:
         portal_url:
           type: string
           format: uri
-          description: Stripe Customer Portal のリダイレクト先URL
+          description: Stripe Customer Portal へリダイレクトするURL
 
-    # ===== 共通エラー =====
-    ErrorResponse:
-      type: object
-      required: [detail]
-      properties:
-        detail:
-          type: string
-          description: エラーの説明（ユーザー向けメッセージ）
-        code:
-          type: string
-          description: エラーコード（フロントのハンドリング用）
-          example: "invalid_region_code"
-
-# ================================================================
-# パス定義
-# ================================================================
 paths:
-  # ================================================================
-  # 認証
-  # ================================================================
-  /api/v1/auth/register:
-    post:
-      tags: [Auth]
-      operationId: registerUser
-      summary: ユーザー登録
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
-      responses:
-        '201':
-          description: 登録成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-
   /api/v1/auth/login:
     post:
       tags: [Auth]
@@ -689,16 +696,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
       responses:
-        '200':
+        "200":
           description: ログイン成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/v1/auth/me:
     get:
@@ -707,46 +714,72 @@ paths:
       summary: 自分のユーザー情報を取得
       description: プラン状態・デフォルト地域を含むプロフィール情報を返す
       responses:
-        '200':
+        "200":
           description: ユーザー情報
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
-  /api/v1/auth/me/default-region:
     put:
       tags: [Auth]
-      operationId: updateDefaultRegion
-      summary: デフォルト地域の設定・更新
+      operationId: replaceCurrentUserProfile
+      summary: 自分のプロフィール情報を置き換え
       description: |
-        ユーザーが住んでいる地域を設定・更新する。
-        オンボーディング時の初回設定および設定画面からの変更時に使用する。
-        default_region_code が未設定のままコーデ提案を呼ぶと 400 が返るため、
-        オンボーディング完了前に必ずこのエンドポイントを呼ぶこと。
+        自分のプロフィール情報を全項目置き換える。
+        display_name、default_region_code、secondary_region_code をまとめて更新する。
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateDefaultRegionRequest'
+              $ref: "#/components/schemas/ReplaceUserProfileRequest"
       responses:
-        '200':
+        "200":
           description: 更新後のユーザー情報
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '400':
-          description: 不正な region_code（マスタに存在しない）
+                $ref: "#/components/schemas/User"
+        "400":
+          description: 不正な region_code、または主地域と副地域の重複
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    patch:
+      tags: [Auth]
+      operationId: patchCurrentUserProfile
+      summary: 自分のプロフィール情報を部分更新
+      description: |
+        自分のプロフィール情報を部分更新する。
+        送信したフィールドのみ変更され、未送信フィールドは保持される。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchUserProfileRequest"
+      responses:
+        "200":
+          description: 更新後のユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: 不正な region_code、または主地域と副地域の重複
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   # ================================================================
   # 地域マスタ（認証不要）
@@ -771,15 +804,15 @@ paths:
           required: false
           schema:
             type: string
-            pattern: '^[0-9]{2}$'
+            pattern: "^[0-9]{2}$"
             example: "19"
       responses:
-        '200':
+        "200":
           description: 地域一覧
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RegionsResponse'
+                $ref: "#/components/schemas/RegionsResponse"
 
   # ================================================================
   # 服管理
@@ -794,15 +827,15 @@ paths:
         - name: category
           in: query
           schema:
-            $ref: '#/components/schemas/ClothingCategory'
+            $ref: "#/components/schemas/ClothingCategory"
         - name: season
           in: query
           schema:
-            $ref: '#/components/schemas/SeasonTag'
+            $ref: "#/components/schemas/SeasonTag"
         - name: tpo
           in: query
           schema:
-            $ref: '#/components/schemas/TpoTag'
+            $ref: "#/components/schemas/TpoTag"
         - name: is_favorite
           in: query
           schema:
@@ -819,14 +852,14 @@ paths:
             type: integer
             default: 0
       responses:
-        '200':
+        "200":
           description: 服一覧
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClothesListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/ClothesListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
     post:
       tags: [Clothes]
@@ -842,18 +875,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ClothingCreateRequest'
+              $ref: "#/components/schemas/ClothingCreateRequest"
       responses:
-        '201':
+        "201":
           description: 登録成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClothingItem'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/ClothingItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/v1/clothes/upload-url:
     post:
@@ -880,14 +913,14 @@ paths:
                   enum: [image/jpeg, image/png, image/webp]
                   example: image/jpeg
       responses:
-        '200':
+        "200":
           description: 署名付きURL
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UploadUrlResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/v1/clothes/analyze-image:
     post:
@@ -907,24 +940,24 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AnalyzeImageRequest'
+              $ref: "#/components/schemas/AnalyzeImageRequest"
       responses:
-        '200':
+        "200":
           description: LLMによる属性推定結果
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AnalyzeImageResponse'
-        '400':
+                $ref: "#/components/schemas/AnalyzeImageResponse"
+        "400":
           description: 無効な画像URL
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /api/v1/clothes/{clothes_id}:
     parameters:
@@ -940,18 +973,18 @@ paths:
       operationId: getClothingById
       summary: 服の詳細取得
       responses:
-        '200':
+        "200":
           description: 服の詳細
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClothingItem'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/ClothingItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
     put:
       tags: [Clothes]
@@ -962,20 +995,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ClothingUpdateRequest'
+              $ref: "#/components/schemas/ClothingUpdateRequest"
       responses:
-        '200':
+        "200":
           description: 更新後の服情報
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClothingItem'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/ClothingItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
     patch:
       tags: [Clothes]
@@ -987,20 +1020,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ClothingUpdateRequest'
+              $ref: "#/components/schemas/ClothingUpdateRequest"
       responses:
-        '200':
+        "200":
           description: 更新後の服情報
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClothingItem'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/ClothingItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
     delete:
       tags: [Clothes]
@@ -1008,14 +1041,14 @@ paths:
       summary: 服を削除
       description: 服を削除する。関連する outfit_items も CASCADE で削除される。
       responses:
-        '204':
+        "204":
           description: 削除成功
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   # ================================================================
   # コーデ（提案・履歴）
@@ -1039,24 +1072,24 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CoordinateSuggestRequest'
+              $ref: "#/components/schemas/CoordinateSuggestRequest"
       responses:
-        '200':
+        "200":
           description: コーデ提案結果
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CoordinateSuggestResponse'
-        '400':
+                $ref: "#/components/schemas/CoordinateSuggestResponse"
+        "400":
           description: 不正な region_code、またはユーザーの default_region_code 未設定
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /api/v1/outfits:
     get:
@@ -1073,7 +1106,7 @@ paths:
         - name: tpo
           in: query
           schema:
-            $ref: '#/components/schemas/TpoTag'
+            $ref: "#/components/schemas/TpoTag"
         - name: from
           in: query
           schema:
@@ -1098,14 +1131,14 @@ paths:
             type: integer
             default: 0
       responses:
-        '200':
+        "200":
           description: コーデ一覧
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OutfitsListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/OutfitsListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/v1/outfits/{outfit_id}:
     parameters:
@@ -1121,18 +1154,18 @@ paths:
       operationId: getOutfitById
       summary: コーデ詳細取得
       responses:
-        '200':
+        "200":
           description: コーデ詳細
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Outfit'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/Outfit"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
     patch:
       tags: [Outfit]
@@ -1143,20 +1176,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OutfitUpdateRequest'
+              $ref: "#/components/schemas/OutfitUpdateRequest"
       responses:
-        '200':
+        "200":
           description: 更新後のコーデ情報
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Outfit'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/Outfit"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   # ================================================================
   # 天気
@@ -1185,20 +1218,20 @@ paths:
             default: 3
             maximum: 7
       responses:
-        '200':
+        "200":
           description: 天気予報
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WeatherForecast'
-        '400':
+                $ref: "#/components/schemas/WeatherForecast"
+        "400":
           description: 不正な region_code（マスタに存在しない）
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   # ================================================================
   # 決済（Stripe）
@@ -1233,14 +1266,14 @@ paths:
                   format: uri
                   description: 決済キャンセル後のリダイレクト先
       responses:
-        '200':
+        "200":
           description: Checkoutセッション作成成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CheckoutSessionResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/CheckoutSessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/v1/billing/portal:
     get:
@@ -1258,20 +1291,20 @@ paths:
             format: uri
           description: Portal終了後のリダイレクト先
       responses:
-        '200':
+        "200":
           description: Portalセッション作成成功
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PortalSessionResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
+                $ref: "#/components/schemas/PortalSessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
           description: 有料プランでないユーザーはアクセス不可
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/v1/billing/webhook:
     post:
@@ -1302,11 +1335,11 @@ paths:
               type: object
               description: Stripe Webhookイベントペイロード（Stripe仕様に準拠）
       responses:
-        '200':
+        "200":
           description: 受信・処理成功
-        '400':
+        "400":
           description: 署名検証失敗
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
