@@ -1,4 +1,5 @@
 import uuid
+from typing import Any
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -6,6 +7,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.user import User
+
+_UNSET: Any = object()
 
 
 async def get_user(db: AsyncSession, user_id: uuid.UUID) -> User | None:
@@ -52,13 +55,23 @@ async def get_or_create_user(
     return user
 
 
-async def update_default_region(
+async def update_user_profile(
     db: AsyncSession,
     user_id: uuid.UUID,
-    region_code: str,
+    *,
+    display_name: str | None | object = _UNSET,
+    default_region_code: str | None | object = _UNSET,
+    secondary_region_code: str | None | object = _UNSET,
 ) -> User:
     user = await get_user_or_404(db, user_id)
-    user.default_region_code = region_code
+
+    if display_name is not _UNSET:
+        user.display_name = display_name
+    if default_region_code is not _UNSET:
+        user.default_region_code = default_region_code
+    if secondary_region_code is not _UNSET:
+        user.secondary_region_code = secondary_region_code
+
     db.add(user)
     await db.commit()
     await db.refresh(user)

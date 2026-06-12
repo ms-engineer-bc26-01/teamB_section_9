@@ -15,6 +15,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     default_region_code: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    secondary_region_code: Mapped[str | None] = mapped_column(String(5), nullable=True)
     subscription_status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
