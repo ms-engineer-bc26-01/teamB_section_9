@@ -593,6 +593,115 @@ def test_suggest_outfit_returns_bad_gateway_on_weather_parse_error(
     assert response.json()["detail"] == "failed to fetch weather forecast"
 
 
+@pytest.mark.asyncio
+async def test_outfit_service_sends_only_selected_clothes_to_llm(
+    monkeypatch,
+) -> None:
+    """LLMへ渡すのは_select_clothesで選定されたアイテムのみ (Issue #60)"""
+    captured: dict[str, str] = {}
+
+    class FakeLLMClient:
+        async def generate(self, prompt: str) -> str:
+            captured["prompt"] = prompt
+            return "generated-coordinate"
+
+    monkeypatch.setattr(
+        "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
+    )
+
+    service = OutfitService()
+
+    tops_item = ClothingItem(
+        id=uuid.UUID("00000000-0000-0000-0000-000000000010"),
+        user_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+        name="white shirt",
+        category="tops",
+        color="white",
+        pattern=None,
+        size="M",
+        season=["spring", "summer"],
+        tpo_tags=["casual"],
+        image_url="https://example.com/shirt.jpg",
+        thumbnail_url=None,
+        memo=None,
+        is_favorite=False,
+        wear_count=0,
+        last_worn_at=None,
+        created_at="2026-06-04T00:00:00Z",
+        updated_at="2026-06-04T00:00:00Z",
+    )
+    # ワンピースは固定カテゴリ外（outer/tops/bottoms/shoes/bag/accessoryのみ対象）
+    onepiece_item = ClothingItem(
+        id=uuid.UUID("00000000-0000-0000-0000-000000000020"),
+        user_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+        name="floral onepiece",
+        category="onepiece",
+        color="pink",
+        pattern=None,
+        size="M",
+        season=["spring", "summer"],
+        tpo_tags=["casual"],
+        image_url="https://example.com/onepiece.jpg",
+        thumbnail_url=None,
+        memo=None,
+        is_favorite=False,
+        wear_count=0,
+        last_worn_at=None,
+        created_at="2026-06-04T00:00:00Z",
+        updated_at="2026-06-04T00:00:00Z",
+    )
+
+    result = await service.suggest(
+        tpo="casual",
+        clothes=[tops_item, onepiece_item],
+        weather={
+            "current": {
+                "temperature_2m": 25.0,
+                "weather_code": 1,
+                "precipitation_probability": 10,
+            },
+            "daily": [],
+        },
+    )
+
+    assert "white shirt" in captured["prompt"]
+    assert "floral onepiece" not in captured["prompt"]
+    item_names = [s.clothing_item.name for s in result.items]
+    assert "white shirt" in item_names
+    assert "floral onepiece" not in item_names
+
+
+def test_suggest_outfit_rejects_tpo_exceeding_max_length(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", True)
+    monkeypatch.setattr(settings, "APP_ENV", "development")
+
+    response = client.post(
+        "/api/v1/outfits/suggest",
+        json={"tpo": "a" * 101},
+    )
+
+    assert response.status_code == 422
+
+
+def test_suggest_outfit_rejects_too_many_clothing_ids(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", True)
+    monkeypatch.setattr(settings, "APP_ENV", "development")
+
+    too_many_ids = [str(uuid.uuid4()) for _ in range(51)]
+    response = client.post(
+        "/api/v1/outfits/suggest",
+        json={"tpo": "casual", "clothing_ids": too_many_ids},
+    )
+
+    assert response.status_code == 422
+
+
 def test_list_outfits_returns_items_and_total(
     client: TestClient,
     monkeypatch,

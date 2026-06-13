@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import router as api_v1_router
 from app.core.config import settings
+from app.core.logging import setup_logging
+
+setup_logging(settings.LOG_LEVEL)
 
 app = FastAPI(
     title="Closet Management API",  # TODO:アプリ名のAPIに変更

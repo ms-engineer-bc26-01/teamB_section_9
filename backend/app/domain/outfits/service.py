@@ -31,7 +31,10 @@ class OutfitService:
         clothes: list[ClothingItem],
         weather: dict,
     ) -> "OutfitSuggestion":
-        clothes_summary = self._format_clothes(clothes)
+        selected = self._select_clothes(tpo=tpo, clothes=clothes)
+        selected_clothes = [s.clothing_item for s in selected]
+
+        clothes_summary = self._format_clothes(selected_clothes)
         weather_summary = self._format_weather(weather)
 
         prompt = (
@@ -57,7 +60,7 @@ class OutfitService:
         return OutfitSuggestion(
             comment=comment.strip(),
             weather_summary=weather_summary,
-            items=self._select_clothes(tpo=tpo, clothes=clothes),
+            items=selected,
         )
 
     @staticmethod
