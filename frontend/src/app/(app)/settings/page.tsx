@@ -10,6 +10,7 @@ import {
     MapPin,
     Settings,
     Sparkles,
+    X,
     UserRound,
 } from "lucide-react";
 
@@ -31,6 +32,7 @@ type UserProfile = {
     email: string;
     display_name: string | null;
     default_region_code: string | null;
+    secondary_region_code: string | null;
     subscription_status: "free" | "active" | "canceled";
     stripe_customer_id: string | null;
     created_at: string;
@@ -50,7 +52,6 @@ type RegionsResponse = {
     items: Region[];
 };
 
-const SECONDARY_REGION_STORAGE_KEY = "climo.secondary_region_code";
 const HOME_SCENE_STORAGE_KEY = "climo.home_scene_tpo";
 
 const scenes = [
@@ -77,18 +78,27 @@ function getRegionLabel(region: Region) {
     return `${region.prefecture_name} ${region.name}`;
 }
 
+function getPrefectureCodeByRegionCode(regions: Region[], regionCode: string | null) {
+    if (!regionCode) return "";
+
+    return regions.find((region) => region.code === regionCode)?.prefecture_code ?? "";
+}
+
 export default function SettingsPage() {
     const router = useRouter();
     const { session, user, clearAuth } = useAuthStore();
 
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [regions, setRegions] = useState<Region[]>([]);
+    const [primaryPrefectureCode, setPrimaryPrefectureCode] = useState("");
     const [primaryRegionCode, setPrimaryRegionCode] = useState("");
+    const [secondaryPrefectureCode, setSecondaryPrefectureCode] = useState("");
     const [secondaryRegionCode, setSecondaryRegionCode] = useState("");
     const [homeSceneTpo, setHomeSceneTpo] = useState("business");
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isRegionsLoading, setIsRegionsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -101,34 +111,73 @@ export default function SettingsPage() {
         }
 
         let isMounted = true;
+        let fetchedProfile: UserProfile | null = null;
+        let fetchedRegions: Region[] = [];
+
+        function syncPrefectureCodes() {
+            if (!isMounted || !fetchedProfile || fetchedRegions.length === 0) return;
+
+            setPrimaryPrefectureCode(
+                getPrefectureCodeByRegionCode(
+                    fetchedRegions,
+                    fetchedProfile.default_region_code,
+                ),
+            );
+            setSecondaryPrefectureCode(
+                getPrefectureCodeByRegionCode(
+                    fetchedRegions,
+                    fetchedProfile.secondary_region_code,
+                ),
+            );
+        }
 
         async function fetchSettingsData() {
-            try {
-                const [me, regionResponse] = await Promise.all([
-                    apiClient.get<UserProfile>("/auth/me", { token }),
-                    apiClient.get<RegionsResponse>("/regions"),
-                ]);
+            setIsLoading(true);
+            setIsRegionsLoading(true);
 
-                if (!isMounted) return;
+            const savedHomeSceneTpo =
+                window.localStorage.getItem(HOME_SCENE_STORAGE_KEY) ?? "business";
+            setHomeSceneTpo(savedHomeSceneTpo);
 
-                const savedSecondaryRegionCode =
-                    window.localStorage.getItem(SECONDARY_REGION_STORAGE_KEY) ?? "";
-                const savedHomeSceneTpo =
-                    window.localStorage.getItem(HOME_SCENE_STORAGE_KEY) ?? "business";
+            apiClient
+                .get<RegionsResponse>("/regions")
+                .then((regionResponse) => {
+                    if (!isMounted) return;
+                    fetchedRegions = regionResponse.items;
+                    setRegions(regionResponse.items);
+                    syncPrefectureCodes();
+                })
+                .catch(() => {
+                    if (!isMounted) return;
+                    setErrorMessage("地域一覧を取得できませんでした。時間をおいて再度お試しください。");
+                })
+                .finally(() => {
+                    if (isMounted) {
+                        setIsRegionsLoading(false);
+                    }
+                });
 
-                setProfile(me);
-                setRegions(regionResponse.items);
-                setPrimaryRegionCode(me.default_region_code ?? "");
-                setSecondaryRegionCode(savedSecondaryRegionCode);
-                setHomeSceneTpo(savedHomeSceneTpo);
-            } catch {
-                if (!isMounted) return;
-                setErrorMessage("設定情報を取得できませんでした。時間をおいて再度お試しください。");
-            } finally {
-                if (isMounted) {
-                    setIsLoading(false);
-                }
-            }
+            apiClient
+                .get<UserProfile>("/auth/me", { token })
+                .then((me) => {
+                    if (!isMounted) return;
+                    fetchedProfile = me;
+                    setProfile(me);
+                    setPrimaryRegionCode(me.default_region_code ?? "");
+                    setSecondaryRegionCode(me.secondary_region_code ?? "");
+                    syncPrefectureCodes();
+                })
+                .catch(() => {
+                    if (!isMounted) return;
+                    setErrorMessage(
+                        "プロフィール情報を取得できませんでした。表示されている項目から設定してください。",
+                    );
+                })
+                .finally(() => {
+                    if (isMounted) {
+                        setIsLoading(false);
+                    }
+                });
         }
 
         fetchSettingsData();
@@ -149,6 +198,41 @@ export default function SettingsPage() {
 
     const email = profile?.email ?? user?.email ?? "";
     const planLabel = getPlanLabel(profile?.subscription_status);
+    const prefectures = useMemo(() => {
+        const prefectureMap = new Map<string, string>();
+
+        for (const region of regions) {
+            if (!prefectureMap.has(region.prefecture_code)) {
+                prefectureMap.set(region.prefecture_code, region.prefecture_name);
+            }
+        }
+
+        return Array.from(prefectureMap, ([code, name]) => ({ code, name }));
+    }, [regions]);
+    const primaryRegionOptions = useMemo(
+        () =>
+            regions.filter(
+                (region) => region.prefecture_code === primaryPrefectureCode,
+            ),
+        [primaryPrefectureCode, regions],
+    );
+    const secondaryRegionOptions = useMemo(
+        () =>
+            regions.filter(
+                (region) => region.prefecture_code === secondaryPrefectureCode,
+            ),
+        [secondaryPrefectureCode, regions],
+    );
+
+    const handlePrimaryPrefectureChange = (prefectureCode: string) => {
+        setPrimaryPrefectureCode(prefectureCode);
+        setPrimaryRegionCode("");
+    };
+
+    const handleSecondaryPrefectureChange = (prefectureCode: string) => {
+        setSecondaryPrefectureCode(prefectureCode);
+        setSecondaryRegionCode("");
+    };
 
     const handleSave = async () => {
         const token = session?.access_token;
@@ -158,8 +242,23 @@ export default function SettingsPage() {
             return;
         }
 
-        if (!primaryRegionCode || !secondaryRegionCode) {
-            setErrorMessage("地域1と地域2を選択してください。");
+        if (!primaryRegionCode) {
+            setErrorMessage("地域1を選択してください。");
+            setSuccessMessage(null);
+            return;
+        }
+
+        if (secondaryPrefectureCode && !secondaryRegionCode) {
+            setErrorMessage("地域2の地域を選択してください。");
+            setSuccessMessage(null);
+            return;
+        }
+
+        if (
+            secondaryRegionCode &&
+            primaryRegionCode === secondaryRegionCode
+        ) {
+            setErrorMessage("地域2は地域1と別の地域を選択してください。");
             setSuccessMessage(null);
             return;
         }
@@ -169,16 +268,15 @@ export default function SettingsPage() {
         setSuccessMessage(null);
 
         try {
-            const updatedProfile = await apiClient.put<UserProfile>(
-                "/auth/me/default-region",
-                { region_code: primaryRegionCode },
+            const updatedProfile = await apiClient.patch<UserProfile>(
+                "/auth/me",
+                {
+                    default_region_code: primaryRegionCode,
+                    secondary_region_code: secondaryRegionCode || null,
+                },
                 { token },
             );
 
-            window.localStorage.setItem(
-                SECONDARY_REGION_STORAGE_KEY,
-                secondaryRegionCode,
-            );
             window.localStorage.setItem(HOME_SCENE_STORAGE_KEY, homeSceneTpo);
 
             setProfile(updatedProfile);
@@ -298,6 +396,31 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
                         <label
+                            htmlFor="primary-prefecture"
+                            className="text-sm font-medium text-[#4B3A2F]"
+                        >
+                            地域1の都道府県
+                        </label>
+                        <Select
+                            value={primaryPrefectureCode}
+                            onValueChange={handlePrimaryPrefectureChange}
+                            disabled={isRegionsLoading || regions.length === 0}
+                        >
+                            <SelectTrigger id="primary-prefecture" className="h-11 w-full">
+                                <SelectValue placeholder="都道府県を選択" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {prefectures.map((prefecture) => (
+                                    <SelectItem key={prefecture.code} value={prefecture.code}>
+                                        {prefecture.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label
                             htmlFor="primary-region"
                             className="text-sm font-medium text-[#4B3A2F]"
                         >
@@ -306,13 +429,17 @@ export default function SettingsPage() {
                         <Select
                             value={primaryRegionCode}
                             onValueChange={setPrimaryRegionCode}
-                            disabled={isLoading || regions.length === 0}
+                            disabled={
+                                isRegionsLoading ||
+                                !primaryPrefectureCode ||
+                                primaryRegionOptions.length === 0
+                            }
                         >
                             <SelectTrigger id="primary-region" className="h-11 w-full">
-                                <SelectValue placeholder="地域1を選択" />
+                                <SelectValue placeholder="地域を選択" />
                             </SelectTrigger>
                             <SelectContent>
-                                {regions.map((region) => (
+                                {primaryRegionOptions.map((region) => (
                                     <SelectItem key={region.code} value={region.code}>
                                         {getRegionLabel(region)}
                                     </SelectItem>
@@ -326,21 +453,68 @@ export default function SettingsPage() {
 
                     <div className="space-y-2">
                         <label
-                            htmlFor="secondary-region"
+                            htmlFor="secondary-prefecture"
                             className="text-sm font-medium text-[#4B3A2F]"
                         >
-                            地域2
+                            地域2の都道府県
                         </label>
+                        <Select
+                            value={secondaryPrefectureCode}
+                            onValueChange={handleSecondaryPrefectureChange}
+                            disabled={isRegionsLoading || regions.length === 0}
+                        >
+                            <SelectTrigger id="secondary-prefecture" className="h-11 w-full">
+                                <SelectValue placeholder="都道府県を選択" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {prefectures.map((prefecture) => (
+                                    <SelectItem key={prefecture.code} value={prefecture.code}>
+                                        {prefecture.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                            <label
+                                htmlFor="secondary-region"
+                                className="text-sm font-medium text-[#4B3A2F]"
+                            >
+                                地域2
+                            </label>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                className="h-8 px-2 text-xs text-[#8C715C]"
+                                disabled={
+                                    isRegionsLoading ||
+                                    (!secondaryPrefectureCode && !secondaryRegionCode)
+                                }
+                                onClick={() => {
+                                    setSecondaryPrefectureCode("");
+                                    setSecondaryRegionCode("");
+                                }}
+                            >
+                                <X aria-hidden="true" size={14} />
+                                クリア
+                            </Button>
+                        </div>
                         <Select
                             value={secondaryRegionCode}
                             onValueChange={setSecondaryRegionCode}
-                            disabled={isLoading || regions.length === 0}
+                            disabled={
+                                isRegionsLoading ||
+                                !secondaryPrefectureCode ||
+                                secondaryRegionOptions.length === 0
+                            }
                         >
                             <SelectTrigger id="secondary-region" className="h-11 w-full">
-                                <SelectValue placeholder="地域2を選択" />
+                                <SelectValue placeholder="地域を選択" />
                             </SelectTrigger>
                             <SelectContent>
-                                {regions.map((region) => (
+                                {secondaryRegionOptions.map((region) => (
                                     <SelectItem key={region.code} value={region.code}>
                                         {getRegionLabel(region)}
                                     </SelectItem>
@@ -414,7 +588,7 @@ export default function SettingsPage() {
                 <Button
                     type="button"
                     className="h-12 w-full rounded-lg bg-[#2F6F63] text-base font-bold text-white hover:bg-[#285F55]"
-                    disabled={isLoading || isSaving}
+                    disabled={isRegionsLoading || isSaving}
                     onClick={handleSave}
                 >
                     {isSaving ? "保存中..." : "設定を保存する"}
