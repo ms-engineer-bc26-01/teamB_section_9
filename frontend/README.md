@@ -189,15 +189,6 @@ frontend/
 └── playwright.config.ts
 ```
 
-## 主なページ
-
-## 画面一覧
-
-この一覧は、現在のフロントエンド実装と今後の設計予定を整理したものです。
-
-API 欄は、`NEXT_PUBLIC_API_BASE_URL` 配下の相対パスで記載しています。
-例: `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1` の場合、`/auth/me` は `http://localhost:8000/api/v1/auth/me` を指します。
-
 ## 画面一覧
 
 この一覧は、現在のフロントエンド実装と今後の設計予定をまとめたものです。
