@@ -164,7 +164,7 @@ class OutfitService:
                 for i in (best_tops, best_btms)
                 if i is not None
             ]
-            if not tb_scores or one_score >= max(tb_scores):
+            if not tb_scores or one_score > max(tb_scores):
                 return [(best_one, "onepiece")]
 
         return [

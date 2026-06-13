@@ -594,10 +594,10 @@ def test_suggest_outfit_returns_bad_gateway_on_weather_parse_error(
 
 
 @pytest.mark.asyncio
-async def test_onepiece_selected_over_tops_on_equal_score(
+async def test_tops_wins_over_onepiece_on_equal_score(
     monkeypatch,
 ) -> None:
-    """同スコアのとき onepiece が tops より優先される (Issue #60)"""
+    """同スコアのとき tops が onepiece より優先される（後方互換）(Issue #60)"""
     captured: dict[str, str] = {}
 
     class FakeLLMClient:
@@ -663,11 +663,37 @@ async def test_onepiece_selected_over_tops_on_equal_score(
         },
     )
 
-    assert "floral onepiece" in captured["prompt"]
-    assert "white shirt" not in captured["prompt"]
+    assert "white shirt" in captured["prompt"]
+    assert "floral onepiece" not in captured["prompt"]
     item_names = [s.clothing_item.name for s in result.items]
-    assert "floral onepiece" in item_names
-    assert "white shirt" not in item_names
+    assert "white shirt" in item_names
+    assert "floral onepiece" not in item_names
+
+
+def test_onepiece_selected_when_strictly_higher_score() -> None:
+    """onepiece が tops を厳密に上回るスコアのとき onepiece が選ばれる (Issue #60)"""
+    tops = _make_clothing_item(
+        "00000000-0000-0000-0000-000000000060",
+        "plain tops",
+        "tops",
+        ["casual"],
+        is_favorite=False,
+    )
+    onepiece = _make_clothing_item(
+        "00000000-0000-0000-0000-000000000061",
+        "favorite onepiece",
+        "onepiece",
+        ["casual"],
+        is_favorite=True,
+    )
+
+    result = OutfitService._select_clothes(tpo="casual", clothes=[tops, onepiece])
+
+    roles = {s.role for s in result}
+    names = [s.clothing_item.name for s in result]
+    assert "onepiece" in roles
+    assert "tops" not in roles
+    assert "favorite onepiece" in names
 
 
 def _make_clothing_item(
