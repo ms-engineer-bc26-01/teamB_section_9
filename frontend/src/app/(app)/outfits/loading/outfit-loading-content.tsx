@@ -42,18 +42,22 @@ export function OutfitLoadingContent() {
 
         if (!isMounted) return;
 
-        const userId = result.outfits[0]?.user_id;
+        const outfit = result.outfits[0];
+        const userId = outfit?.user_id;
+        const outfitId = outfit?.id;
 
-        if (!userId) {
-          throw new Error("コーデ提案のユーザー情報が見つかりません。");
+        if (!userId || !outfitId) {
+          throw new Error("コーデ提案の識別情報が見つかりません。");
         }
 
         window.sessionStorage.setItem(
-          getOutfitSuggestionStorageKey(userId),
+          getOutfitSuggestionStorageKey(userId, outfitId),
           JSON.stringify(result),
         );
 
-        router.replace(`/outfits/detail?tpo=${encodeURIComponent(tpo)}`);
+        router.replace(
+          `/outfits/detail?tpo=${encodeURIComponent(tpo)}&outfitId=${encodeURIComponent(outfitId)}`,
+        );
       } catch (error) {
         if (!isMounted) return;
 

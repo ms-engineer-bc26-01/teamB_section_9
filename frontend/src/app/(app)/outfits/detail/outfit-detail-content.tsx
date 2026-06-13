@@ -13,8 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { OutfitSuggestResponse } from "@/features/outfits/types";
 import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
+import type { OutfitSuggestResponse } from "@/features/outfits/types";
 import { useAuthStore } from "@/stores/auth-store";
 
 const tpoLabels: Record<string, string> = {
@@ -39,9 +39,12 @@ type OutfitDetailState = {
   isLoading: boolean;
 };
 
-function loadOutfitSuggestion(userId: string): OutfitDetailState {
+function loadOutfitSuggestion(
+  userId: string,
+  outfitId: string,
+): OutfitDetailState {
   const rawSuggestion = window.sessionStorage.getItem(
-    getOutfitSuggestionStorageKey(userId),
+    getOutfitSuggestionStorageKey(userId, outfitId),
   );
 
   if (!rawSuggestion) {
@@ -54,12 +57,14 @@ function loadOutfitSuggestion(userId: string): OutfitDetailState {
 
   try {
     const suggestion = JSON.parse(rawSuggestion) as OutfitSuggestResponse;
-    const outfitUserId = suggestion.outfits[0]?.user_id;
+    const outfit = suggestion.outfits[0];
+    const outfitUserId = outfit?.user_id;
+    const savedOutfitId = outfit?.id;
 
-    if (outfitUserId !== userId) {
+    if (outfitUserId !== userId || savedOutfitId !== outfitId) {
       return {
         suggestion: null,
-        errorMessage: "ログイン中のユーザーとコーデ提案結果が一致しません。",
+        errorMessage: "ログイン中のユーザーまたはコーデ提案結果が一致しません。",
         isLoading: false,
       };
     }
@@ -76,6 +81,12 @@ function loadOutfitSuggestion(userId: string): OutfitDetailState {
       isLoading: false,
     };
   }
+}
+
+function getOutfitIdFromCurrentUrl() {
+  const searchParams = new URLSearchParams(window.location.search);
+
+  return searchParams.get("outfitId");
 }
 
 function formatTemperature(value: number | null | undefined) {
@@ -133,7 +144,18 @@ export function OutfitDetailContent() {
         return;
       }
 
-      setDetailState(loadOutfitSuggestion(user.id));
+      const outfitId = getOutfitIdFromCurrentUrl();
+
+      if (!outfitId) {
+        setDetailState({
+          suggestion: null,
+          errorMessage: "コーデ提案IDが見つかりません。",
+          isLoading: false,
+        });
+        return;
+      }
+
+      setDetailState(loadOutfitSuggestion(user.id, outfitId));
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
