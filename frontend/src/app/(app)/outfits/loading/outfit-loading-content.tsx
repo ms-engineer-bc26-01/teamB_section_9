@@ -53,7 +53,7 @@ export function OutfitLoadingContent() {
           JSON.stringify(result),
         );
 
-        router.push(`/outfits/detail?tpo=${encodeURIComponent(tpo)}`);
+        router.replace(`/outfits/detail?tpo=${encodeURIComponent(tpo)}`);
       } catch (error) {
         if (!isMounted) return;
 
