@@ -31,7 +31,10 @@ class OutfitService:
         clothes: list[ClothingItem],
         weather: dict,
     ) -> "OutfitSuggestion":
-        clothes_summary = self._format_clothes(clothes)
+        selected = self._select_clothes(tpo=tpo, clothes=clothes)
+        selected_clothes = [s.clothing_item for s in selected]
+
+        clothes_summary = self._format_clothes(selected_clothes)
         weather_summary = self._format_weather(weather)
 
         prompt = (
@@ -57,7 +60,7 @@ class OutfitService:
         return OutfitSuggestion(
             comment=comment.strip(),
             weather_summary=weather_summary,
-            items=self._select_clothes(tpo=tpo, clothes=clothes),
+            items=selected,
         )
 
     @staticmethod
@@ -70,29 +73,105 @@ class OutfitService:
         selected_ids: set = set()
         display_order = 1
 
-        for category in ("outer", "tops", "bottoms", "shoes", "bag", "accessory"):
+        outer_cands = [
+            i for i in clothes if i.category == "outer" and i.id not in selected_ids
+        ]
+        if outer_cands:
+            best = max(outer_cands, key=lambda i: OutfitService._score_item(i, tpo))
+            selected.append(
+                SuggestedClothingSelection(
+                    clothing_item=best,
+                    role="outer",
+                    display_order=display_order,
+                )
+            )
+            selected_ids.add(best.id)
+            display_order += 1
+
+        torso = OutfitService._select_torso(
+            tpo=tpo,
+            clothes=clothes,
+            selected_ids=selected_ids,
+        )
+        for item, role in torso:
+            selected.append(
+                SuggestedClothingSelection(
+                    clothing_item=item,
+                    role=role,
+                    display_order=display_order,
+                )
+            )
+            selected_ids.add(item.id)
+            display_order += 1
+
+        for category in ("shoes", "bag", "accessory"):
             candidates = [
-                item
-                for item in clothes
-                if item.category == category and item.id not in selected_ids
+                i
+                for i in clothes
+                if i.category == category and i.id not in selected_ids
             ]
             if not candidates:
                 continue
-
-            best_item = max(
-                candidates, key=lambda item: OutfitService._score_item(item, tpo)
-            )
+            best = max(candidates, key=lambda i: OutfitService._score_item(i, tpo))
             selected.append(
                 SuggestedClothingSelection(
-                    clothing_item=best_item,
+                    clothing_item=best,
                     role=category,
                     display_order=display_order,
                 )
             )
-            selected_ids.add(best_item.id)
+            selected_ids.add(best.id)
             display_order += 1
 
         return selected
+
+    @staticmethod
+    def _select_torso(
+        *,
+        tpo: str,
+        clothes: list[ClothingItem],
+        selected_ids: set,
+    ) -> list[tuple[ClothingItem, str]]:
+        tops_cands = [
+            i for i in clothes if i.category == "tops" and i.id not in selected_ids
+        ]
+        btms_cands = [
+            i for i in clothes if i.category == "bottoms" and i.id not in selected_ids
+        ]
+        one_cands = [
+            i for i in clothes if i.category == "onepiece" and i.id not in selected_ids
+        ]
+        best_tops = (
+            max(tops_cands, key=lambda i: OutfitService._score_item(i, tpo))
+            if tops_cands
+            else None
+        )
+        best_btms = (
+            max(btms_cands, key=lambda i: OutfitService._score_item(i, tpo))
+            if btms_cands
+            else None
+        )
+        best_one = (
+            max(one_cands, key=lambda i: OutfitService._score_item(i, tpo))
+            if one_cands
+            else None
+        )
+
+        if best_one:
+            one_score = OutfitService._score_item(best_one, tpo)
+            tb_scores = [
+                OutfitService._score_item(i, tpo)
+                for i in (best_tops, best_btms)
+                if i is not None
+            ]
+            if not tb_scores or one_score > max(tb_scores):
+                return [(best_one, "onepiece")]
+
+        return [
+            (item, role)
+            for item, role in ((best_tops, "tops"), (best_btms, "bottoms"))
+            if item
+        ]
 
     @staticmethod
     def _score_item(item: ClothingItem, tpo: str) -> tuple[int, int, int, int]:

@@ -8,11 +8,11 @@ from app.api.v1.schemas.regions import Region
 
 
 class OutfitSuggestRequest(BaseModel):
-    tpo: str
-    date: str | None = None
-    region_code: str | None = None
-    clothing_ids: list[uuid.UUID] = Field(default_factory=list)
-    exclude_clothing_ids: list[uuid.UUID] = Field(default_factory=list)
+    tpo: str = Field(min_length=1, max_length=100)
+    date: str | None = Field(default=None, max_length=10)
+    region_code: str | None = Field(default=None, max_length=10)
+    clothing_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
+    exclude_clothing_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
 
 
 class SuggestedOutfitItem(BaseModel):
