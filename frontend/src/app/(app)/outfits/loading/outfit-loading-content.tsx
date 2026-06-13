@@ -6,6 +6,7 @@ import { Sparkles } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { suggestOutfit } from "@/features/outfits/api";
+import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
 
 const allowedTpos = [
   "business",
@@ -14,8 +15,6 @@ const allowedTpos = [
   "ceremony",
   "leisure",
 ] as const;
-
-const outfitSuggestionStorageKey = "climo:outfit-suggestion";
 
 function normalizeTpo(value: string | null) {
   if (value && allowedTpos.includes(value as (typeof allowedTpos)[number])) {
@@ -43,8 +42,14 @@ export function OutfitLoadingContent() {
 
         if (!isMounted) return;
 
+        const userId = result.outfits[0]?.user_id;
+
+        if (!userId) {
+          throw new Error("コーデ提案のユーザー情報が見つかりません。");
+        }
+
         window.sessionStorage.setItem(
-          outfitSuggestionStorageKey,
+          getOutfitSuggestionStorageKey(userId),
           JSON.stringify(result),
         );
 

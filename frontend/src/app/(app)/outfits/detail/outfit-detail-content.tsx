@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, CloudSun, Heart, RefreshCw, Shirt } from "lucide-react";
 
@@ -14,8 +14,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { OutfitSuggestResponse } from "@/features/outfits/types";
-
-const outfitSuggestionStorageKey = "climo:outfit-suggestion";
+import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
+import { useAuthStore } from "@/stores/auth-store";
 
 const tpoLabels: Record<string, string> = {
   business: "オフィス向けコーデ",
@@ -36,36 +36,44 @@ const tpoSceneLabels: Record<string, string> = {
 type OutfitDetailState = {
   suggestion: OutfitSuggestResponse | null;
   errorMessage: string | null;
+  isLoading: boolean;
 };
 
-function loadOutfitSuggestion(): OutfitDetailState {
-  if (typeof window === "undefined") {
-    return {
-      suggestion: null,
-      errorMessage: null,
-    };
-  }
-
+function loadOutfitSuggestion(userId: string): OutfitDetailState {
   const rawSuggestion = window.sessionStorage.getItem(
-    outfitSuggestionStorageKey,
+    getOutfitSuggestionStorageKey(userId),
   );
 
   if (!rawSuggestion) {
     return {
       suggestion: null,
       errorMessage: "コーデ提案結果が見つかりません。",
+      isLoading: false,
     };
   }
 
   try {
+    const suggestion = JSON.parse(rawSuggestion) as OutfitSuggestResponse;
+    const outfitUserId = suggestion.outfits[0]?.user_id;
+
+    if (outfitUserId !== userId) {
+      return {
+        suggestion: null,
+        errorMessage: "ログイン中のユーザーとコーデ提案結果が一致しません。",
+        isLoading: false,
+      };
+    }
+
     return {
-      suggestion: JSON.parse(rawSuggestion) as OutfitSuggestResponse,
+      suggestion,
       errorMessage: null,
+      isLoading: false,
     };
   } catch {
     return {
       suggestion: null,
       errorMessage: "コーデ提案結果の読み込みに失敗しました。",
+      isLoading: false,
     };
   }
 }
@@ -100,8 +108,36 @@ function formatComment(comment: string | null | undefined) {
 }
 
 export function OutfitDetailContent() {
-  const [{ suggestion, errorMessage }] =
-    useState<OutfitDetailState>(loadOutfitSuggestion);
+  const user = useAuthStore((state) => state.user);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
+
+  const [{ suggestion, errorMessage, isLoading }, setDetailState] =
+    useState<OutfitDetailState>({
+      suggestion: null,
+      errorMessage: null,
+      isLoading: true,
+    });
+
+  useEffect(() => {
+    if (!isInitialized) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      if (!user) {
+        setDetailState({
+          suggestion: null,
+          errorMessage: "ログインが必要です。",
+          isLoading: false,
+        });
+        return;
+      }
+
+      setDetailState(loadOutfitSuggestion(user.id));
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isInitialized, user]);
 
   const outfit = suggestion?.outfits[0] ?? null;
   const outfitTitle = outfit ? tpoLabels[outfit.tpo] ?? "おすすめコーデ" : "";
@@ -129,6 +165,16 @@ export function OutfitDetailContent() {
             <CardContent className="px-5 py-4">
               <p role="alert" className="text-sm text-red-700">
                 {errorMessage}
+              </p>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {isLoading ? (
+          <Card className="border-[#E7DDD3] bg-white/90 shadow-sm">
+            <CardContent className="px-5 py-4">
+              <p className="text-sm text-[#6F6259]">
+                コーデ提案結果を読み込んでいます。
               </p>
             </CardContent>
           </Card>
