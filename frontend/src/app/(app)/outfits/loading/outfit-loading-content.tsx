@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { suggestOutfit } from "@/features/outfits/api";
 import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
 import type { OutfitSuggestResponse } from "@/features/outfits/types";
+import { useAuthStore } from "@/stores/auth-store";
 
 const allowedTpos = [
   "business",
@@ -30,8 +31,8 @@ function normalizeTpo(value: string | null) {
   return "business";
 }
 
-function requestOutfitSuggestion(tpo: string) {
-  const requestKey = `tpo:${tpo}`;
+function requestOutfitSuggestion(userId: string, tpo: string) {
+  const requestKey = `user:${userId}:tpo:${tpo}`;
   const existingRequest = outfitSuggestionRequests.get(requestKey);
 
   if (existingRequest) {
@@ -50,31 +51,45 @@ function requestOutfitSuggestion(tpo: string) {
 export function OutfitLoadingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const userId = useAuthStore((state) => state.user?.id ?? null);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
   const tpo = normalizeTpo(searchParams.get("tpo"));
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isInitialized) {
+      return;
+    }
+
     let isMounted = true;
 
     async function loadSuggestion() {
       try {
         setErrorMessage(null);
 
-        const result = await requestOutfitSuggestion(tpo);
+        if (!userId) {
+          throw new Error("ログインが必要です。");
+        }
+
+        const result = await requestOutfitSuggestion(userId, tpo);
 
         if (!isMounted) return;
 
         const outfit = result.outfits[0];
-        const userId = outfit?.user_id;
+        const responseUserId = outfit?.user_id;
         const outfitId = outfit?.id;
 
-        if (!userId || !outfitId) {
+        if (!responseUserId || !outfitId) {
           throw new Error("コーデ提案の識別情報が見つかりません。");
         }
 
+        if (responseUserId !== userId) {
+          throw new Error("ログイン中のユーザーとコーデ提案結果が一致しません。");
+        }
+
         window.sessionStorage.setItem(
-          getOutfitSuggestionStorageKey(userId, outfitId),
+          getOutfitSuggestionStorageKey(responseUserId, outfitId),
           JSON.stringify(result),
         );
 
@@ -97,7 +112,7 @@ export function OutfitLoadingContent() {
     return () => {
       isMounted = false;
     };
-  }, [router, tpo]);
+  }, [isInitialized, router, tpo, userId]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#FAF8F5] px-5 text-[#2F2925]">
