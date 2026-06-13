@@ -594,10 +594,10 @@ def test_suggest_outfit_returns_bad_gateway_on_weather_parse_error(
 
 
 @pytest.mark.asyncio
-async def test_outfit_service_sends_only_selected_clothes_to_llm(
+async def test_onepiece_selected_over_tops_on_equal_score(
     monkeypatch,
 ) -> None:
-    """LLMへ渡すのは_select_clothesで選定されたアイテムのみ (Issue #60)"""
+    """同スコアのとき onepiece が tops より優先される (Issue #60)"""
     captured: dict[str, str] = {}
 
     class FakeLLMClient:
@@ -630,7 +630,6 @@ async def test_outfit_service_sends_only_selected_clothes_to_llm(
         created_at="2026-06-04T00:00:00Z",
         updated_at="2026-06-04T00:00:00Z",
     )
-    # ワンピースは固定カテゴリ外（outer/tops/bottoms/shoes/bag/accessoryのみ対象）
     onepiece_item = ClothingItem(
         id=uuid.UUID("00000000-0000-0000-0000-000000000020"),
         user_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
@@ -664,11 +663,113 @@ async def test_outfit_service_sends_only_selected_clothes_to_llm(
         },
     )
 
-    assert "white shirt" in captured["prompt"]
-    assert "floral onepiece" not in captured["prompt"]
+    assert "floral onepiece" in captured["prompt"]
+    assert "white shirt" not in captured["prompt"]
     item_names = [s.clothing_item.name for s in result.items]
-    assert "white shirt" in item_names
-    assert "floral onepiece" not in item_names
+    assert "floral onepiece" in item_names
+    assert "white shirt" not in item_names
+
+
+def _make_clothing_item(
+    uid: str,
+    name: str,
+    category: str,
+    tpo_tags: list[str],
+    is_favorite: bool = False,
+) -> ClothingItem:
+    return ClothingItem(
+        id=uuid.UUID(uid),
+        user_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+        name=name,
+        category=category,
+        color=None,
+        pattern=None,
+        size=None,
+        season=["spring"],
+        tpo_tags=tpo_tags,
+        image_url="https://example.com/img.jpg",
+        thumbnail_url=None,
+        memo=None,
+        is_favorite=is_favorite,
+        wear_count=0,
+        last_worn_at=None,
+        created_at="2026-06-04T00:00:00Z",
+        updated_at="2026-06-04T00:00:00Z",
+    )
+
+
+def test_tops_bottoms_win_when_higher_score() -> None:
+    """tops/bottoms が is_favorite=True でスコア優位なら onepiece より優先される"""
+    tops = _make_clothing_item(
+        "00000000-0000-0000-0000-000000000030",
+        "favorite tops",
+        "tops",
+        ["casual"],
+        is_favorite=True,
+    )
+    bottoms = _make_clothing_item(
+        "00000000-0000-0000-0000-000000000031",
+        "favorite bottoms",
+        "bottoms",
+        ["casual"],
+        is_favorite=True,
+    )
+    onepiece = _make_clothing_item(
+        "00000000-0000-0000-0000-000000000032",
+        "plain onepiece",
+        "onepiece",
+        ["casual"],
+    )
+
+    result = OutfitService._select_clothes(
+        tpo="casual", clothes=[tops, bottoms, onepiece]
+    )
+
+    roles = {s.role for s in result}
+    names = [s.clothing_item.name for s in result]
+    assert "tops" in roles
+    assert "bottoms" in roles
+    assert "onepiece" not in roles
+    assert "plain onepiece" not in names
+
+
+def test_onepiece_selected_when_no_tops_or_bottoms() -> None:
+    """tops/bottoms 候補がない場合は onepiece が選ばれる"""
+    onepiece = _make_clothing_item(
+        "00000000-0000-0000-0000-000000000040",
+        "ivory onepiece",
+        "onepiece",
+        ["date"],
+    )
+
+    result = OutfitService._select_clothes(tpo="date", clothes=[onepiece])
+
+    assert len(result) == 1
+    assert result[0].role == "onepiece"
+    assert result[0].clothing_item.name == "ivory onepiece"
+
+
+def test_regression_no_onepiece_selects_tops_and_bottoms() -> None:
+    """onepiece 候補がない場合は従来どおり tops+bottoms が選ばれる"""
+    tops = _make_clothing_item(
+        "00000000-0000-0000-0000-000000000050",
+        "plain tops",
+        "tops",
+        ["casual"],
+    )
+    bottoms = _make_clothing_item(
+        "00000000-0000-0000-0000-000000000051",
+        "plain bottoms",
+        "bottoms",
+        ["casual"],
+    )
+
+    result = OutfitService._select_clothes(tpo="casual", clothes=[tops, bottoms])
+
+    roles = {s.role for s in result}
+    assert "tops" in roles
+    assert "bottoms" in roles
+    assert "onepiece" not in roles
 
 
 def test_suggest_outfit_rejects_tpo_exceeding_max_length(
