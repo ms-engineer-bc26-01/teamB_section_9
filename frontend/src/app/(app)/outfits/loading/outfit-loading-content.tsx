@@ -7,6 +7,7 @@ import { Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { suggestOutfit } from "@/features/outfits/api";
 import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
+import type { OutfitSuggestResponse } from "@/features/outfits/types";
 
 const allowedTpos = [
   "business",
@@ -16,12 +17,34 @@ const allowedTpos = [
   "leisure",
 ] as const;
 
+const outfitSuggestionRequests = new Map<
+  string,
+  Promise<OutfitSuggestResponse>
+>();
+
 function normalizeTpo(value: string | null) {
   if (value && allowedTpos.includes(value as (typeof allowedTpos)[number])) {
     return value;
   }
 
   return "business";
+}
+
+function requestOutfitSuggestion(tpo: string) {
+  const requestKey = `tpo:${tpo}`;
+  const existingRequest = outfitSuggestionRequests.get(requestKey);
+
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = suggestOutfit({ tpo }).finally(() => {
+    outfitSuggestionRequests.delete(requestKey);
+  });
+
+  outfitSuggestionRequests.set(requestKey, request);
+
+  return request;
 }
 
 export function OutfitLoadingContent() {
@@ -38,7 +61,7 @@ export function OutfitLoadingContent() {
       try {
         setErrorMessage(null);
 
-        const result = await suggestOutfit({ tpo });
+        const result = await requestOutfitSuggestion(tpo);
 
         if (!isMounted) return;
 
