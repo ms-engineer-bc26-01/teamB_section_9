@@ -112,6 +112,41 @@ def test_create_clothing_returns_created_item(client: TestClient, monkeypatch) -
     assert body["tpo_tags"] == ["business"]
 
 
+def test_create_clothing_allows_missing_image_url(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    _mock_supabase_user(monkeypatch)
+
+    async def fake_create_clothing(db, user_id, payload):
+        item = _sample_item()
+        item["name"] = payload.name
+        item["category"] = payload.category
+        item["tpo_tags"] = payload.tpo_tags
+        item["image_url"] = payload.image_url
+        return item
+
+    monkeypatch.setattr(crud, "create_clothing", fake_create_clothing)
+
+    response = client.post(
+        "/api/v1/clothes",
+        json={
+            "name": "画像なしシャツ",
+            "category": "tops",
+            "season": ["spring"],
+            "tpo_tags": ["casual"],
+        },
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["name"] == "画像なしシャツ"
+    assert body["category"] == "tops"
+    assert body["tpo_tags"] == ["casual"]
+    assert body["image_url"] is None
+
+
 def test_get_clothing_returns_item(client: TestClient, monkeypatch) -> None:
     clothing_id = uuid.uuid4()
     _mock_supabase_user(monkeypatch)
