@@ -27,7 +27,7 @@ sequenceDiagram
     BE->>DB: ユーザーの default_region_code 確認
     Note over BE: region_code が未指定なら<br/>default_region_code を使用
 
-    BE->>DB: ユーザーの服一覧を取得<br/>（clothing_ids 指定があれば絞り込み）
+    BE->>DB: ユーザーの服一覧を取得<br/>（clothing_ids=必ず含める / exclude_clothing_ids=除外 / 未指定枠は自動補完）
 
     BE->>Redis: 天気キャッシュ確認<br/>キー: weather:{region_code}:{yyyymmdd}:{days}
     alt キャッシュHIT（TTL 30分以内）

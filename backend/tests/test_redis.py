@@ -73,12 +73,12 @@ async def test_close_redis_resets_client(monkeypatch) -> None:
 async def test_cache_get_json_returns_decoded_value_on_hit(monkeypatch) -> None:
     class FakeClient:
         async def get(self, key: str):
-            assert key == "weather:1.0:2.0:3"
+            assert key == "cache:any:key"
             return json.dumps({"cached": False, "value": 1})
 
     monkeypatch.setattr(redis_module, "_redis_client", FakeClient())
 
-    assert await redis_module.cache_get_json("weather:1.0:2.0:3") == {
+    assert await redis_module.cache_get_json("cache:any:key") == {
         "cached": False,
         "value": 1,
     }
