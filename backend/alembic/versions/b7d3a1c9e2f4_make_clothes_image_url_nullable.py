@@ -32,6 +32,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
+    op.execute("UPDATE clothes SET image_url = 'about:blank' WHERE image_url IS NULL")
     op.alter_column(
         "clothes",
         "image_url",
