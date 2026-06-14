@@ -196,11 +196,11 @@ POST /api/v1/outfits/suggest  { tpo, date, region_code? }
 
 ### 3.6 Redis キャッシュキー設計
 
-| キー                                           | TTL                  | 用途                                     |
-| ---------------------------------------------- | -------------------- | ---------------------------------------- |
+| キー                                           | TTL                  | 用途                                                      |
+| ---------------------------------------------- | -------------------- | --------------------------------------------------------- |
 | `weather:{region_code}:{yyyymmdd}:{days}`      | 30 分                | 天気データ（地域単位で全ユーザーが共有・days は予報日数） |
-| `suggest:{user_id}:{region_code}:{tpo}:{date}` | 24 時間              | コーデ提案結果                           |
-| `rate:{user_id}`                               | 翌 00:00 まで（JST） | 1 日あたりの提案回数カウンタ             |
+| `suggest:{user_id}:{region_code}:{tpo}:{date}` | 24 時間              | コーデ提案結果                                            |
+| `rate:{user_id}`                               | 翌 00:00 まで（JST） | 1 日あたりの提案回数カウンタ                              |
 
 ---
 
@@ -256,6 +256,7 @@ outfits
   weather_temp_max  float  nullable
   weather_temp_min  float  nullable
   comment           string  nullable  -- LLM のおすすめポイント（200 字以内）
+  coordinate_image_url  string  nullable  -- 生成または保存済みのコーデ画像URL
   is_favorite       boolean  default false
   source            string  -- enum: llm / manual
   created_at        timestamp
@@ -338,13 +339,13 @@ REGIONS: dict[str, dict] = {
 
 ### Auth
 
-| メソッド | パス                      | 認証  | 概要                                                                     |
-| -------- | ------------------------- | ----- | ------------------------------------------------------------------------ |
-| POST     | `/auth/register`          | ※不要 | ユーザー登録 → 201 + AuthResponse                                        |
-| POST     | `/auth/login`             | ※不要 | ログイン → 200 + AuthResponse                                            |
-| GET      | `/auth/me`                | 必須  | 自分のプロフィール取得（プラン状態・デフォルト地域含む）                 |
-| PUT      | `/auth/me`                | 必須  | 自分のプロフィール情報を置き換え（display_name / default_region_code / secondary_region_code） |
-| PATCH    | `/auth/me`                | 必須  | 自分のプロフィール情報を部分更新                                       |
+| メソッド | パス             | 認証  | 概要                                                                                           |
+| -------- | ---------------- | ----- | ---------------------------------------------------------------------------------------------- |
+| POST     | `/auth/register` | ※不要 | ユーザー登録 → 201 + AuthResponse                                                              |
+| POST     | `/auth/login`    | ※不要 | ログイン → 200 + AuthResponse                                                                  |
+| GET      | `/auth/me`       | 必須  | 自分のプロフィール取得（プラン状態・デフォルト地域含む）                                       |
+| PUT      | `/auth/me`       | 必須  | 自分のプロフィール情報を置き換え（display_name / default_region_code / secondary_region_code） |
+| PATCH    | `/auth/me`       | 必須  | 自分のプロフィール情報を部分更新                                                               |
 
 ### 地域マスタ
 
