@@ -82,6 +82,7 @@ function getWeatherLabel(weatherCode: number) {
   }
 
   return "不明";
+}
 
 function renderWeatherIcon(weatherCode: number | null, size: number) {
   if (weatherCode === null) {
