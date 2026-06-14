@@ -14,6 +14,8 @@ from app.core.config import settings
 from app.domain.outfits.service import OutfitService, OutfitSuggestionError
 from app.services.weather_client import WeatherForecastResponseError
 
+TEST_TIMESTAMP = datetime(2026, 6, 4, tzinfo=UTC)
+
 
 @pytest.mark.asyncio
 async def test_outfit_service_uses_prompt_template_independent_of_cwd(
@@ -52,8 +54,8 @@ async def test_outfit_service_uses_prompt_template_independent_of_cwd(
                 is_favorite=False,
                 wear_count=0,
                 last_worn_at=None,
-                created_at="2026-06-04T00:00:00Z",
-                updated_at="2026-06-04T00:00:00Z",
+                created_at=TEST_TIMESTAMP,
+                updated_at=TEST_TIMESTAMP,
             )
         ],
         weather={
@@ -158,8 +160,8 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
                         is_favorite=False,
                         wear_count=0,
                         last_worn_at=None,
-                        created_at="2026-06-04T00:00:00Z",
-                        updated_at="2026-06-04T00:00:00Z",
+                        created_at=TEST_TIMESTAMP,
+                        updated_at=TEST_TIMESTAMP,
                     )
                 ]
             },
@@ -814,8 +816,8 @@ async def test_tops_wins_over_onepiece_on_equal_score(
         is_favorite=False,
         wear_count=0,
         last_worn_at=None,
-        created_at="2026-06-04T00:00:00Z",
-        updated_at="2026-06-04T00:00:00Z",
+        created_at=TEST_TIMESTAMP,
+        updated_at=TEST_TIMESTAMP,
     )
     onepiece_item = ClothingItem(
         id=uuid.UUID("00000000-0000-0000-0000-000000000020"),
@@ -833,8 +835,8 @@ async def test_tops_wins_over_onepiece_on_equal_score(
         is_favorite=False,
         wear_count=0,
         last_worn_at=None,
-        created_at="2026-06-04T00:00:00Z",
-        updated_at="2026-06-04T00:00:00Z",
+        created_at=TEST_TIMESTAMP,
+        updated_at=TEST_TIMESTAMP,
     )
 
     result = await service.suggest(
@@ -906,8 +908,8 @@ def _make_clothing_item(
         is_favorite=is_favorite,
         wear_count=0,
         last_worn_at=None,
-        created_at="2026-06-04T00:00:00Z",
-        updated_at="2026-06-04T00:00:00Z",
+        created_at=TEST_TIMESTAMP,
+        updated_at=TEST_TIMESTAMP,
     )
 
 
