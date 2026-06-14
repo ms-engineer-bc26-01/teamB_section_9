@@ -135,9 +135,7 @@ def test_get_weather_forecast_returns_400_for_unknown_region(
     async def fail_if_called(**kwargs):
         raise AssertionError("fetch_weather_forecast_cached should not be called")
 
-    monkeypatch.setattr(
-        weather_router, "fetch_weather_forecast_cached", fail_if_called
-    )
+    monkeypatch.setattr(weather_router, "fetch_weather_forecast_cached", fail_if_called)
 
     response = client.get(
         "/api/v1/weather/forecast",
@@ -220,9 +218,7 @@ async def test_fetch_weather_forecast_cached_miss_fetches_and_stores(
     )
     monkeypatch.setattr(weather_client, "cache_set_json", fake_cache_set_json)
 
-    result = await fetch_weather_forecast_cached(
-        latitude=1.0, longitude=2.0, days=3
-    )
+    result = await fetch_weather_forecast_cached(latitude=1.0, longitude=2.0, days=3)
 
     assert result["cached"] is False
     assert fetched == [True]
@@ -243,8 +239,6 @@ async def test_fetch_weather_forecast_cached_hit_skips_fetch(monkeypatch) -> Non
     monkeypatch.setattr(weather_client, "cache_get_json", fake_cache_get_json)
     monkeypatch.setattr(weather_client, "fetch_weather_forecast", fail_if_called)
 
-    result = await fetch_weather_forecast_cached(
-        latitude=1.0, longitude=2.0, days=3
-    )
+    result = await fetch_weather_forecast_cached(latitude=1.0, longitude=2.0, days=3)
 
     assert result["cached"] is True
