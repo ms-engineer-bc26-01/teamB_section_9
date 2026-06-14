@@ -210,7 +210,7 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
         "app.dependencies.auth.user_crud.get_or_create_user", fake_get_or_create_user
     )
     monkeypatch.setattr(
-        outfits_router, "fetch_weather_forecast", fake_fetch_weather_forecast
+        outfits_router, "fetch_weather_forecast_cached", fake_fetch_weather_forecast
     )
     monkeypatch.setattr(outfits_router.clothes_crud, "list_clothes", fake_list_clothes)
     monkeypatch.setattr(
@@ -379,7 +379,7 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
         "app.dependencies.auth.user_crud.get_or_create_user", fake_get_or_create_user
     )
     monkeypatch.setattr(
-        outfits_router, "fetch_weather_forecast", fake_fetch_weather_forecast
+        outfits_router, "fetch_weather_forecast_cached", fake_fetch_weather_forecast
     )
     monkeypatch.setattr(outfits_router.clothes_crud, "list_clothes", fake_list_clothes)
     monkeypatch.setattr(
@@ -429,7 +429,7 @@ def test_suggest_outfit_accepts_clothing_filters(
         raise WeatherForecastResponseError("invalid weather forecast response")
 
     monkeypatch.setattr(
-        outfits_router, "fetch_weather_forecast", fake_fetch_weather_forecast
+        outfits_router, "fetch_weather_forecast_cached", fake_fetch_weather_forecast
     )
 
     response = client.post("/api/v1/outfits/suggest", json=payload)
@@ -610,7 +610,7 @@ def test_suggest_outfit_returns_bad_gateway_on_llm_failure(
     monkeypatch.setattr(settings, "APP_ENV", "development")
     monkeypatch.setattr("app.api.v1.routers.outfits.OutfitService", FakeOutfitService)
     monkeypatch.setattr(
-        outfits_router, "fetch_weather_forecast", fake_fetch_weather_forecast
+        outfits_router, "fetch_weather_forecast_cached", fake_fetch_weather_forecast
     )
     monkeypatch.setattr(outfits_router.clothes_crud, "list_clothes", fake_list_clothes)
 
@@ -652,7 +652,7 @@ def test_suggest_outfit_returns_bad_gateway_on_service_initialization_failure(
     monkeypatch.setattr(settings, "APP_ENV", "development")
     monkeypatch.setattr("app.api.v1.routers.outfits.OutfitService", FakeOutfitService)
     monkeypatch.setattr(
-        outfits_router, "fetch_weather_forecast", fake_fetch_weather_forecast
+        outfits_router, "fetch_weather_forecast_cached", fake_fetch_weather_forecast
     )
     monkeypatch.setattr(outfits_router.clothes_crud, "list_clothes", fake_list_clothes)
 
@@ -678,7 +678,7 @@ def test_suggest_outfit_returns_bad_gateway_on_weather_parse_error(
     monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", True)
     monkeypatch.setattr(settings, "APP_ENV", "development")
     monkeypatch.setattr(
-        outfits_router, "fetch_weather_forecast", fake_fetch_weather_forecast
+        outfits_router, "fetch_weather_forecast_cached", fake_fetch_weather_forecast
     )
 
     response = client.post(

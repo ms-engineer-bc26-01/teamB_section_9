@@ -8,7 +8,7 @@ from app.constants.regions import get_region_coordinates
 from app.dependencies.auth import CurrentUser, get_current_user
 from app.services.weather_client import (
     WeatherForecastResponseError,
-    fetch_weather_forecast,
+    fetch_weather_forecast_cached,
 )
 
 router = APIRouter(prefix="/weather", tags=["Weather"])
@@ -35,7 +35,7 @@ async def get_weather_forecast(
     latitude, longitude = coordinates
 
     try:
-        forecast = await fetch_weather_forecast(
+        forecast = await fetch_weather_forecast_cached(
             latitude=latitude,
             longitude=longitude,
             days=days,

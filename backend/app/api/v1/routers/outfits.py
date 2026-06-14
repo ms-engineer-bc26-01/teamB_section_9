@@ -21,7 +21,7 @@ from app.domain.outfits import crud as outfits_crud
 from app.domain.outfits.service import OutfitService, OutfitSuggestionError
 from app.services.weather_client import (
     WeatherForecastResponseError,
-    fetch_weather_forecast,
+    fetch_weather_forecast_cached,
 )
 
 router = APIRouter(prefix="/outfits", tags=["Outfits"])
@@ -73,7 +73,7 @@ async def suggest_outfit(
     latitude, longitude = region["lat"], region["lng"]
 
     try:
-        weather = await fetch_weather_forecast(
+        weather = await fetch_weather_forecast_cached(
             latitude=latitude,
             longitude=longitude,
             days=3,

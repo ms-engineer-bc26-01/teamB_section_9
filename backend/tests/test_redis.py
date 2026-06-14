@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from redis.exceptions import RedisError
 
@@ -65,3 +67,70 @@ async def test_close_redis_resets_client(monkeypatch) -> None:
 
     assert closed == [True]
     assert redis_module._redis_client is None
+
+
+@pytest.mark.asyncio
+async def test_cache_get_json_returns_decoded_value_on_hit(monkeypatch) -> None:
+    class FakeClient:
+        async def get(self, key: str):
+            assert key == "weather:1.0:2.0:3"
+            return json.dumps({"cached": False, "value": 1})
+
+    monkeypatch.setattr(redis_module, "_redis_client", FakeClient())
+
+    assert await redis_module.cache_get_json("weather:1.0:2.0:3") == {
+        "cached": False,
+        "value": 1,
+    }
+
+
+@pytest.mark.asyncio
+async def test_cache_get_json_returns_none_on_miss(monkeypatch) -> None:
+    class FakeClient:
+        async def get(self, key: str):
+            return None
+
+    monkeypatch.setattr(redis_module, "_redis_client", FakeClient())
+
+    assert await redis_module.cache_get_json("missing") is None
+
+
+@pytest.mark.asyncio
+async def test_cache_get_json_returns_none_on_redis_error(monkeypatch) -> None:
+    """接続失敗時は握りつぶしてミス扱い（None）。"""
+
+    class FakeClient:
+        async def get(self, key: str):
+            raise RedisError("connection refused")
+
+    monkeypatch.setattr(redis_module, "_redis_client", FakeClient())
+
+    assert await redis_module.cache_get_json("any") is None
+
+
+@pytest.mark.asyncio
+async def test_cache_set_json_writes_with_ttl(monkeypatch) -> None:
+    calls: list[tuple] = []
+
+    class FakeClient:
+        async def set(self, key, value, ex):
+            calls.append((key, value, ex))
+
+    monkeypatch.setattr(redis_module, "_redis_client", FakeClient())
+
+    await redis_module.cache_set_json("k", {"a": 1}, 1800)
+
+    assert calls == [("k", json.dumps({"a": 1}), 1800)]
+
+
+@pytest.mark.asyncio
+async def test_cache_set_json_swallows_redis_error(monkeypatch) -> None:
+    """保存失敗時は例外を送出しない（API レスポンスに影響させない）。"""
+
+    class FakeClient:
+        async def set(self, key, value, ex):
+            raise RedisError("connection refused")
+
+    monkeypatch.setattr(redis_module, "_redis_client", FakeClient())
+
+    await redis_module.cache_set_json("k", {"a": 1}, 1800)  # 例外が出なければ OK
