@@ -1,26 +1,135 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
   ChevronRight,
+  Cloud,
+  CloudDrizzle,
+  CloudFog,
+  CloudLightning,
+  CloudRain,
+  CloudSnow,
   CloudSun,
   Shirt,
+  Sun,
   Sparkles,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  getWeatherForecast,
+  type WeatherForecast,
+} from "@/features/weather/api";
+import { apiClient } from "@/lib/api/client";
+import { useAuthStore } from "@/stores/auth-store";
 
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
+const DEFAULT_REGION_CODE = "13_01";
 
 const mockHomeData = {
-  weatherLabel: "くもり時々晴れ",
-  highTemperature: 18,
-  lowTemperature: 12,
-  precipitationProbability: 30,
   sceneLabel: "お仕事",
   clothesCount: 18,
   weeklyOutfitCount: 5,
 };
+
+type UserProfile = {
+  default_region_code: string | null;
+};
+
+type HomeWeatherState = {
+  weather: WeatherForecast | null;
+  errorMessage: string | null;
+};
+
+function getWeatherLabel(weatherCode: number) {
+  if (weatherCode === 0) {
+    return "快晴";
+  }
+
+  if (weatherCode === 1) {
+    return "晴れ";
+  }
+
+  if (weatherCode === 2) {
+    return "くもり時々晴れ";
+  }
+
+  if (weatherCode === 3) {
+    return "くもり";
+  }
+
+  if ([45, 48].includes(weatherCode)) {
+    return "霧";
+  }
+
+  if ([51, 53, 55, 56, 57].includes(weatherCode)) {
+    return "霧雨";
+  }
+
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(weatherCode)) {
+    return "雨";
+  }
+
+  if ([71, 73, 75, 77, 85, 86].includes(weatherCode)) {
+    return "雪";
+  }
+
+  if ([95, 96, 99].includes(weatherCode)) {
+    return "雷雨";
+  }
+
+  return "不明";
+}
+
+function renderWeatherIcon(weatherCode: number | null, size: number) {
+  if (weatherCode === null) {
+    return <CloudSun aria-hidden="true" size={size} />;
+  }
+
+  if (weatherCode === 0 || weatherCode === 1) {
+    return <Sun aria-hidden="true" size={size} />;
+  }
+
+  if (weatherCode === 2) {
+    return <CloudSun aria-hidden="true" size={size} />;
+  }
+
+  if (weatherCode === 3) {
+    return <Cloud aria-hidden="true" size={size} />;
+  }
+
+  if ([45, 48].includes(weatherCode)) {
+    return <CloudFog aria-hidden="true" size={size} />;
+  }
+
+  if ([51, 53, 55, 56, 57].includes(weatherCode)) {
+    return <CloudDrizzle aria-hidden="true" size={size} />;
+  }
+
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(weatherCode)) {
+    return <CloudRain aria-hidden="true" size={size} />;
+  }
+
+  if ([71, 73, 75, 77, 85, 86].includes(weatherCode)) {
+    return <CloudSnow aria-hidden="true" size={size} />;
+  }
+
+  if ([95, 96, 99].includes(weatherCode)) {
+    return <CloudLightning aria-hidden="true" size={size} />;
+  }
+
+  return <CloudSun aria-hidden="true" size={size} />;
+}
+
+async function fetchHomeWeather(token: string) {
+  const profile = await apiClient.get<UserProfile>("/auth/me", { token });
+  const regionCode = profile.default_region_code ?? DEFAULT_REGION_CODE;
+
+  return getWeatherForecast(token, regionCode);
+}
 
 const outfitItems = [
   "白シャツ",
@@ -30,9 +139,92 @@ const outfitItems = [
 ];
 
 export default function HomeDashboard() {
+  const session = useAuthStore((state) => state.session);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
+  const [weatherState, setWeatherState] = useState<HomeWeatherState>({
+    weather: null,
+    errorMessage: null,
+  });
+
+  useEffect(() => {
+    if (!isInitialized) {
+      return;
+    }
+
+    const token = session?.access_token;
+
+    if (!token) {
+      return;
+    }
+
+    let isMounted = true;
+
+    fetchHomeWeather(token)
+      .then((weather) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setWeatherState({
+          weather,
+          errorMessage: null,
+        });
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setWeatherState({
+          weather: null,
+          errorMessage: "天気情報を取得できませんでした。",
+        });
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isInitialized, session?.access_token]);
+
   const today = new Date();
+  const token = session?.access_token;
   const todayLabel = `${today.getMonth() + 1}月${today.getDate()}日(${weekdayLabels[today.getDay()]})`;
   const todayDateTime = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const weather = token ? weatherState.weather : null;
+  const todayForecast = weather?.daily[0] ?? null;
+  const hasWeather = weather !== null && todayForecast !== null;
+  const errorMessage = token
+    ? weatherState.errorMessage
+    : isInitialized
+      ? "ログインすると天気を表示できます。"
+      : null;
+  const weatherLabel = weather
+    ? getWeatherLabel(weather.current.weather_code)
+    : errorMessage
+      ? "天気情報は未取得"
+      : "天気を確認中";
+  const highTemperature = hasWeather
+    ? Math.round(todayForecast.temperature_max)
+    : null;
+  const lowTemperature = hasWeather
+    ? Math.round(todayForecast.temperature_min)
+    : null;
+  const precipitationProbability =
+    todayForecast?.precipitation_probability_max ??
+    weather?.current.precipitation_probability ??
+    null;
+  const isWeatherLoading =
+    Boolean(token) &&
+    isInitialized &&
+    weatherState.weather === null &&
+    weatherState.errorMessage === null;
+  const weatherCode = weather?.current.weather_code ?? null;
+  const temperatureText =
+    highTemperature !== null && lowTemperature !== null
+      ? `${highTemperature}℃ / ${lowTemperature}℃`
+      : "-";
+  const precipitationText =
+    precipitationProbability !== null ? `${precipitationProbability}%` : "-";
 
   return (
     <div className="space-y-5">
@@ -48,7 +240,7 @@ export default function HomeDashboard() {
             </h1>
           </div>
           <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#EAF4F0] text-[#2F6F63]">
-            <CloudSun aria-hidden="true" size={25} />
+            {renderWeatherIcon(weatherCode, 25)}
           </div>
         </div>
         <p className="text-sm leading-6 text-[#6F6258]">
@@ -70,19 +262,20 @@ export default function HomeDashboard() {
         <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
           <CardContent className="flex items-center gap-8 px-5 py-5">
             <div className="flex size-24 shrink-0 items-center justify-center rounded-full bg-[#F6FAF8] text-[#2F6F63]">
-              <CloudSun aria-hidden="true" size={56} />
+              {renderWeatherIcon(weatherCode, 56)}
             </div>
 
             <div className="space-y-1">
-              <p className="text-lg font-bold text-[#2B2926]">
-                {mockHomeData.weatherLabel}
-              </p>
+              <p className="text-lg font-bold text-[#2B2926]">{weatherLabel}</p>
               <p className="text-2xl font-bold text-[#2B2926]">
-                {mockHomeData.highTemperature}℃ / {mockHomeData.lowTemperature}℃
+                {isWeatherLoading ? "-" : temperatureText}
               </p>
               <p className="text-sm font-semibold text-[#4B3A2F]">
-                降水確率 {mockHomeData.precipitationProbability}%
+                降水確率 {isWeatherLoading ? "-" : precipitationText}
               </p>
+              {errorMessage ? (
+                <p className="text-sm text-[#8C3D2F]">{errorMessage}</p>
+              ) : null}
             </div>
           </CardContent>
         </Card>
