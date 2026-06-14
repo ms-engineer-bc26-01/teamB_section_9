@@ -32,6 +32,7 @@ class Outfit(Base):
         nullable=False,
         server_default="false",
     )
+    courage_image_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     source: Mapped[str] = mapped_column(String(20), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
