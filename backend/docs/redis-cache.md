@@ -13,11 +13,13 @@
 
 | 用途 | キー形式 | 例 |
 |------|---------|----|
-| 天気予報 | `weather:{latitude}:{longitude}:{days}` | `weather:35.6895:139.6917:3` |
-| コーデ提案（将来） | `outfit:{user_id}:{...}` | （未実装・別タスク） |
+| 天気予報 | `weather:{region_code}:{yyyymmdd}:{days}` | `weather:13_01:20260614:3` |
+| コーデ提案（将来） | `suggest:{user_id}:{region_code}:{tpo}:{date}` | （未実装・別タスク） |
 
-- 天気は緯度経度と日数で結果が一意に定まるため、これらをキーにする。
-  緯度経度は [`app/constants/regions.py`](../app/constants/regions.py) の固定値なのでキーは安定する。
+- 仕様（[`docs/openapi.yaml`](../../docs/openapi.yaml)）の `weather:{region_code}:{yyyymmdd}` に準拠。
+  `days`（予報日数 1〜7）で結果が変わるため、衝突回避のため末尾に `days` を加える。
+- `yyyymmdd` は JST 基準（日付境界をアプリのタイムゾーンに合わせる）。
+- 地域は全ユーザー共有（地域単位でキャッシュ）。
 
 ## 値フォーマット
 

@@ -156,8 +156,8 @@ POST /api/v1/outfits/suggest  { tpo, date, region_code? }
   2. Redis でレート制限チェック（超過時: 429）
   3. ユーザーの default_region_code を確認（region_code 未指定時のフォールバック）
   4. Redis から天気キャッシュ確認
-       MISS → Open-Meteo を叩いて 30 分キャッシュ（キー: weather:{region_code}:{yyyymmdd}）
-  5. DB からユーザーの服一覧を取得（clothing_ids 指定があれば絞り込み）
+       MISS → Open-Meteo を叩いて 30 分キャッシュ（キー: weather:{region_code}:{yyyymmdd}:{days}）
+  5. DB からユーザーの服一覧を取得（clothing_ids=必ず含める / exclude_clothing_ids=除外。指定で埋まらない枠は自動補完）
   6. Redis から提案結果キャッシュ確認
        HIT  → そのまま返す（cached: true）
        MISS → 7 へ
@@ -198,7 +198,7 @@ POST /api/v1/outfits/suggest  { tpo, date, region_code? }
 
 | キー                                           | TTL                  | 用途                                     |
 | ---------------------------------------------- | -------------------- | ---------------------------------------- |
-| `weather:{region_code}:{yyyymmdd}`             | 30 分                | 天気データ（地域単位で全ユーザーが共有） |
+| `weather:{region_code}:{yyyymmdd}:{days}`      | 30 分                | 天気データ（地域単位で全ユーザーが共有・days は予報日数） |
 | `suggest:{user_id}:{region_code}:{tpo}:{date}` | 24 時間              | コーデ提案結果                           |
 | `rate:{user_id}`                               | 翌 00:00 まで（JST） | 1 日あたりの提案回数カウンタ             |
 

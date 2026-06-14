@@ -112,7 +112,7 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
         )()
 
     async def fake_fetch_weather_forecast(
-        *, latitude: float, longitude: float, days: int
+        *, region_code: str, latitude: float, longitude: float, days: int
     ):
         assert latitude == 35.6895
         assert longitude == 139.6917
@@ -324,7 +324,7 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
         )()
 
     async def fake_fetch_weather_forecast(
-        *, latitude: float, longitude: float, days: int
+        *, region_code: str, latitude: float, longitude: float, days: int
     ):
         expected_coordinates = get_region_coordinates("13_01")
         assert expected_coordinates is not None
@@ -423,7 +423,7 @@ def test_suggest_outfit_accepts_clothing_filters(
     monkeypatch.setattr(settings, "APP_ENV", "development")
 
     async def fake_fetch_weather_forecast(
-        *, latitude: float, longitude: float, days: int
+        *, region_code: str, latitude: float, longitude: float, days: int
     ):
         del latitude, longitude, days
         raise WeatherForecastResponseError("invalid weather forecast response")
@@ -440,7 +440,7 @@ def test_suggest_outfit_accepts_clothing_filters(
 
 @pytest.mark.asyncio
 async def test_suggest_outfit_filters_to_specified_clothing_ids(monkeypatch) -> None:
-    """clothing_ids 指定時はそのIDの服のみを候補にする (Issue #61)"""
+    """clothing_ids 指定時はその服を必ず含める (Issue #61)"""
 
     class FakeLLMClient:
         async def generate(self, prompt: str) -> str:
@@ -521,6 +521,90 @@ async def test_suggest_outfit_excludes_specified_clothing_ids(monkeypatch) -> No
     assert "keep tops" in names
 
 
+def test_select_clothes_includes_all_specified_same_category() -> None:
+    """clothing_ids に同カテゴリ複数を指定したら全て含める (Issue #61)"""
+    tops_a = _make_clothing_item(
+        "00000000-0000-0000-0000-0000000000c1", "tops A", "tops", ["casual"]
+    )
+    tops_b = _make_clothing_item(
+        "00000000-0000-0000-0000-0000000000c2", "tops B", "tops", ["casual"]
+    )
+
+    result = OutfitService._select_clothes(
+        tpo="casual",
+        clothes=[tops_a, tops_b],
+        clothing_ids=[tops_a.id, tops_b.id],
+    )
+
+    names = {s.clothing_item.name for s in result}
+    assert names == {"tops A", "tops B"}
+    assert [s.role for s in result] == ["tops", "tops"]
+
+
+def test_select_clothes_includes_specified_onepiece_and_tops_together() -> None:
+    """onepiece と tops を同時指定したら両方含める（排他より指定を優先）(Issue #61)"""
+    onepiece = _make_clothing_item(
+        "00000000-0000-0000-0000-0000000000c3", "floral onepiece", "onepiece", ["date"]
+    )
+    tops = _make_clothing_item(
+        "00000000-0000-0000-0000-0000000000c4", "white tops", "tops", ["date"]
+    )
+
+    result = OutfitService._select_clothes(
+        tpo="date",
+        clothes=[onepiece, tops],
+        clothing_ids=[onepiece.id, tops.id],
+    )
+
+    names = {s.clothing_item.name for s in result}
+    assert names == {"floral onepiece", "white tops"}
+
+
+def test_select_clothes_autocompletes_unspecified_slots() -> None:
+    """指定で埋まらないカテゴリは手持ちから自動補完する (Issue #61)"""
+    forced_tops = _make_clothing_item(
+        "00000000-0000-0000-0000-0000000000c5", "my tops", "tops", ["casual"]
+    )
+    auto_bottoms = _make_clothing_item(
+        "00000000-0000-0000-0000-0000000000c6", "auto bottoms", "bottoms", ["casual"]
+    )
+
+    result = OutfitService._select_clothes(
+        tpo="casual",
+        clothes=[forced_tops, auto_bottoms],
+        clothing_ids=[forced_tops.id],
+    )
+
+    names = {s.clothing_item.name for s in result}
+    roles = {s.role for s in result}
+    assert names == {"my tops", "auto bottoms"}
+    assert roles == {"tops", "bottoms"}
+
+
+def test_select_clothes_keeps_forced_tops_even_with_favorite_onepiece() -> None:
+    """高スコアの onepiece があっても指定した tops は必ず残る (Issue #61 退行防止)"""
+    forced_tops = _make_clothing_item(
+        "00000000-0000-0000-0000-0000000000c7", "forced tops", "tops", ["casual"]
+    )
+    fav_onepiece = _make_clothing_item(
+        "00000000-0000-0000-0000-0000000000c8",
+        "fav onepiece",
+        "onepiece",
+        ["casual"],
+        is_favorite=True,
+    )
+
+    result = OutfitService._select_clothes(
+        tpo="casual",
+        clothes=[forced_tops, fav_onepiece],
+        clothing_ids=[forced_tops.id],
+    )
+
+    names = {s.clothing_item.name for s in result}
+    assert "forced tops" in names
+    assert "fav onepiece" not in names
+
+
 @pytest.mark.asyncio
 async def test_outfit_service_wraps_llm_api_errors(monkeypatch) -> None:
     class FakeLLMClient:
@@ -590,7 +674,7 @@ def test_suggest_outfit_returns_bad_gateway_on_llm_failure(
             raise OutfitSuggestionError("failed to generate outfit suggestion")
 
     async def fake_fetch_weather_forecast(
-        *, latitude: float, longitude: float, days: int
+        *, region_code: str, latitude: float, longitude: float, days: int
     ):
         del latitude, longitude, days
         return {
@@ -632,7 +716,7 @@ def test_suggest_outfit_returns_bad_gateway_on_service_initialization_failure(
             raise OutfitSuggestionError("failed to generate outfit suggestion")
 
     async def fake_fetch_weather_forecast(
-        *, latitude: float, longitude: float, days: int
+        *, region_code: str, latitude: float, longitude: float, days: int
     ):
         del latitude, longitude, days
         return {
@@ -670,7 +754,7 @@ def test_suggest_outfit_returns_bad_gateway_on_weather_parse_error(
     monkeypatch,
 ) -> None:
     async def fake_fetch_weather_forecast(
-        *, latitude: float, longitude: float, days: int
+        *, region_code: str, latitude: float, longitude: float, days: int
     ):
         del latitude, longitude, days
         raise WeatherForecastResponseError("invalid weather forecast response")

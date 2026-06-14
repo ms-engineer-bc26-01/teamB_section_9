@@ -96,6 +96,19 @@ async def test_cache_get_json_returns_none_on_miss(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
+async def test_cache_get_json_returns_none_for_non_dict_value(monkeypatch) -> None:
+    """valid JSON でも dict でなければミス扱い（list/str で後続が壊れないように）。"""
+
+    class FakeClient:
+        async def get(self, key: str):
+            return json.dumps(["not", "a", "dict"])
+
+    monkeypatch.setattr(redis_module, "_redis_client", FakeClient())
+
+    assert await redis_module.cache_get_json("any") is None
+
+
+@pytest.mark.asyncio
 async def test_cache_get_json_returns_none_on_redis_error(monkeypatch) -> None:
     """接続失敗時は握りつぶしてミス扱い（None）。"""
 

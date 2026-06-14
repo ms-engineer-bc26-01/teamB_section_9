@@ -34,12 +34,12 @@ class OutfitService:
         clothing_ids: list[uuid.UUID] | None = None,
         exclude_clothing_ids: list[uuid.UUID] | None = None,
     ) -> "OutfitSuggestion":
-        candidates = self._filter_clothes(
-            clothes,
+        selected = self._select_clothes(
+            tpo=tpo,
+            clothes=clothes,
             clothing_ids=clothing_ids,
             exclude_clothing_ids=exclude_clothing_ids,
         )
-        selected = self._select_clothes(tpo=tpo, clothes=candidates)
         selected_clothes = [s.clothing_item for s in selected]
 
         clothes_summary = self._format_clothes(selected_clothes)
@@ -72,62 +72,43 @@ class OutfitService:
         )
 
     @staticmethod
-    def _filter_clothes(
-        clothes: list[ClothingItem],
-        *,
-        clothing_ids: list[uuid.UUID] | None,
-        exclude_clothing_ids: list[uuid.UUID] | None,
-    ) -> list[ClothingItem]:
-        """候補の服を絞り込み・除外する。
-
-        仕様:
-        - clothing_ids 指定時は、その ID の服のみに絞り込む。
-        - exclude_clothing_ids は絞り込みの後に適用するため、
-          同じ ID が両方に含まれる場合は除外が優先される。
-        - 指定 ID がユーザー保有服に1件も存在しない場合は空候補となるが、
-          呼び出し側は通常どおり処理を継続する
-          （LLM へは「服の登録はありません。」が渡る）。
-        """
-        candidates = clothes
-        if clothing_ids:
-            include = set(clothing_ids)
-            candidates = [c for c in candidates if c.id in include]
-        if exclude_clothing_ids:
-            exclude = set(exclude_clothing_ids)
-            candidates = [c for c in candidates if c.id not in exclude]
-        return candidates
-
-    @staticmethod
     def _select_clothes(
         *,
         tpo: str,
         clothes: list[ClothingItem],
+        clothing_ids: list[uuid.UUID] | None = None,
+        exclude_clothing_ids: list[uuid.UUID] | None = None,
     ) -> list["SuggestedClothingSelection"]:
+        """コーデを構成する服を選定する。
+
+        仕様 (Issue #61):
+        - exclude_clothing_ids: その服を候補から完全に除外する（提案に出さない）。
+        - clothing_ids: その服を必ず提案に含める（ユーザー指定を最優先）。
+          同カテゴリ複数指定や onepiece と tops/bottoms の同時指定も、
+          すべて結果に含める（通常の 1カテゴリ1点・onepiece 排他より優先）。
+        - 指定で埋まらないカテゴリは、除外・指定済みを除いた手持ちから
+          従来のスコア選定ロジックで自動補完する。
+        - clothing_ids が（除外後の）手持ちに無い場合は含めようがないため無視する。
+        """
+        pool = clothes
+        if exclude_clothing_ids:
+            excluded = set(exclude_clothing_ids)
+            pool = [c for c in pool if c.id not in excluded]
+
+        forced_ids = set(clothing_ids or [])
+        forced = [c for c in pool if c.id in forced_ids]
+        forced_id_set = {c.id for c in forced}
+        auto_pool = [c for c in pool if c.id not in forced_id_set]
+
+        forced_by_category: dict[str, list[ClothingItem]] = {}
+        for item in forced:
+            forced_by_category.setdefault(item.category, []).append(item)
+
         selected: list[SuggestedClothingSelection] = []
-        selected_ids: set = set()
         display_order = 1
 
-        outer_cands = [
-            i for i in clothes if i.category == "outer" and i.id not in selected_ids
-        ]
-        if outer_cands:
-            best = max(outer_cands, key=lambda i: OutfitService._score_item(i, tpo))
-            selected.append(
-                SuggestedClothingSelection(
-                    clothing_item=best,
-                    role="outer",
-                    display_order=display_order,
-                )
-            )
-            selected_ids.add(best.id)
-            display_order += 1
-
-        torso = OutfitService._select_torso(
-            tpo=tpo,
-            clothes=clothes,
-            selected_ids=selected_ids,
-        )
-        for item, role in torso:
+        def add(item: ClothingItem, role: str) -> None:
+            nonlocal display_order
             selected.append(
                 SuggestedClothingSelection(
                     clothing_item=item,
@@ -135,27 +116,62 @@ class OutfitService:
                     display_order=display_order,
                 )
             )
-            selected_ids.add(item.id)
             display_order += 1
 
-        for category in ("shoes", "bag", "accessory"):
-            candidates = [
-                i
-                for i in clothes
-                if i.category == category and i.id not in selected_ids
-            ]
-            if not candidates:
-                continue
-            best = max(candidates, key=lambda i: OutfitService._score_item(i, tpo))
-            selected.append(
-                SuggestedClothingSelection(
-                    clothing_item=best,
-                    role=category,
-                    display_order=display_order,
-                )
+        def best_of(category: str) -> ClothingItem | None:
+            cands = [i for i in auto_pool if i.category == category]
+            if not cands:
+                return None
+            return max(cands, key=lambda i: OutfitService._score_item(i, tpo))
+
+        # outer
+        if "outer" in forced_by_category:
+            for item in forced_by_category["outer"]:
+                add(item, "outer")
+        else:
+            best = best_of("outer")
+            if best:
+                add(best, "outer")
+
+        # torso（onepiece か tops/bottoms）
+        forced_onepiece = forced_by_category.get("onepiece", [])
+        forced_tops = forced_by_category.get("tops", [])
+        forced_bottoms = forced_by_category.get("bottoms", [])
+        if forced_onepiece or forced_tops or forced_bottoms:
+            for item in forced_onepiece:
+                add(item, "onepiece")
+            for item in forced_tops:
+                add(item, "tops")
+            for item in forced_bottoms:
+                add(item, "bottoms")
+            # onepiece 指定が無ければ tops/bottoms の欠けを自動補完
+            if not forced_onepiece:
+                if not forced_tops and (best := best_of("tops")):
+                    add(best, "tops")
+                if not forced_bottoms and (best := best_of("bottoms")):
+                    add(best, "bottoms")
+        else:
+            torso = OutfitService._select_torso(
+                tpo=tpo,
+                clothes=auto_pool,
+                selected_ids=set(),
             )
-            selected_ids.add(best.id)
-            display_order += 1
+            for item, role in torso:
+                add(item, role)
+
+        # shoes / bag / accessory
+        for category in ("shoes", "bag", "accessory"):
+            if category in forced_by_category:
+                for item in forced_by_category[category]:
+                    add(item, category)
+            elif best := best_of(category):
+                add(best, category)
+
+        # 上記以外のカテゴリで指定された服は末尾に含める（取りこぼし防止）
+        handled = {"outer", "onepiece", "tops", "bottoms", "shoes", "bag", "accessory"}
+        for item in forced:
+            if item.category not in handled:
+                add(item, item.category)
 
         return selected
 

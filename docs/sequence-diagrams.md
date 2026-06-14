@@ -29,7 +29,7 @@ sequenceDiagram
 
     BE->>DB: ユーザーの服一覧を取得<br/>（clothing_ids 指定があれば絞り込み）
 
-    BE->>Redis: 天気キャッシュ確認<br/>キー: weather:{region_code}:{yyyymmdd}
+    BE->>Redis: 天気キャッシュ確認<br/>キー: weather:{region_code}:{yyyymmdd}:{days}
     alt キャッシュHIT（TTL 30分以内）
         Redis-->>BE: キャッシュ済み天気データ
     else キャッシュMISS

@@ -74,6 +74,7 @@ async def suggest_outfit(
 
     try:
         weather = await fetch_weather_forecast_cached(
+            region_code=region_code,
             latitude=latitude,
             longitude=longitude,
             days=3,
@@ -177,5 +178,8 @@ async def suggest_outfit(
             latitude=region["lat"],
             longitude=region["lng"],
         ),
-        cached=bool(weather.get("cached", False)),
+        # cached は「提案結果キャッシュ」（suggest:... TTL24h）由来を示す仕様。
+        # 天気キャッシュがヒットしても LLM 提案と DB 保存は毎回走るため、
+        # 提案結果キャッシュ未実装の現状は常に False（天気キャッシュとは別概念）。
+        cached=False,
     )

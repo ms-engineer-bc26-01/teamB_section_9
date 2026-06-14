@@ -57,10 +57,14 @@ async def cache_get_json(key: str) -> dict[str, Any] | None:
     if raw is None:
         return None
     try:
-        return json.loads(raw)
+        value = json.loads(raw)
     except (ValueError, TypeError) as exc:
         logger.warning("redis cache value invalid (key=%s): %s", key, exc)
         return None
+    if not isinstance(value, dict):
+        logger.warning("redis cache value is not a dict (key=%s)", key)
+        return None
+    return value
 
 
 async def cache_set_json(key: str, value: dict[str, Any], ttl_seconds: int) -> None:

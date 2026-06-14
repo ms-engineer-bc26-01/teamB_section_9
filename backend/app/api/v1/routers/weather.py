@@ -36,6 +36,7 @@ async def get_weather_forecast(
 
     try:
         forecast = await fetch_weather_forecast_cached(
+            region_code=region_code,
             latitude=latitude,
             longitude=longitude,
             days=days,
