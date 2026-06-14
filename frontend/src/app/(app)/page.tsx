@@ -81,8 +81,7 @@ function getWeatherLabel(weatherCode: number) {
     return "雷雨";
   }
 
-  return "天気情報を取得しました";
-}
+  return "不明";
 
 function renderWeatherIcon(weatherCode: number | null, size: number) {
   if (weatherCode === null) {
