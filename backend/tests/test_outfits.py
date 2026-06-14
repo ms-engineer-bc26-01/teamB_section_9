@@ -413,21 +413,112 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
         },
     ],
 )
-def test_suggest_outfit_rejects_unsupported_clothing_filters(
+def test_suggest_outfit_accepts_clothing_filters(
     client: TestClient,
     monkeypatch,
     payload: dict[str, object],
 ) -> None:
+    """clothing_ids / exclude は 400 拒否されず後続へ進む (Issue #61)"""
     monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", True)
     monkeypatch.setattr(settings, "APP_ENV", "development")
 
+    async def fake_fetch_weather_forecast(
+        *, latitude: float, longitude: float, days: int
+    ):
+        del latitude, longitude, days
+        raise WeatherForecastResponseError("invalid weather forecast response")
+
+    monkeypatch.setattr(
+        outfits_router, "fetch_weather_forecast", fake_fetch_weather_forecast
+    )
+
     response = client.post("/api/v1/outfits/suggest", json=payload)
 
-    assert response.status_code == 400
-    assert (
-        response.json()["detail"]
-        == "clothing_ids and exclude_clothing_ids are not supported"
+    # 400 で弾かれず、weather 取得段階（502）まで到達することを確認
+    assert response.status_code == 502
+
+
+@pytest.mark.asyncio
+async def test_suggest_outfit_filters_to_specified_clothing_ids(monkeypatch) -> None:
+    """clothing_ids 指定時はそのIDの服のみを候補にする (Issue #61)"""
+
+    class FakeLLMClient:
+        async def generate(self, prompt: str) -> str:
+            del prompt
+            return "generated-coordinate"
+
+    monkeypatch.setattr(
+        "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
     )
+
+    tops_a = _make_clothing_item(
+        "00000000-0000-0000-0000-0000000000a1", "tops A", "tops", ["casual"]
+    )
+    tops_b = _make_clothing_item(
+        "00000000-0000-0000-0000-0000000000a2", "tops B", "tops", ["casual"]
+    )
+
+    service = OutfitService()
+    result = await service.suggest(
+        tpo="casual",
+        clothes=[tops_a, tops_b],
+        weather={
+            "current": {
+                "temperature_2m": 25.0,
+                "weather_code": 1,
+                "precipitation_probability": 10,
+            },
+            "daily": [],
+        },
+        clothing_ids=[tops_b.id],
+    )
+
+    names = [s.clothing_item.name for s in result.items]
+    assert names == ["tops B"]
+
+
+@pytest.mark.asyncio
+async def test_suggest_outfit_excludes_specified_clothing_ids(monkeypatch) -> None:
+    """exclude_clothing_ids 指定時はそのIDの服を候補から除外する (Issue #61)"""
+
+    class FakeLLMClient:
+        async def generate(self, prompt: str) -> str:
+            del prompt
+            return "generated-coordinate"
+
+    monkeypatch.setattr(
+        "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
+    )
+
+    tops_keep = _make_clothing_item(
+        "00000000-0000-0000-0000-0000000000b1", "keep tops", "tops", ["casual"]
+    )
+    tops_drop = _make_clothing_item(
+        "00000000-0000-0000-0000-0000000000b2",
+        "drop tops",
+        "tops",
+        ["casual"],
+        is_favorite=True,
+    )
+
+    service = OutfitService()
+    result = await service.suggest(
+        tpo="casual",
+        clothes=[tops_keep, tops_drop],
+        weather={
+            "current": {
+                "temperature_2m": 25.0,
+                "weather_code": 1,
+                "precipitation_probability": 10,
+            },
+            "daily": [],
+        },
+        exclude_clothing_ids=[tops_drop.id],
+    )
+
+    names = [s.clothing_item.name for s in result.items]
+    assert "drop tops" not in names
+    assert "keep tops" in names
 
 
 @pytest.mark.asyncio
@@ -487,9 +578,15 @@ def test_suggest_outfit_returns_bad_gateway_on_llm_failure(
 ) -> None:
     class FakeOutfitService:
         async def suggest(
-            self, *, tpo: str, clothes: list[ClothingItem], weather: dict
+            self,
+            *,
+            tpo: str,
+            clothes: list[ClothingItem],
+            weather: dict,
+            clothing_ids=None,
+            exclude_clothing_ids=None,
         ) -> str:
-            del tpo, clothes, weather
+            del tpo, clothes, weather, clothing_ids, exclude_clothing_ids
             raise OutfitSuggestionError("failed to generate outfit suggestion")
 
     async def fake_fetch_weather_forecast(

@@ -14,6 +14,7 @@ from app.api.v1.schemas.outfits import (
 from app.api.v1.schemas.regions import Region
 from app.constants.regions import get_region
 from app.core.deps import get_db
+from app.core.logging import logger
 from app.dependencies.auth import CurrentUser, get_current_user
 from app.domain.clothes import crud as clothes_crud
 from app.domain.outfits import crud as outfits_crud
@@ -58,12 +59,6 @@ async def suggest_outfit(
     current_user: AuthenticatedUser,
     db: DbSession,
 ):
-    if request.clothing_ids or request.exclude_clothing_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="clothing_ids and exclude_clothing_ids are not supported",
-        )
-
     region_code = (
         request.region_code or current_user.default_region_code or DEFAULT_REGION_CODE
     )
@@ -84,11 +79,13 @@ async def suggest_outfit(
             days=3,
         )
     except httpx.HTTPError as exc:
+        logger.error("weather fetch failed (region=%s): %s", region_code, exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="failed to fetch weather forecast",
         ) from exc
     except WeatherForecastResponseError as exc:
+        logger.error("weather forecast invalid (region=%s): %s", region_code, exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="failed to fetch weather forecast",
@@ -109,8 +106,16 @@ async def suggest_outfit(
             tpo=request.tpo,
             clothes=clothes,
             weather=weather,
+            clothing_ids=request.clothing_ids,
+            exclude_clothing_ids=request.exclude_clothing_ids,
         )
     except OutfitSuggestionError as exc:
+        logger.error(
+            "outfit suggestion failed (user=%s, tpo=%s): %s",
+            current_user.id,
+            request.tpo,
+            exc,
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="failed to generate outfit suggestion",
@@ -127,6 +132,14 @@ async def suggest_outfit(
         weather_temp_min=today_forecast.get("temperature_min"),
         comment=result.comment,
         items=result.items,
+    )
+
+    logger.info(
+        "outfit suggested (user=%s, outfit=%s, region=%s, items=%d)",
+        current_user.id,
+        saved_outfit.id,
+        region_code,
+        len(result.items),
     )
 
     return OutfitSuggestResponse(

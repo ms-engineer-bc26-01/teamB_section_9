@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,8 +31,15 @@ class OutfitService:
         tpo: str,
         clothes: list[ClothingItem],
         weather: dict,
+        clothing_ids: list[uuid.UUID] | None = None,
+        exclude_clothing_ids: list[uuid.UUID] | None = None,
     ) -> "OutfitSuggestion":
-        selected = self._select_clothes(tpo=tpo, clothes=clothes)
+        candidates = self._filter_clothes(
+            clothes,
+            clothing_ids=clothing_ids,
+            exclude_clothing_ids=exclude_clothing_ids,
+        )
+        selected = self._select_clothes(tpo=tpo, clothes=candidates)
         selected_clothes = [s.clothing_item for s in selected]
 
         clothes_summary = self._format_clothes(selected_clothes)
@@ -62,6 +70,23 @@ class OutfitService:
             weather_summary=weather_summary,
             items=selected,
         )
+
+    @staticmethod
+    def _filter_clothes(
+        clothes: list[ClothingItem],
+        *,
+        clothing_ids: list[uuid.UUID] | None,
+        exclude_clothing_ids: list[uuid.UUID] | None,
+    ) -> list[ClothingItem]:
+        """指定があれば clothing_ids で絞り込み、exclude_clothing_ids を除外する。"""
+        candidates = clothes
+        if clothing_ids:
+            include = set(clothing_ids)
+            candidates = [c for c in candidates if c.id in include]
+        if exclude_clothing_ids:
+            exclude = set(exclude_clothing_ids)
+            candidates = [c for c in candidates if c.id not in exclude]
+        return candidates
 
     @staticmethod
     def _select_clothes(
