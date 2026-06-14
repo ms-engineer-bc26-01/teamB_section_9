@@ -21,6 +21,7 @@ from app.domain.outfits import crud as outfits_crud
 from app.domain.outfits.service import OutfitService, OutfitSuggestionError
 from app.services.weather_client import (
     WeatherForecastResponseError,
+    extract_outfit_prompt_weather,
     fetch_weather_forecast_cached,
 )
 
@@ -102,11 +103,24 @@ async def suggest_outfit(
     ).items
 
     try:
+        prompt_weather = extract_outfit_prompt_weather(weather)
+    except WeatherForecastResponseError as exc:
+        logger.error(
+            "weather forecast invalid for outfit prompt (region=%s): %s",
+            region_code,
+            exc,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="failed to fetch weather forecast",
+        ) from exc
+
+    try:
         service = OutfitService()
         result = await service.suggest(
             tpo=request.tpo,
             clothes=clothes,
-            weather=weather,
+            weather=prompt_weather,
             clothing_ids=request.clothing_ids,
             exclude_clothing_ids=request.exclude_clothing_ids,
         )
