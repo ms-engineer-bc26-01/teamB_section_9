@@ -132,6 +132,7 @@ async def suggest_outfit(
         weather_temp_max=today_forecast.get("temperature_max"),
         weather_temp_min=today_forecast.get("temperature_min"),
         comment=result.comment,
+        courage_image_url="",  # TODO: 生成されたコーデ画像のURLを保存する
         items=result.items,
     )
 
@@ -154,6 +155,7 @@ async def suggest_outfit(
                 weather_temp_max=today_forecast.get("temperature_max"),
                 weather_temp_min=today_forecast.get("temperature_min"),
                 comment=result.comment,
+                courage_image_url=saved_outfit.courage_image_url,
                 is_favorite=saved_outfit.is_favorite,
                 source=saved_outfit.source,
                 items=[
