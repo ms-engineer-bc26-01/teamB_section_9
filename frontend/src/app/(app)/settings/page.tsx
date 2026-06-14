@@ -294,7 +294,13 @@ export default function SettingsPage() {
         setSuccessMessage(null);
 
         try {
-            await supabase.auth.signOut();
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                setErrorMessage("ログアウトできませんでした。時間をおいて再度お試しください。");
+                setIsLoggingOut(false);
+                return;
+            }
+
             clearAuth();
             router.replace("/login");
         } catch {
