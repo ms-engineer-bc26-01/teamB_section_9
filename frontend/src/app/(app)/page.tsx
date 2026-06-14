@@ -422,15 +422,16 @@ export default function HomeDashboard() {
             </p>
           ) : null}
 
-          <Link
-            href="/outfits/preview"
-            aria-label={`${sceneLabel}のコーデのポイントを見る`}
-            className="flex items-center justify-center gap-3 py-3 text-sm font-bold text-[#2B2926]"
-          >
-            コーデのポイントを見る
-            <ChevronRight aria-hidden="true" size={20} />
-          </Link>
-        </CardContent>
+          {latestOutfit ? (
+            <Link
+              href={`/outfits/preview?id=${latestOutfit.id}`}
+              aria-label={`${sceneLabel}のコーデのポイントを見る`}
+              className="flex items-center justify-center gap-3 py-3 text-sm font-bold text-[#2B2926]"
+            >
+              コーデのポイントを見る
+              <ChevronRight aria-hidden="true" size={20} />
+            </Link>
+          ) : null}          </CardContent>
       </Card>
 
       <Link
