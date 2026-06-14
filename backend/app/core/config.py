@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = Field(default="redis://redis:6379/0")
     REDIS_WEATHER_TTL_SECONDS: int = Field(default=1800)  # 天気キャッシュ 30分
-    REDIS_OUTFIT_TTL_SECONDS: int = Field(default=3600)  # コーデキャッシュ 1時間
+    REDIS_OUTFIT_TTL_SECONDS: int = Field(default=86400)  # コーデキャッシュ 24時間
 
     model_config = SettingsConfigDict(env_file=".env", populate_by_name=True)
 
