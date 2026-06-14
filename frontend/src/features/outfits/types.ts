@@ -46,3 +46,8 @@ export type OutfitSuggestResponse = {
   region_used: Region;
   cached: boolean;
 };
+
+export type OutfitsListResponse = {
+  items: SuggestedOutfit[];
+  total: number;
+};
