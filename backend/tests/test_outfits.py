@@ -186,14 +186,14 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
         assert weather_temp_max == 27.1
         assert weather_temp_min == 19.8
         assert comment == "generated-coordinate"
-        assert courage_image_url == ""
+        assert courage_image_url is None
         assert [item.role for item in items] == ["tops"]
         return type(
             "Outfit",
             (),
             {
                 "id": uuid.UUID("00000000-0000-0000-0000-000000000777"),
-                "courage_image_url": "",
+                "courage_image_url": None,
                 "is_favorite": False,
                 "source": "llm",
                 "created_at": datetime(2026, 6, 4, tzinfo=UTC),
@@ -253,7 +253,7 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
                 "weather_temp_max": 27.1,
                 "weather_temp_min": 19.8,
                 "comment": "generated-coordinate",
-                "courage_image_url": "",
+                "courage_image_url": None,
                 "is_favorite": False,
                 "source": "llm",
                 "items": [
@@ -368,7 +368,7 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
             (),
             {
                 "id": uuid.UUID("00000000-0000-0000-0000-000000000888"),
-                "courage_image_url": "",
+                "courage_image_url": None,
                 "is_favorite": False,
                 "source": "llm",
                 "created_at": datetime(2026, 6, 4, tzinfo=UTC),
