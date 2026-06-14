@@ -1,4 +1,8 @@
+"use client";
+
+import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, Camera, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +21,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { createClothing } from "@/features/clothes/api";
+import type { ClothingCreateRequest } from "@/features/clothes/types";
 
 const seasons = [
     { label: "春", value: "spring" },
@@ -35,9 +41,98 @@ const tpoTags = [
 ];
 
 export default function ClothesRegisterPage() {
+    const router = useRouter();
+
+    const [name, setName] = useState("");
+    const [category, setCategory] = useState("");
+    const [color, setColor] = useState("");
+    const [size, setSize] = useState("");
+    const [pattern, setPattern] = useState("");
+    const [selectedSeasons, setSelectedSeasons] = useState<string[]>([]);
+    const [selectedTpoTags, setSelectedTpoTags] = useState<string[]>([]);
+    const [memo, setMemo] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    const isSubmitDisabled =
+        !name.trim() || !category || selectedSeasons.length === 0 || isSubmitting;
+
+    const toggleSeason = (season: string) => {
+        setSelectedSeasons((current) =>
+            current.includes(season)
+                ? current.filter((value) => value !== season)
+                : [...current, season],
+        );
+    };
+
+    const toggleTpoTag = (tag: string) => {
+        setSelectedTpoTags((current) =>
+            current.includes(tag)
+                ? current.filter((value) => value !== tag)
+                : [...current, tag],
+        );
+    };
+
+    const buildPayload = (): ClothingCreateRequest => {
+        const payload: ClothingCreateRequest = {
+            name: name.trim(),
+            category,
+            season: selectedSeasons,
+            tpo_tags: selectedTpoTags,
+        };
+
+        const trimmedColor = color.trim();
+        const trimmedSize = size.trim();
+        const trimmedMemo = memo.trim();
+
+        if (trimmedColor) {
+            payload.color = trimmedColor;
+        }
+
+        if (pattern) {
+            payload.pattern = pattern;
+        }
+
+        if (trimmedSize) {
+            payload.size = trimmedSize;
+        }
+
+        if (trimmedMemo) {
+            payload.memo = trimmedMemo;
+        }
+
+        return payload;
+    };
+
+    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (isSubmitDisabled) {
+            return;
+        }
+
+        setErrorMessage(null);
+        setIsSubmitting(true);
+
+        try {
+            await createClothing(buildPayload());
+            router.push("/clothes");
+            router.refresh();
+        } catch (error) {
+            setErrorMessage(
+                error instanceof Error ? error.message : "服の登録に失敗しました",
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <main className="min-h-screen bg-[#FAF8F5] px-4 py-6 text-[#222222]">
-            <div className="mx-auto flex w-full max-w-[390px] flex-col gap-6">
+            <form
+                onSubmit={handleSubmit}
+                className="mx-auto flex w-full max-w-[390px] flex-col gap-6"
+            >
                 <header className="flex items-center gap-3">
                     <Button asChild variant="ghost" size="icon" aria-label="服一覧に戻る">
                         <Link href="/clothes">
@@ -84,8 +179,11 @@ export default function ClothesRegisterPage() {
                             <Input
                                 id="name"
                                 name="name"
+                                value={name}
+                                onChange={(event) => setName(event.target.value)}
                                 placeholder="例：白のリネンシャツ"
                                 className="bg-white"
+                                required
                             />
                         </div>
 
@@ -93,7 +191,7 @@ export default function ClothesRegisterPage() {
                             <label htmlFor="category" className="text-sm font-medium">
                                 カテゴリ <span className="text-[#8C715C]">*</span>
                             </label>
-                            <Select>
+                            <Select value={category} onValueChange={setCategory}>
                                 <SelectTrigger id="category" className="bg-white">
                                     <SelectValue placeholder="カテゴリを選択" />
                                 </SelectTrigger>
@@ -101,6 +199,7 @@ export default function ClothesRegisterPage() {
                                     <SelectItem value="tops">トップス</SelectItem>
                                     <SelectItem value="bottoms">ボトムス</SelectItem>
                                     <SelectItem value="outer">アウター</SelectItem>
+                                    <SelectItem value="onepiece">ワンピース</SelectItem>
                                     <SelectItem value="shoes">靴</SelectItem>
                                     <SelectItem value="bag">バッグ</SelectItem>
                                     <SelectItem value="accessory">アクセサリー</SelectItem>
@@ -116,6 +215,8 @@ export default function ClothesRegisterPage() {
                                 <Input
                                     id="color"
                                     name="color"
+                                    value={color}
+                                    onChange={(event) => setColor(event.target.value)}
                                     placeholder="例：白"
                                     className="bg-white"
                                 />
@@ -128,6 +229,8 @@ export default function ClothesRegisterPage() {
                                 <Input
                                     id="size"
                                     name="size"
+                                    value={size}
+                                    onChange={(event) => setSize(event.target.value)}
                                     placeholder="例：M"
                                     className="bg-white"
                                 />
@@ -138,7 +241,7 @@ export default function ClothesRegisterPage() {
                             <label htmlFor="pattern" className="text-sm font-medium">
                                 柄
                             </label>
-                            <Select>
+                            <Select value={pattern} onValueChange={setPattern}>
                                 <SelectTrigger id="pattern" className="bg-white">
                                     <SelectValue placeholder="柄を選択" />
                                 </SelectTrigger>
@@ -165,33 +268,64 @@ export default function ClothesRegisterPage() {
                                 季節 <span className="text-[#8C715C]">*</span>
                             </p>
                             <div className="flex flex-wrap gap-2">
-                                {seasons.map((season) => (
-                                    <Badge
-                                        key={season.value}
-                                        variant="outline"
-                                        className="rounded-full border-[#D8CABE] px-3 py-1 text-[#6B4F3A]"
-                                    >
-                                        {season.label}
-                                    </Badge>
-                                ))}
+                                {seasons.map((season) => {
+                                    const isSelected = selectedSeasons.includes(
+                                        season.value,
+                                    );
+
+                                    return (
+                                        <Badge
+                                            key={season.value}
+                                            asChild
+                                            variant="outline"
+                                            className={
+                                                isSelected
+                                                    ? "rounded-full border-[#6B4F3A] bg-[#6B4F3A] px-3 py-1 text-white"
+                                                    : "rounded-full border-[#D8CABE] px-3 py-1 text-[#6B4F3A]"
+                                            }
+                                        >
+                                            <button
+                                                type="button"
+                                                aria-pressed={isSelected}
+                                                onClick={() => toggleSeason(season.value)}
+                                            >
+                                                {season.label}
+                                            </button>
+                                        </Badge>
+                                    );
+                                })}
                             </div>
-                            <p className="text-xs text-[#8C715C]">
-                                複数選択の状態管理は後続PRで実装
-                            </p>
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <p className="text-sm font-medium">TPO</p>
                             <div className="flex flex-wrap gap-2">
-                                {tpoTags.map((tag) => (
-                                    <Badge
-                                        key={tag.value}
-                                        variant="outline"
-                                        className="rounded-full border-[#D8CABE] px-3 py-1 text-[#6B4F3A]"
-                                    >
-                                        {tag.label}
-                                    </Badge>
-                                ))}
+                                {tpoTags.map((tag) => {
+                                    const isSelected = selectedTpoTags.includes(
+                                        tag.value,
+                                    );
+
+                                    return (
+                                        <Badge
+                                            key={tag.value}
+                                            asChild
+                                            variant="outline"
+                                            className={
+                                                isSelected
+                                                    ? "rounded-full border-[#6B4F3A] bg-[#6B4F3A] px-3 py-1 text-white"
+                                                    : "rounded-full border-[#D8CABE] px-3 py-1 text-[#6B4F3A]"
+                                            }
+                                        >
+                                            <button
+                                                type="button"
+                                                aria-pressed={isSelected}
+                                                onClick={() => toggleTpoTag(tag.value)}
+                                            >
+                                                {tag.label}
+                                            </button>
+                                        </Badge>
+                                    );
+                                })}
                             </div>
                         </div>
                     </CardContent>
@@ -208,6 +342,8 @@ export default function ClothesRegisterPage() {
                         <textarea
                             id="memo"
                             name="memo"
+                            value={memo}
+                            onChange={(event) => setMemo(event.target.value)}
                             maxLength={200}
                             placeholder="素材感、着心地、合わせたい服など"
                             className="min-h-28 w-full resize-none rounded-md border border-input bg-white px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -216,15 +352,24 @@ export default function ClothesRegisterPage() {
                     </CardContent>
                 </Card>
 
+                {errorMessage ? (
+                    <p
+                        role="alert"
+                        className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700"
+                    >
+                        {errorMessage}
+                    </p>
+                ) : null}
+
                 <Button
-                    type="button"
+                    type="submit"
                     className="h-12 rounded-full bg-[#6B4F3A] text-white hover:bg-[#5A4230]"
-                    disabled
+                    disabled={isSubmitDisabled}
                 >
                     <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-                    登録する
+                    {isSubmitting ? "登録中..." : "登録する"}
                 </Button>
-            </div>
+            </form>
         </main>
     );
 }

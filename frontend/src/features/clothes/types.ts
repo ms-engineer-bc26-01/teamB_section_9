@@ -23,3 +23,17 @@ export type ClothesListResponse = {
     items: ClothingItem[];
     total: number;
 };
+
+export type ClothingCreateRequest = {
+    name: string;
+    category: string;
+    color?: string | null;
+    pattern?: string | null;
+    size?: string | null;
+    season?: string[];
+    tpo_tags?: string[];
+    image_url?: string | null;
+    thumbnail_url?: string | null;
+    memo?: string | null;
+    is_favorite?: boolean;
+};
