@@ -175,6 +175,7 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
         weather_temp_max,
         weather_temp_min,
         comment,
+        courage_image_url,
         items,
     ):
         assert user_id == resolved_user_id
@@ -183,12 +184,14 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
         assert weather_temp_max == 27.1
         assert weather_temp_min == 19.8
         assert comment == "generated-coordinate"
+        assert courage_image_url == ""
         assert [item.role for item in items] == ["tops"]
         return type(
             "Outfit",
             (),
             {
                 "id": uuid.UUID("00000000-0000-0000-0000-000000000777"),
+                "courage_image_url": "",
                 "is_favorite": False,
                 "source": "llm",
                 "created_at": datetime(2026, 6, 4, tzinfo=UTC),
@@ -248,6 +251,7 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
                 "weather_temp_max": 27.1,
                 "weather_temp_min": 19.8,
                 "comment": "generated-coordinate",
+                "courage_image_url": "",
                 "is_favorite": False,
                 "source": "llm",
                 "items": [
@@ -352,6 +356,7 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
         weather_temp_max,
         weather_temp_min,
         comment,
+        courage_image_url,
         items,
     ):
         assert region_code == "13_01"
@@ -361,6 +366,7 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
             (),
             {
                 "id": uuid.UUID("00000000-0000-0000-0000-000000000888"),
+                "courage_image_url": "",
                 "is_favorite": False,
                 "source": "llm",
                 "created_at": datetime(2026, 6, 4, tzinfo=UTC),
@@ -853,6 +859,7 @@ def test_list_outfits_returns_items_and_total(
                         "weather_temp_max": 27.1,
                         "weather_temp_min": 19.8,
                         "comment": "generated-coordinate",
+                        "courage_image_url": "",
                         "is_favorite": True,
                         "source": "llm",
                         "items": [],
@@ -879,6 +886,7 @@ def test_list_outfits_returns_items_and_total(
                 "weather_temp_max": 27.1,
                 "weather_temp_min": 19.8,
                 "comment": "generated-coordinate",
+                "courage_image_url": "",
                 "is_favorite": True,
                 "source": "llm",
                 "items": [],
