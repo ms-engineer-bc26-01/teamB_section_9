@@ -13,7 +13,7 @@ setup_logging(settings.LOG_LEVEL)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     # 起動時に Redis 疎通を確認（キャッシュ用途のため失敗してもアプリは起動する）
     if await ping_redis():
         logger.info("redis connected (%s)", settings.REDIS_URL)

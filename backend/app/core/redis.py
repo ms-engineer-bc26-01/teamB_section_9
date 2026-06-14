@@ -4,7 +4,6 @@ from redis.asyncio import Redis, from_url
 from redis.exceptions import RedisError
 
 from app.core.config import settings
-from app.core.logging import logger
 
 _redis_client: Redis | None = None
 
@@ -22,11 +21,13 @@ def get_redis() -> Redis:
 
 
 async def ping_redis() -> bool:
-    """Return True if the Redis server responds to PING, False otherwise."""
+    """Redis が PING に応答すれば True、接続失敗なら False を返す。
+
+    失敗ログはここでは出さず、呼び出し側で用途に応じたレベルで出力する。
+    """
     try:
         return await get_redis().ping()
-    except RedisError as exc:
-        logger.error("redis ping failed (url=%s): %s", settings.REDIS_URL, exc)
+    except RedisError:
         return False
 
 
