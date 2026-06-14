@@ -147,6 +147,27 @@ def test_create_clothing_allows_missing_image_url(
     assert body["image_url"] is None
 
 
+def test_create_clothing_rejects_empty_image_url(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    _mock_supabase_user(monkeypatch)
+
+    response = client.post(
+        "/api/v1/clothes",
+        json={
+            "name": "空画像URLシャツ",
+            "category": "tops",
+            "season": ["spring"],
+            "tpo_tags": ["casual"],
+            "image_url": "",
+        },
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 422
+
+
 def test_get_clothing_returns_item(client: TestClient, monkeypatch) -> None:
     clothing_id = uuid.uuid4()
     _mock_supabase_user(monkeypatch)

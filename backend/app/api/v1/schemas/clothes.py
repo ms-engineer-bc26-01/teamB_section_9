@@ -12,7 +12,7 @@ class ClothingCreateRequest(BaseModel):
     size: str | None = Field(default=None, max_length=50)
     season: list[str] = Field(default_factory=list)
     tpo_tags: list[str] = Field(default_factory=list)
-    image_url: str | None = Field(default=None, max_length=512)
+    image_url: str | None = Field(default=None, min_length=1, max_length=512)
     thumbnail_url: str | None = Field(default=None, max_length=512)
     memo: str | None = Field(default=None, max_length=200)
     is_favorite: bool = False
