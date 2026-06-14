@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-5"
 
     # Redis
-    REDIS_URL: str = Field(default="redis://redis:6379")
+    REDIS_URL: str = Field(default="redis://redis:6379/0")
     REDIS_WEATHER_TTL_SECONDS: int = Field(default=1800)  # 天気キャッシュ 30分
     REDIS_OUTFIT_TTL_SECONDS: int = Field(default=3600)  # コーデキャッシュ 1時間
 

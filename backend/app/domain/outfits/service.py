@@ -78,7 +78,16 @@ class OutfitService:
         clothing_ids: list[uuid.UUID] | None,
         exclude_clothing_ids: list[uuid.UUID] | None,
     ) -> list[ClothingItem]:
-        """指定があれば clothing_ids で絞り込み、exclude_clothing_ids を除外する。"""
+        """候補の服を絞り込み・除外する。
+
+        仕様:
+        - clothing_ids 指定時は、その ID の服のみに絞り込む。
+        - exclude_clothing_ids は絞り込みの後に適用するため、
+          同じ ID が両方に含まれる場合は除外が優先される。
+        - 指定 ID がユーザー保有服に1件も存在しない場合は空候補となるが、
+          呼び出し側は通常どおり処理を継続する
+          （LLM へは「服の登録はありません。」が渡る）。
+        """
         candidates = clothes
         if clothing_ids:
             include = set(clothing_ids)
