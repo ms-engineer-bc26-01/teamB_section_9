@@ -199,6 +199,7 @@ export default function ClothesRegisterPage() {
                                     <SelectItem value="tops">トップス</SelectItem>
                                     <SelectItem value="bottoms">ボトムス</SelectItem>
                                     <SelectItem value="outer">アウター</SelectItem>
+                                    <SelectItem value="onepiece">ワンピース</SelectItem>
                                     <SelectItem value="shoes">靴</SelectItem>
                                     <SelectItem value="bag">バッグ</SelectItem>
                                     <SelectItem value="accessory">アクセサリー</SelectItem>
