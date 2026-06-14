@@ -1,10 +1,16 @@
 import uuid
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.api.v1.routers import weather as weather_router
+from app.core.config import settings
 from app.dependencies import auth
-from app.services.weather_client import WeatherForecastResponseError
+from app.services import weather_client
+from app.services.weather_client import (
+    WeatherForecastResponseError,
+    fetch_weather_forecast_cached,
+)
 
 
 def _auth_headers(token: str = "supabase-test-token") -> dict[str, str]:
@@ -39,8 +45,9 @@ def test_get_weather_forecast_returns_open_meteo_data(
     _mock_supabase_user(monkeypatch)
 
     async def fake_fetch_weather_forecast(
-        *, latitude: float, longitude: float, days: int
+        *, region_code: str, latitude: float, longitude: float, days: int
     ):
+        assert region_code == "13_01"
         assert latitude == 35.6895
         assert longitude == 139.6917
         assert days == 3
@@ -77,7 +84,7 @@ def test_get_weather_forecast_returns_open_meteo_data(
         }
 
     monkeypatch.setattr(
-        weather_router, "fetch_weather_forecast", fake_fetch_weather_forecast
+        weather_router, "fetch_weather_forecast_cached", fake_fetch_weather_forecast
     )
 
     response = client.get(
@@ -128,9 +135,9 @@ def test_get_weather_forecast_returns_400_for_unknown_region(
     _mock_supabase_user(monkeypatch)
 
     async def fail_if_called(**kwargs):
-        raise AssertionError("fetch_weather_forecast should not be called")
+        raise AssertionError("fetch_weather_forecast_cached should not be called")
 
-    monkeypatch.setattr(weather_router, "fetch_weather_forecast", fail_if_called)
+    monkeypatch.setattr(weather_router, "fetch_weather_forecast_cached", fail_if_called)
 
     response = client.get(
         "/api/v1/weather/forecast",
@@ -152,7 +159,7 @@ def test_get_weather_forecast_returns_502_for_invalid_open_meteo_response(
         raise WeatherForecastResponseError("invalid weather forecast response")
 
     monkeypatch.setattr(
-        weather_router, "fetch_weather_forecast", fake_fetch_weather_forecast
+        weather_router, "fetch_weather_forecast_cached", fake_fetch_weather_forecast
     )
 
     response = client.get(
@@ -187,3 +194,61 @@ def test_get_weather_forecast_requires_authentication(client: TestClient) -> Non
     )
 
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_fetch_weather_forecast_cached_miss_fetches_and_stores(
+    monkeypatch,
+) -> None:
+    """ミス時: Open-Meteo を呼んで保存し、cached=False を返す。"""
+    fetched: list[bool] = []
+    stored: list[tuple] = []
+
+    async def fake_cache_get_json(key: str):
+        return None
+
+    async def fake_fetch_weather_forecast(*, latitude, longitude, days):
+        fetched.append(True)
+        return {"current": {}, "daily": [], "cached": False}
+
+    async def fake_cache_set_json(key, value, ttl_seconds):
+        stored.append((key, value, ttl_seconds))
+
+    monkeypatch.setattr(weather_client, "cache_get_json", fake_cache_get_json)
+    monkeypatch.setattr(
+        weather_client, "fetch_weather_forecast", fake_fetch_weather_forecast
+    )
+    monkeypatch.setattr(weather_client, "cache_set_json", fake_cache_set_json)
+
+    result = await fetch_weather_forecast_cached(
+        region_code="13_01", latitude=1.0, longitude=2.0, days=3
+    )
+
+    assert result["cached"] is False
+    assert fetched == [True]
+    # キー: weather:{region_code}:{yyyymmdd}:{days}（日付は実行日依存のため前後で確認）
+    assert stored[0][0].startswith("weather:13_01:")
+    assert stored[0][0].endswith(":3")
+    assert stored[0][2] == settings.REDIS_WEATHER_TTL_SECONDS
+
+
+@pytest.mark.asyncio
+async def test_fetch_weather_forecast_cached_hit_skips_fetch(monkeypatch) -> None:
+    """ヒット時: Open-Meteo を呼ばず、cached=True を返す。"""
+
+    async def fake_cache_get_json(key: str):
+        assert key.startswith("weather:13_01:")
+        assert key.endswith(":3")
+        return {"current": {}, "daily": [], "cached": False}
+
+    async def fail_if_called(**kwargs):
+        raise AssertionError("fetch_weather_forecast should not be called on hit")
+
+    monkeypatch.setattr(weather_client, "cache_get_json", fake_cache_get_json)
+    monkeypatch.setattr(weather_client, "fetch_weather_forecast", fail_if_called)
+
+    result = await fetch_weather_forecast_cached(
+        region_code="13_01", latitude=1.0, longitude=2.0, days=3
+    )
+
+    assert result["cached"] is True

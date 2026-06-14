@@ -157,9 +157,9 @@ components:
           type: string
           example: "13_02"
           description: |
-            ユーザーの副地域コード（{都道府県コード}_{連番} 形式）。
-            勤務先・旅行先など「第2の地点」として任意で保存する。
-            利用する場合はリクエストの region_code で明示する。
+            ユーザーの副地域コード（{都道府県コード}_{連番} 形式）。
+            勤務先・旅行先など「第2の地点」として任意で保存する。
+            利用する場合はリクエストの region_code で明示する。
           nullable: true
         subscription_status:
           type: string
@@ -601,7 +601,7 @@ components:
           items:
             type: string
             format: uuid
-          description: 候補として使う服のID（省略時は全登録服から選択）
+          description: 提案に必ず含める服のID（指定アイテムは結果に必ず入る。残りの枠は手持ちから自動補完）
         exclude_clothing_ids:
           type: array
           items:
@@ -1063,7 +1063,7 @@ paths:
         提案結果は outfits テーブルにも保存され、後から /api/v1/outfits で参照できる。
 
         キャッシュ戦略：
-        - 天気: Redis 30分キャッシュ（キー: weather:{region_code}:{yyyymmdd}）
+        - 天気: Redis 30分キャッシュ（キー: weather:{region_code}:{yyyymmdd}:{days}）
         - 提案結果: 同一条件（user_id × region_code × tpo × date）で24時間キャッシュ
 
         レート制限: 1ユーザー1分10回 / 1日の上限はプランによる
@@ -1201,7 +1201,7 @@ paths:
       summary: 天気予報取得（Open-Meteo）
       description: |
         指定された地域コードの代表地点の緯度経度で Open-Meteo から天気予報を取得する。
-        Redisに30分キャッシュ済みの場合はそちらを返す（キャッシュキー: weather:{region_code}:{yyyymmdd}）。
+        Redisに30分キャッシュ済みの場合はそちらを返す（キャッシュキー: weather:{region_code}:{yyyymmdd}:{days}）。
         地域コードは /api/v1/regions で取得可能。
       parameters:
         - name: region_code
