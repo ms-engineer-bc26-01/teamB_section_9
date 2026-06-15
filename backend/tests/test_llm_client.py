@@ -137,6 +137,7 @@ async def test_openai_client_raises_on_structured_output_refusal(monkeypatch) ->
             self.responses = FakeResponses()
 
     monkeypatch.setattr(settings, "OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(settings, "OPENAI_MODEL", "gpt-test")
     monkeypatch.setattr("app.services.openai_client.AsyncOpenAI", FakeAsyncOpenAI)
 
     client = OpenAIClient()
