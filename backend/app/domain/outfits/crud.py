@@ -47,6 +47,7 @@ def _to_outfit_schema(outfit: Outfit) -> SuggestedOutfit:
         weather_temp_max=outfit.weather_temp_max,
         weather_temp_min=outfit.weather_temp_min,
         comment=outfit.comment,
+        coordinate_image_url=outfit.coordinate_image_url,
         is_favorite=outfit.is_favorite,
         source=outfit.source,
         items=[
@@ -110,6 +111,7 @@ async def create_suggested_outfit(
     weather_temp_max: float | None,
     weather_temp_min: float | None,
     comment: str | None,
+    coordinate_image_url: str | None,
     items: list[SuggestedClothingSelection],
 ) -> Outfit:
     outfit = Outfit(
@@ -120,6 +122,7 @@ async def create_suggested_outfit(
         weather_temp_max=weather_temp_max,
         weather_temp_min=weather_temp_min,
         comment=comment,
+        coordinate_image_url=coordinate_image_url,
         source="llm",
     )
     db.add(outfit)

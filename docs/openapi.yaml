@@ -546,6 +546,11 @@ components:
           type: string
           description: LLMのおすすめポイント（200字以内）
           nullable: true
+        coordinate_image_url:
+          type: string
+          format: uri
+          description: 生成または保存済みのコーデ画像URL
+          nullable: true
         is_favorite:
           type: boolean
           default: false

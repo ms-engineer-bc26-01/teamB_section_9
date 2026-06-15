@@ -31,6 +31,7 @@ class SuggestedOutfit(BaseModel):
     weather_temp_max: float | None = None
     weather_temp_min: float | None = None
     comment: str | None = None
+    coordinate_image_url: str | None = None
     is_favorite: bool = False
     source: str
     items: list[SuggestedOutfitItem]

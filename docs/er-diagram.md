@@ -49,6 +49,7 @@ erDiagram
     float weather_temp_max "nullable"
     float weather_temp_min "nullable"
     string comment "LLMのおすすめポイント, nullable"
+    string coordinate_image_url "nullable: 生成または保存済みのコーデ画像URL"
     boolean is_favorite "default: false"
     string source "llm / manual"
     timestamp created_at
