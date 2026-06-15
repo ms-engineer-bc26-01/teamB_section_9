@@ -11,7 +11,13 @@ from app.api.v1.routers import outfits as outfits_router
 from app.api.v1.schemas.clothes import ClothingItem
 from app.constants.regions import get_region_coordinates
 from app.core.config import settings
-from app.domain.outfits.service import OutfitService, OutfitSuggestionError
+from app.domain.outfits.service import (
+    LLMOutfitSuggestionItem,
+    LLMOutfitSuggestionPayload,
+    OutfitService,
+    OutfitSuggestionError,
+)
+from app.services.base_llm import LLMStructuredResponseError
 from app.services.weather_client import WeatherForecastResponseError
 
 
@@ -23,9 +29,20 @@ async def test_outfit_service_uses_prompt_template_independent_of_cwd(
     captured: dict[str, str] = {}
 
     class FakeLLMClient:
-        async def generate(self, prompt: str) -> str:
+        async def generate_structured(self, prompt: str, *, response_format):
             captured["prompt"] = prompt
-            return "generated-coordinate"
+            assert response_format is LLMOutfitSuggestionPayload
+            return LLMOutfitSuggestionPayload(
+                comment="generated-coordinate",
+                items=[
+                    LLMOutfitSuggestionItem(
+                        name="white shirt",
+                        category="トップス",
+                        color="white",
+                        pattern=None,
+                    )
+                ],
+            )
 
     monkeypatch.setattr(
         "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
@@ -196,12 +213,23 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
         )()
 
     class FakeLLMClient:
-        async def generate(self, prompt: str) -> str:
+        async def generate_structured(self, prompt: str, *, response_format):
             assert "casual" in prompt
             assert "current: temp=25.4C" in prompt
             assert "tops - white shirt - color=white" in prompt
             assert "2026-06-04" in prompt
-            return "generated-coordinate"
+            assert response_format is LLMOutfitSuggestionPayload
+            return LLMOutfitSuggestionPayload(
+                comment="generated-coordinate",
+                items=[
+                    LLMOutfitSuggestionItem(
+                        name="white shirt",
+                        category="トップス",
+                        color="white",
+                        pattern=None,
+                    )
+                ],
+            )
 
     monkeypatch.setattr(
         "app.dependencies.auth.verify_supabase_jwt", fake_verify_supabase_jwt
@@ -368,9 +396,10 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
         )()
 
     class FakeLLMClient:
-        async def generate(self, prompt: str) -> str:
+        async def generate_structured(self, prompt: str, *, response_format):
             assert "服の登録はありません。" in prompt
-            return "generated-coordinate"
+            assert response_format is LLMOutfitSuggestionPayload
+            return LLMOutfitSuggestionPayload(comment="generated-coordinate", items=[])
 
     monkeypatch.setattr(
         "app.dependencies.auth.verify_supabase_jwt", fake_verify_supabase_jwt
@@ -443,9 +472,10 @@ async def test_suggest_outfit_filters_to_specified_clothing_ids(monkeypatch) -> 
     """clothing_ids 指定時はその服を必ず含める (Issue #61)"""
 
     class FakeLLMClient:
-        async def generate(self, prompt: str) -> str:
+        async def generate_structured(self, prompt: str, *, response_format):
             del prompt
-            return "generated-coordinate"
+            assert response_format is LLMOutfitSuggestionPayload
+            return LLMOutfitSuggestionPayload(comment="generated-coordinate", items=[])
 
     monkeypatch.setattr(
         "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
@@ -482,9 +512,10 @@ async def test_suggest_outfit_excludes_specified_clothing_ids(monkeypatch) -> No
     """exclude_clothing_ids 指定時はそのIDの服を候補から除外する (Issue #61)"""
 
     class FakeLLMClient:
-        async def generate(self, prompt: str) -> str:
+        async def generate_structured(self, prompt: str, *, response_format):
             del prompt
-            return "generated-coordinate"
+            assert response_format is LLMOutfitSuggestionPayload
+            return LLMOutfitSuggestionPayload(comment="generated-coordinate", items=[])
 
     monkeypatch.setattr(
         "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
@@ -608,8 +639,9 @@ def test_select_clothes_keeps_forced_tops_even_with_favorite_onepiece() -> None:
 @pytest.mark.asyncio
 async def test_outfit_service_wraps_llm_api_errors(monkeypatch) -> None:
     class FakeLLMClient:
-        async def generate(self, prompt: str) -> str:
+        async def generate_structured(self, prompt: str, *, response_format):
             del prompt
+            del response_format
             raise APIError(
                 "upstream failure",
                 request=httpx.Request("POST", "https://api.openai.com/v1/responses"),
@@ -638,6 +670,38 @@ async def test_outfit_service_wraps_llm_api_errors(monkeypatch) -> None:
 
     assert str(exc_info.value) == "failed to generate outfit suggestion"
     assert isinstance(exc_info.value.__cause__, APIError)
+
+
+@pytest.mark.asyncio
+async def test_outfit_service_wraps_structured_output_errors(monkeypatch) -> None:
+    class FakeLLMClient:
+        async def generate_structured(self, prompt: str, *, response_format):
+            del prompt
+            del response_format
+            raise LLMStructuredResponseError("cannot comply")
+
+    monkeypatch.setattr(
+        "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
+    )
+
+    service = OutfitService()
+
+    with pytest.raises(OutfitSuggestionError) as exc_info:
+        await service.suggest(
+            tpo="casual",
+            clothes=[],
+            weather={
+                "current": {
+                    "temperature_2m": 25.0,
+                    "weather_code": 1,
+                    "precipitation_probability": 10,
+                },
+                "daily": [],
+            },
+        )
+
+    assert str(exc_info.value) == "failed to generate outfit suggestion"
+    assert isinstance(exc_info.value.__cause__, LLMStructuredResponseError)
 
 
 def test_suggest_outfit_requires_authentication(
@@ -782,9 +846,10 @@ async def test_tops_wins_over_onepiece_on_equal_score(
     captured: dict[str, str] = {}
 
     class FakeLLMClient:
-        async def generate(self, prompt: str) -> str:
+        async def generate_structured(self, prompt: str, *, response_format):
             captured["prompt"] = prompt
-            return "generated-coordinate"
+            assert response_format is LLMOutfitSuggestionPayload
+            return LLMOutfitSuggestionPayload(comment="generated-coordinate", items=[])
 
     monkeypatch.setattr(
         "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
