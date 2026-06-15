@@ -4,7 +4,6 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.api.v1.schemas.clothes import ClothingItem
-from app.api.v1.schemas.regions import Region
 
 
 class OutfitSuggestRequest(BaseModel):
@@ -13,6 +12,25 @@ class OutfitSuggestRequest(BaseModel):
     region_code: str | None = Field(default=None, max_length=10)
     clothing_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
     exclude_clothing_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
+
+
+class SuggestedGeneratedOutfitItem(BaseModel):
+    name: str
+    role: str
+    color: str | None
+    pattern: str | None
+    display_order: int
+    clothing_item: ClothingItem | None = None
+
+
+class SuggestedGeneratedOutfit(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    tpo: str
+    comment: str | None = None
+    is_favorite: bool = False
+    items: list[SuggestedGeneratedOutfitItem]
+    created_at: datetime
 
 
 class SuggestedOutfitItem(BaseModel):
@@ -39,10 +57,7 @@ class SuggestedOutfit(BaseModel):
 
 
 class OutfitSuggestResponse(BaseModel):
-    outfits: list[SuggestedOutfit]
-    weather_summary: str
-    region_used: Region
-    cached: bool
+    outfits: list[SuggestedGeneratedOutfit]
 
 
 class OutfitsListResponse(BaseModel):

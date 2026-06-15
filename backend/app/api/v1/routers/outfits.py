@@ -1,3 +1,5 @@
+import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 import httpx
@@ -8,15 +10,13 @@ from app.api.v1.schemas.outfits import (
     OutfitsListResponse,
     OutfitSuggestRequest,
     OutfitSuggestResponse,
-    SuggestedOutfit,
-    SuggestedOutfitItem,
+    SuggestedGeneratedOutfit,
+    SuggestedGeneratedOutfitItem,
 )
-from app.api.v1.schemas.regions import Region
 from app.constants.regions import get_region
 from app.core.deps import get_db
 from app.core.logging import logger
 from app.dependencies.auth import CurrentUser, get_current_user
-from app.domain.clothes import crud as clothes_crud
 from app.domain.outfits import crud as outfits_crud
 from app.domain.outfits.service import OutfitService, OutfitSuggestionError
 from app.services.weather_client import (
@@ -30,7 +30,6 @@ router = APIRouter(prefix="/outfits", tags=["Outfits"])
 AuthenticatedUser = Annotated[CurrentUser, Depends(get_current_user)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 DEFAULT_REGION_CODE = "13_01"
-CLOTHES_FETCH_LIMIT = 1000
 
 
 @router.get("", response_model=OutfitsListResponse)
@@ -57,7 +56,6 @@ async def list_outfits(
 async def suggest_outfit(
     request: OutfitSuggestRequest,
     current_user: AuthenticatedUser,
-    db: DbSession,
 ):
     region_code = (
         request.region_code or current_user.default_region_code or DEFAULT_REGION_CODE
@@ -92,20 +90,11 @@ async def suggest_outfit(
             detail="failed to fetch weather forecast",
         ) from exc
 
-    clothes = (
-        await clothes_crud.list_clothes(
-            db,
-            current_user.id,
-            limit=CLOTHES_FETCH_LIMIT,
-            offset=0,
-        )
-    ).items
-
     try:
         service = OutfitService()
         result = await service.suggest(
             tpo=request.tpo,
-            clothes=clothes,
+            clothes=[],
             weather=weather,
             clothing_ids=request.clothing_ids,
             exclude_clothing_ids=request.exclude_clothing_ids,
@@ -122,66 +111,33 @@ async def suggest_outfit(
             detail="failed to generate outfit suggestion",
         ) from exc
 
-    today_forecast = weather.get("daily", [{}])[0] if weather.get("daily") else {}
-    saved_outfit = await outfits_crud.create_suggested_outfit(
-        db,
-        user_id=current_user.id,
-        tpo=request.tpo,
-        region_code=region_code,
-        weather_summary=result.weather_summary,
-        weather_temp_max=today_forecast.get("temperature_max"),
-        weather_temp_min=today_forecast.get("temperature_min"),
-        comment=result.comment,
-        coordinate_image_url=None,  # TODO: 生成されたコーデ画像のURLを保存する
-        items=result.items,
-    )
-
     logger.info(
-        "outfit suggested (user=%s, outfit=%s, region=%s, items=%d)",
+        "outfit suggested (user=%s, region=%s, items=%d)",
         current_user.id,
-        saved_outfit.id,
         region_code,
         len(result.items),
     )
 
     return OutfitSuggestResponse(
         outfits=[
-            SuggestedOutfit(
-                id=saved_outfit.id,
+            SuggestedGeneratedOutfit(
+                id=uuid.uuid4(),
                 user_id=current_user.id,
                 tpo=request.tpo,
-                region_code=region_code,
-                weather_summary=result.weather_summary,
-                weather_temp_max=today_forecast.get("temperature_max"),
-                weather_temp_min=today_forecast.get("temperature_min"),
                 comment=result.comment,
-                coordinate_image_url=saved_outfit.coordinate_image_url,
-                is_favorite=saved_outfit.is_favorite,
-                source=saved_outfit.source,
+                is_favorite=False,
                 items=[
-                    SuggestedOutfitItem(
-                        clothes_id=item.clothing_item.id,
+                    SuggestedGeneratedOutfitItem(
+                        name=item.name,
                         role=item.role,
+                        color=item.color,
+                        pattern=item.pattern,
                         display_order=item.display_order,
                         clothing_item=item.clothing_item,
                     )
                     for item in result.items
                 ],
-                created_at=saved_outfit.created_at,
+                created_at=datetime.now(UTC),
             )
-        ],
-        weather_summary=result.weather_summary,
-        region_used=Region(
-            code=region_code,
-            prefecture_code=region_code.split("_")[0],
-            prefecture_name=region["prefecture"],
-            name=region["name"],
-            city=region["city"],
-            latitude=region["lat"],
-            longitude=region["lng"],
-        ),
-        # cached は「提案結果キャッシュ」（suggest:... TTL24h）由来を示す仕様。
-        # 天気キャッシュがヒットしても LLM 提案と DB 保存は毎回走るため、
-        # 提案結果キャッシュ未実装の現状は常に False（天気キャッシュとは別概念）。
-        cached=False,
+        ]
     )

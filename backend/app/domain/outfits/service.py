@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from openai import APIError
-from pydantic import BaseModel, ConfigDict
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from app.api.v1.schemas.clothes import ClothingItem
 from app.services.base_llm import LLMStructuredResponseError
@@ -24,7 +24,7 @@ class LLMOutfitSuggestionItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
-    category: str
+    role: str = Field(validation_alias=AliasChoices("role", "category"))
     color: str | None
     pattern: str | None
 
@@ -52,30 +52,15 @@ class OutfitService:
         clothing_ids: list[uuid.UUID] | None = None,
         exclude_clothing_ids: list[uuid.UUID] | None = None,
     ) -> "OutfitSuggestion":
-        selected = self._select_clothes(
-            tpo=tpo,
-            clothes=clothes,
-            clothing_ids=clothing_ids,
-            exclude_clothing_ids=exclude_clothing_ids,
-        )
-        selected_clothes = [s.clothing_item for s in selected]
-
-        clothes_summary = self._format_clothes(selected_clothes)
+        del clothes, clothing_ids, exclude_clothing_ids
         weather_summary = self._format_weather(weather)
 
-        prompt = (
-            _PROMPT_TEMPLATE.replace(
-                "{{ clothes }}",
-                clothes_summary,
-            )
-            .replace(
-                "{{ weather }}",
-                weather_summary,
-            )
-            .replace(
-                "{{ tpo }}",
-                tpo,
-            )
+        prompt = _PROMPT_TEMPLATE.replace(
+            "{{ weather }}",
+            weather_summary,
+        ).replace(
+            "{{ tpo }}",
+            tpo,
         )
 
         try:
@@ -89,8 +74,37 @@ class OutfitService:
         return OutfitSuggestion(
             comment=payload.comment.strip(),
             weather_summary=weather_summary,
-            items=selected,
+            items=[
+                SuggestedOutfitItem(
+                    name=item.name.strip(),
+                    role=self._normalize_role(item.role),
+                    color=item.color.strip() if item.color else None,
+                    pattern=item.pattern.strip() if item.pattern else None,
+                    display_order=index,
+                    clothing_item=None,
+                )
+                for index, item in enumerate(payload.items, start=1)
+            ],
         )
+
+    @staticmethod
+    def _normalize_role(role: str) -> str:
+        normalized = role.strip().lower()
+        role_map = {
+            "outer": "outer",
+            "tops": "tops",
+            "bottoms": "bottoms",
+            "shoes": "shoes",
+            "bag": "bag",
+            "accessory": "accessory",
+            "アウター": "outer",
+            "トップス": "tops",
+            "ボトムス": "bottoms",
+            "シューズ": "shoes",
+            "バッグ": "bag",
+            "アクセサリー": "accessory",
+        }
+        return role_map.get(role.strip(), role_map.get(normalized, role.strip()))
 
     @staticmethod
     def _select_clothes(
@@ -315,7 +329,17 @@ class SuggestedClothingSelection:
 
 
 @dataclass(frozen=True, slots=True)
+class SuggestedOutfitItem:
+    name: str
+    role: str
+    color: str | None
+    pattern: str | None
+    display_order: int
+    clothing_item: ClothingItem | None
+
+
+@dataclass(frozen=True, slots=True)
 class OutfitSuggestion:
     comment: str
     weather_summary: str
-    items: list[SuggestedClothingSelection]
+    items: list[SuggestedOutfitItem]
