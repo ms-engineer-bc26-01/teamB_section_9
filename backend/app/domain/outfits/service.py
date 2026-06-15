@@ -33,8 +33,7 @@ class LLMOutfitSuggestionPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     comment: str
-    items: list[LLMOutfitSuggestionItem]
-
+    items: list[LLMOutfitSuggestionItem] = []
 
 class OutfitService:
     def __init__(self):
