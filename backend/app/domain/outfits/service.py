@@ -35,6 +35,7 @@ class LLMOutfitSuggestionPayload(BaseModel):
     comment: str
     items: list[LLMOutfitSuggestionItem] = []
 
+
 class OutfitService:
     def __init__(self):
         try:
