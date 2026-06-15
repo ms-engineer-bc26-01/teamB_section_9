@@ -27,7 +27,7 @@ class Clothes(Base):
     pattern: Mapped[str | None] = mapped_column(String(20), nullable=True)
     size: Mapped[str | None] = mapped_column(String(50), nullable=True)
     season: Mapped[list[str]] = mapped_column(ARRAY(String(20)), nullable=False)
-    image_url: Mapped[str] = mapped_column(String(512), nullable=False)
+    image_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     thumbnail_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     memo: Mapped[str | None] = mapped_column(String(200), nullable=True)
     is_favorite: Mapped[bool] = mapped_column(
