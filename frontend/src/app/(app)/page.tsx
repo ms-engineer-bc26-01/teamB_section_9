@@ -312,7 +312,7 @@ export default function HomeDashboard() {
 
   return (
     <div className="space-y-5">
-      <section aria-labelledby="home-heading" className="space-y-3">
+      {/* <section aria-labelledby="home-heading" className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-[#8C715C]">Climo</p>
@@ -330,7 +330,7 @@ export default function HomeDashboard() {
         <p className="text-sm leading-6 text-[#6F6258]">
           クローゼットの服と天気をもとに、外出前のコーデ選びを手早くサポートします。
         </p>
-      </section>
+      </section> */}
 
       <section aria-labelledby="weather-heading" className="space-y-3">
         <h2 id="weather-heading" className="sr-only">
@@ -342,27 +342,6 @@ export default function HomeDashboard() {
         >
           {todayLabel}
         </time>
-
-        <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
-          <CardContent className="flex items-center gap-8 px-5 py-5">
-            <div className="flex size-24 shrink-0 items-center justify-center rounded-full bg-[#F6FAF8] text-[#2F6F63]">
-              {renderWeatherIcon(weatherCode, 56)}
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-lg font-bold text-[#2B2926]">{weatherLabel}</p>
-              <p className="text-2xl font-bold text-[#2B2926]">
-                {isWeatherLoading ? "-" : temperatureText}
-              </p>
-              <p className="text-sm font-semibold text-[#4B3A2F]">
-                降水確率 {isWeatherLoading ? "-" : precipitationText}
-              </p>
-              {errorMessage ? (
-                <p className="text-sm text-[#8C3D2F]">{errorMessage}</p>
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
       </section>
 
       <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
@@ -432,6 +411,27 @@ export default function HomeDashboard() {
               <ChevronRight aria-hidden="true" size={20} />
             </Link>
           ) : null}          </CardContent>
+      </Card>
+
+      <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
+        <CardContent className="flex items-center gap-8 px-5 py-5">
+          <div className="flex size-24 shrink-0 items-center justify-center rounded-full bg-[#F6FAF8] text-[#2F6F63]">
+            {renderWeatherIcon(weatherCode, 56)}
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-lg font-bold text-[#2B2926]">{weatherLabel}</p>
+            <p className="text-2xl font-bold text-[#2B2926]">
+              {isWeatherLoading ? "-" : temperatureText}
+            </p>
+            <p className="text-sm font-semibold text-[#4B3A2F]">
+              降水確率 {isWeatherLoading ? "-" : precipitationText}
+            </p>
+            {errorMessage ? (
+              <p className="text-sm text-[#8C3D2F]">{errorMessage}</p>
+            ) : null}
+          </div>
+        </CardContent>
       </Card>
 
       <Link
