@@ -130,7 +130,12 @@ class OutfitService:
         clothing_ids: list[uuid.UUID] | None = None,
         exclude_clothing_ids: list[uuid.UUID] | None = None,
     ) -> list["SuggestedClothingSelection"]:
-        """コーデを構成する服を選定する。
+        """アルゴリズムでコーデを構成する服を選定する（スコアリング選定）。
+
+        注: 現在の `suggest()` は LLM 主導選定に移行したため、本メソッドは
+        提案フローからは呼ばれていない（ユニットテストのみが参照）。スコアリング
+        選定ロジックは後続の画像生成フォールバック等での再利用を見込んで残置している。
+        不要が確定した場合は本メソッドと関連テストごと削除してよい。
 
         仕様 (Issue #61):
         - exclude_clothing_ids: その服を候補から完全に除外する（提案に出さない）。

@@ -58,7 +58,7 @@ erDiagram
   outfit_items {
     uuid outfit_id FK "→ outfits.id"
     uuid clothes_id FK "→ clothes.id"
-    string role "tops / bottoms / outer / shoes / bag / accessory"
+    string role "tops / bottoms / outer / onepiece / shoes / bag / accessory"
     int display_order
   }
 
