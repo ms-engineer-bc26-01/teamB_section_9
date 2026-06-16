@@ -24,6 +24,9 @@ import {
   type WeatherForecast,
 } from "@/features/weather/api";
 import { getOutfits } from "@/features/outfits/api";
+import {
+  getSuggestedOutfitItemName,
+} from "@/features/outfits/types";
 import type { SuggestedOutfit } from "@/features/outfits/types";
 import { apiClient } from "@/lib/api/client";
 import { useAuthStore } from "@/stores/auth-store";
@@ -380,13 +383,13 @@ export default function HomeDashboard() {
             <div className="grid grid-cols-2 gap-2">
               {latestOutfitItems.map((item) => (
                 <div
-                  key={`${item.role}-${item.clothes_id}`}
+                  key={`${item.role}-${item.display_order}`}
                   className="rounded-lg border border-[#EFE5DC] bg-[#FFFCF8] px-3 py-3 text-sm font-medium text-[#4B3A2F]"
                 >
                   <span className="block text-xs font-semibold text-[#8C715C]">
                     {item.role}
                   </span>
-                  <span className="mt-1 block">{item.clothing_item.name}</span>
+                  <span className="mt-1 block">{getSuggestedOutfitItemName(item)}</span>
                 </div>
               ))}
             </div>
