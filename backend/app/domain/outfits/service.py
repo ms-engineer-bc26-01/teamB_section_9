@@ -90,24 +90,53 @@ class OutfitService:
         clothes_by_id = {str(item.id): item for item in pool}
         items: list[SuggestedOutfitItemResult] = []
         for display_order, llm_item in enumerate(payload.items, start=1):
-            owned = (
-                clothes_by_id.get(llm_item.clothes_id) if llm_item.clothes_id else None
-            )
-            items.append(
-                SuggestedOutfitItemResult(
-                    name=llm_item.name,
-                    role=llm_item.role,
-                    color=llm_item.color,
-                    pattern=llm_item.pattern,
-                    display_order=display_order,
-                    clothing_item=owned,
+            owned = self._resolve_owned(llm_item.clothes_id, clothes_by_id)
+            if owned is not None:
+                # 手持ち服は DB の値を正として返す（LLM の表記揺れで
+                # clothing_item と食い違わせない）。role は提案上の役割なので LLM 値。
+                items.append(
+                    SuggestedOutfitItemResult(
+                        name=owned.name,
+                        role=llm_item.role,
+                        color=owned.color,
+                        pattern=owned.pattern,
+                        display_order=display_order,
+                        clothing_item=owned,
+                    )
                 )
-            )
+            else:
+                items.append(
+                    SuggestedOutfitItemResult(
+                        name=llm_item.name,
+                        role=llm_item.role,
+                        color=llm_item.color,
+                        pattern=llm_item.pattern,
+                        display_order=display_order,
+                        clothing_item=None,
+                    )
+                )
 
         return OutfitSuggestion(
             comment=payload.comment.strip(),
             items=items,
         )
+
+    @staticmethod
+    def _resolve_owned(
+        clothes_id: str | None,
+        clothes_by_id: dict[str, ClothingItem],
+    ) -> ClothingItem | None:
+        """LLM が返した clothes_id を手持ち服に解決する。
+
+        前後空白や、プロンプト提示の `id=<uuid>` 形式が混ざっても拾えるよう正規化する。
+        手持ちに無い ID / None は補完提案として None を返す。
+        """
+        if not clothes_id:
+            return None
+        key = clothes_id.strip()
+        if key.startswith("id="):
+            key = key[len("id=") :].strip()
+        return clothes_by_id.get(key)
 
     @staticmethod
     def _format_must_include(

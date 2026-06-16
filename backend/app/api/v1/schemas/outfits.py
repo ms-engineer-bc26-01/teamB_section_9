@@ -8,6 +8,7 @@ from app.api.v1.schemas.clothes import ClothingItem
 
 class OutfitSuggestRequest(BaseModel):
     tpo: str = Field(min_length=1, max_length=100)
+    # NOTE: date は現状未使用（将来の指定日提案用の予約フィールド）
     date: str | None = Field(default=None, max_length=10)
     region_code: str | None = Field(default=None, max_length=10)
     clothing_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)

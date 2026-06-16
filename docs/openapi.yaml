@@ -594,7 +594,7 @@ components:
         date:
           type: string
           format: date
-          description: 着用日（天気取得に使用）
+          description: 着用日。現状は未使用（予報は常に現在＋当日を使用）。将来の指定日提案に向けた予約フィールド
         region_code:
           type: string
           example: "19_02"

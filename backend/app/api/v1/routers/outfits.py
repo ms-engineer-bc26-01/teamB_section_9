@@ -74,6 +74,7 @@ async def suggest_outfit(
 
     latitude, longitude = region["lat"], region["lng"]
 
+    # NOTE: request.date は現状未使用（予報は常に現在＋当日。指定日提案は将来対応）
     try:
         weather = await fetch_weather_forecast_cached(
             region_code=region_code,

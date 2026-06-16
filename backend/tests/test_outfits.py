@@ -149,6 +149,110 @@ async def test_outfit_service_uses_prompt_template_independent_of_cwd(
     assert result.items[0].clothing_item.name == "white shirt"
 
 
+@pytest.mark.asyncio
+async def test_suggest_resolves_id_prefixed_clothes_id_and_prefers_db_values(
+    monkeypatch,
+) -> None:
+    """clothes_id に id= 接頭辞/空白が混ざっても解決し、手持ちは DB 値を返す。"""
+    owned = ClothingItem(
+        id=uuid.UUID("00000000-0000-0000-0000-0000000000aa"),
+        user_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+        name="DBシャツ",
+        category="tops",
+        color="navy",
+        pattern="stripe",
+        size="M",
+        season=["all"],
+        tpo_tags=["casual"],
+        image_url="https://example.com/db.jpg",
+        thumbnail_url=None,
+        memo=None,
+        is_favorite=False,
+        wear_count=0,
+        last_worn_at=None,
+        created_at=TEST_TIMESTAMP,
+        updated_at=TEST_TIMESTAMP,
+    )
+
+    class FakeLLMClient:
+        async def generate_structured(self, prompt: str, *, response_format):
+            del prompt, response_format
+            return LLMOutfitSuggestionPayload(
+                comment="c",
+                items=[
+                    LLMOutfitSuggestionItem(
+                        name="LLMが言う名前",
+                        role="tops",
+                        color="red",
+                        pattern=None,
+                        # プロンプト提示の "id=<uuid>" 形式 + 末尾空白を模す
+                        clothes_id="id=00000000-0000-0000-0000-0000000000aa ",
+                    )
+                ],
+            )
+
+    monkeypatch.setattr(
+        "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
+    )
+    service = OutfitService()
+    result = await service.suggest(
+        tpo="casual", clothes=[owned], weather=_make_prompt_weather()
+    )
+
+    item = result.items[0]
+    assert item.clothing_item is not None
+    assert item.clothing_item.id == owned.id
+    # 手持ち服は DB 値が正（LLM の食い違う name/color は採用しない）
+    assert item.name == "DBシャツ"
+    assert item.color == "navy"
+    assert item.pattern == "stripe"
+
+
+@pytest.mark.asyncio
+async def test_suggest_returns_null_clothing_item_for_unowned(monkeypatch) -> None:
+    """clothes_id=None / 手持ちに無い ID は補完提案として clothing_item=None で返す。"""
+
+    class FakeLLMClient:
+        async def generate_structured(self, prompt: str, *, response_format):
+            del prompt, response_format
+            return LLMOutfitSuggestionPayload(
+                comment="c",
+                items=[
+                    LLMOutfitSuggestionItem(
+                        name="提案ボトム",
+                        role="bottoms",
+                        color="beige",
+                        pattern=None,
+                        clothes_id=None,
+                    ),
+                    LLMOutfitSuggestionItem(
+                        name="存在しない服",
+                        role="shoes",
+                        color=None,
+                        pattern=None,
+                        clothes_id="99999999-9999-9999-9999-999999999999",
+                    ),
+                ],
+            )
+
+    monkeypatch.setattr(
+        "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
+    )
+    service = OutfitService()
+    result = await service.suggest(
+        tpo="casual", clothes=[], weather=_make_prompt_weather()
+    )
+
+    assert len(result.items) == 2
+    # clothes_id=None → 補完
+    assert result.items[0].clothing_item is None
+    assert result.items[0].name == "提案ボトム"
+    assert result.items[0].color == "beige"
+    # 手持ちに無い ID → 補完
+    assert result.items[1].clothing_item is None
+    assert result.items[1].name == "存在しない服"
+
+
 def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
     client: TestClient,
     monkeypatch,
