@@ -9,10 +9,13 @@ export type OutfitSuggestRequest = {
 };
 
 export type SuggestedOutfitItem = {
-  clothes_id: string;
+  clothes_id?: string | null;
+  name?: string | null;
   role: string;
+  color?: string | null;
+  pattern?: string | null;
   display_order: number;
-  clothing_item: ClothingItem;
+  clothing_item?: ClothingItem | null;
 };
 
 export type SuggestedOutfit = {
@@ -51,3 +54,11 @@ export type OutfitsListResponse = {
   items: SuggestedOutfit[];
   total: number;
 };
+
+export function getSuggestedOutfitItemName(item: SuggestedOutfitItem) {
+  return item.name ?? item.clothing_item?.name ?? "アイテム名未設定";
+}
+
+export function getSuggestedOutfitItemColor(item: SuggestedOutfitItem) {
+  return item.color ?? item.clothing_item?.color ?? null;
+}

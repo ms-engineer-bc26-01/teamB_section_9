@@ -23,6 +23,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getOutfits } from "@/features/outfits/api";
+import {
+  getSuggestedOutfitItemColor,
+  getSuggestedOutfitItemName,
+} from "@/features/outfits/types";
 import type { SuggestedOutfit } from "@/features/outfits/types";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -269,26 +273,30 @@ export function OutfitPreviewContent() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {outfitItems.length > 0 ? (
-                  outfitItems.map((item) => (
-                    <div
-                      key={`${item.role}-${item.clothes_id}`}
-                      className="rounded-lg bg-[#FAF8F5] px-4 py-3"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm text-[#6F6259]">
-                          {item.role}
-                        </span>
-                        <span className="text-right text-sm font-medium">
-                          {item.clothing_item.name}
-                        </span>
+                  outfitItems.map((item) => {
+                    const itemColor = getSuggestedOutfitItemColor(item);
+
+                    return (
+                      <div
+                        key={`${item.role}-${item.display_order}`}
+                        className="rounded-lg bg-[#FAF8F5] px-4 py-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm text-[#6F6259]">
+                            {item.role}
+                          </span>
+                          <span className="text-right text-sm font-medium">
+                            {getSuggestedOutfitItemName(item)}
+                          </span>
+                        </div>
+                        {itemColor ? (
+                          <p className="mt-1 text-xs text-[#8C715C]">
+                            {itemColor}
+                          </p>
+                        ) : null}
                       </div>
-                      {item.clothing_item.color ? (
-                        <p className="mt-1 text-xs text-[#8C715C]">
-                          {item.clothing_item.color}
-                        </p>
-                      ) : null}
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <p className="rounded-lg bg-[#FAF8F5] px-4 py-3 text-sm text-[#6F6259]">
                     アイテム情報がありません。

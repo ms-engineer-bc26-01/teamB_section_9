@@ -14,6 +14,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
+import {
+  getSuggestedOutfitItemName,
+} from "@/features/outfits/types";
 import type { OutfitSuggestResponse } from "@/features/outfits/types";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -243,14 +246,14 @@ export function OutfitDetailContent() {
                 {outfit.items.length > 0 ? (
                   outfit.items.map((item) => (
                     <div
-                      key={`${item.role}-${item.clothes_id}`}
+                      key={`${item.role}-${item.display_order}`}
                       className="flex items-center justify-between rounded-xl bg-[#FAF8F5] px-4 py-3"
                     >
                       <span className="text-sm text-[#6F6259]">
                         {item.role}
                       </span>
                       <span className="text-sm font-medium">
-                        {item.clothing_item.name}
+                        {getSuggestedOutfitItemName(item)}
                       </span>
                     </div>
                   ))
