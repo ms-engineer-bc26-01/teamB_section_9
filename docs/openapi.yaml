@@ -627,7 +627,9 @@ components:
           description: アイテム名（手持ち／補完提案いずれも入る）
         role:
           type: string
-          description: このコーデ内でのアイテムの役割（tops / bottoms / outer / onepiece / shoes / bag / accessory）
+          description: >-
+            このコーデ内でのアイテムの役割（tops / bottoms / outer / onepiece / shoes / bag / accessory）。
+            提案上の役割であり clothing_item.category と必ずしも一致しない（同一視しないこと）
         color:
           type: string
           nullable: true
@@ -662,6 +664,7 @@ components:
         is_favorite:
           type: boolean
           default: false
+          description: 現状の suggest レスポンスでは未保存のため常に false（型整合のため保持）
         items:
           type: array
           items:

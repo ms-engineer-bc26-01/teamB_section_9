@@ -159,7 +159,7 @@ POST /api/v1/outfits/suggest  { tpo, date, region_code? }
        MISS → Open-Meteo を叩いて 30 分キャッシュ（キー: weather:{region_code}:{yyyymmdd}:{days}）
   5. DB からユーザーの服一覧（クローゼット）を取得
        - exclude_clothing_ids はプロンプトの候補から除外
-       - clothing_ids は「必ず含める服」として id 付きでプロンプトに明記
+       - clothing_ids は「優先して含めたい服」として id 付きでプロンプトに明記（含有は best-effort）
   6. LLM にプロンプト送信（id 付きクローゼット + 天気 + TPO、構造化出力で強制）
        - 手持ち服を優先して選定（選んだ服は clothes_id を返す）
        - 手持ちで埋まらないカテゴリのみ補完アイテムを提案（clothes_id=null）

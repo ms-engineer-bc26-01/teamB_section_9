@@ -38,7 +38,7 @@ sequenceDiagram
         BE->>Redis: 天気データをキャッシュ（TTL 30分）
     end
 
-    Note over BE: プロンプト構築<br/>・クローゼットを id 付きで提示<br/>・exclude は候補から除外<br/>・clothing_ids は「必ず含める服」として明記
+    Note over BE: プロンプト構築<br/>・クローゼットを id 付きで提示<br/>・exclude は候補から除外<br/>・clothing_ids は「優先して含めたい服」として明記(best-effort)
 
     BE->>LLM: プロンプト送信<br/>（id付きクローゼット + 天気 + TPO + 構造化出力）
     Note over LLM: 手持ち優先で選定（clothes_idを返す）<br/>不足カテゴリのみ補完提案（clothes_id=null）

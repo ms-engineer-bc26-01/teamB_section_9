@@ -411,6 +411,98 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
     ]
 
 
+def test_suggest_outfit_response_mixes_owned_and_suggested_items(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    """API レスポンス全体で owned と補完(null)が混在しても正しく直列化される。"""
+    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", True)
+    monkeypatch.setattr(settings, "APP_ENV", "development")
+
+    owned_id = uuid.UUID("00000000-0000-0000-0000-000000000010")
+
+    async def fake_fetch_weather_forecast(
+        *, region_code: str, latitude: float, longitude: float, days: int
+    ):
+        del region_code, latitude, longitude, days
+        return _make_forecast()
+
+    async def fake_list_clothes(db, user_id, **kwargs):
+        del db, kwargs
+        return type(
+            "ClothesListResponse",
+            (),
+            {
+                "items": [
+                    ClothingItem(
+                        id=owned_id,
+                        user_id=user_id,
+                        name="white shirt",
+                        category="tops",
+                        color="white",
+                        pattern=None,
+                        size="M",
+                        season=["all"],
+                        tpo_tags=["casual"],
+                        image_url="https://example.com/shirt.jpg",
+                        thumbnail_url=None,
+                        memo=None,
+                        is_favorite=False,
+                        wear_count=0,
+                        last_worn_at=None,
+                        created_at=TEST_TIMESTAMP,
+                        updated_at=TEST_TIMESTAMP,
+                    )
+                ]
+            },
+        )()
+
+    class FakeLLMClient:
+        async def generate_structured(self, prompt: str, *, response_format):
+            del prompt, response_format
+            return LLMOutfitSuggestionPayload(
+                comment="c",
+                items=[
+                    LLMOutfitSuggestionItem(
+                        name="white shirt",
+                        role="tops",
+                        color="white",
+                        pattern=None,
+                        clothes_id=str(owned_id),
+                    ),
+                    LLMOutfitSuggestionItem(
+                        name="提案パンツ",
+                        role="bottoms",
+                        color="beige",
+                        pattern=None,
+                        clothes_id=None,
+                    ),
+                ],
+            )
+
+    monkeypatch.setattr(
+        outfits_router, "fetch_weather_forecast_cached", fake_fetch_weather_forecast
+    )
+    monkeypatch.setattr(outfits_router.clothes_crud, "list_clothes", fake_list_clothes)
+    monkeypatch.setattr(
+        "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
+    )
+
+    response = client.post("/api/v1/outfits/suggest", json={"tpo": "casual"})
+
+    assert response.status_code == 200
+    items = response.json()["outfits"][0]["items"]
+    assert len(items) == 2
+    # owned: clothing_item が完全な ClothingItem として直列化される
+    assert items[0]["clothing_item"] is not None
+    assert items[0]["clothing_item"]["id"] == str(owned_id)
+    assert items[0]["name"] == "white shirt"
+    # suggested: clothing_item は null
+    assert items[1]["clothing_item"] is None
+    assert items[1]["name"] == "提案パンツ"
+    assert items[1]["role"] == "bottoms"
+
+
 def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
     client: TestClient,
     monkeypatch,
