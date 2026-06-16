@@ -614,24 +614,73 @@ components:
             format: uuid
           description: 提案から除外する服のID（「別の提案」時に前回のアイテムを除外するなど）
 
+    # LLM提案アイテム（POST /outfits/suggest 用）。
+    # 手持ち服はそのまま clothing_item に解決し、手持ちにない補完アイテムは
+    # clothing_item=null（name/role/color/pattern のみ）で返すハイブリッド形式。
+    SuggestOutfitItem:
+      type: object
+      description: LLMが提案したコーデの1アイテム
+      properties:
+        name:
+          type: string
+          description: アイテム名（手持ち／補完提案いずれも入る）
+        role:
+          type: string
+          description: このコーデ内でのアイテムの役割（tops / bottoms / outer / onepiece / shoes / bag / accessory）
+        color:
+          type: string
+          nullable: true
+        pattern:
+          type: string
+          nullable: true
+        display_order:
+          type: integer
+          description: 表示順
+        clothing_item:
+          allOf:
+            - $ref: "#/components/schemas/ClothingItem"
+          nullable: true
+          description: 手持ち服に一致した場合の服詳細。手持ちにない補完提案の場合は null
+
+    SuggestOutfit:
+      type: object
+      description: LLMが提案したコーデ（現状はDB保存せず、id/created_atは一時生成）
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        tpo:
+          $ref: "#/components/schemas/TpoTag"
+        comment:
+          type: string
+          description: LLMのおすすめポイント
+          nullable: true
+        is_favorite:
+          type: boolean
+          default: false
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SuggestOutfitItem"
+        created_at:
+          type: string
+          format: date-time
+
     CoordinateSuggestResponse:
       type: object
+      description: |
+        コーデ提案レスポンス。クローゼットを参照し LLM がコーデを生成する。
+        現状はテキスト表示を優先し DB 保存しないため、outfits のみを返す
+        （旧 weather_summary / region_used / cached は廃止）。
       properties:
         outfits:
           type: array
           items:
-            $ref: "#/components/schemas/Outfit"
-          description: 提案されたコーデ（1〜2件）。DBにも保存される
-        weather_summary:
-          type: string
-          description: 当日の天気要約
-        region_used:
-          allOf:
-            - $ref: "#/components/schemas/Region"
-          description: 提案で実際に使用した地域（リクエストで省略時はユーザーのデフォルト地域）
-        cached:
-          type: boolean
-          description: Redisキャッシュからの応答かどうか
+            $ref: "#/components/schemas/SuggestOutfit"
+          description: 提案されたコーデ
 
     # ===== 天気 =====
     WeatherForecast:
@@ -1064,12 +1113,12 @@ paths:
       operationId: suggestOutfits
       summary: LLMによるコーデ提案
       description: |
-        登録済みの服 × TPO × 天気情報を Gemini 2.5 Flash に渡してコーデを提案する。
-        提案結果は outfits テーブルにも保存され、後から /api/v1/outfits で参照できる。
+        登録済みの服（クローゼット） × TPO × 天気情報を LLM に渡してコーデを提案する。
+        手持ち服を優先し、手持ちで埋まらないカテゴリは LLM が補完アイテムを提案する
+        （ハイブリッド）。手持ちに一致したアイテムは clothing_item に解決して返す。
 
-        キャッシュ戦略：
-        - 天気: Redis 30分キャッシュ（キー: weather:{region_code}:{yyyymmdd}:{days}）
-        - 提案結果: 同一条件（user_id × region_code × tpo × date）で24時間キャッシュ
+        現状はテキスト提案の表示を優先するため DB 保存は行わない（履歴化は後続対応）。
+        天気キャッシュ（Redis 30分）は提案入力として利用する。
 
         レート制限: 1ユーザー1分10回 / 1日の上限はプランによる
       requestBody:

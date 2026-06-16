@@ -11,11 +11,11 @@ sequenceDiagram
     participant Redis
     participant DB as PostgreSQL
     participant Weather as Open-Meteo
-    participant LLM as Gemini 2.5 Flash
+    participant LLM as LLM<br/>(OpenAI 構造化出力)
 
     User->>FE: TPO・日付を選択して<br/>「コーデ提案」ボタン押下
 
-    FE->>BE: POST /api/v1/outfits/suggest<br/>{ tpo, date, region_code?, clothing_ids?: [id, ...] }
+    FE->>BE: POST /api/v1/outfits/suggest<br/>{ tpo, date, region_code?, clothing_ids?, exclude_clothing_ids? }
     Note over BE: JWT検証 → current_user 取得
 
     BE->>Redis: ユーザーのレート制限チェック<br/>（rate:{user_id}）
@@ -27,7 +27,7 @@ sequenceDiagram
     BE->>DB: ユーザーの default_region_code 確認
     Note over BE: region_code が未指定なら<br/>default_region_code を使用
 
-    BE->>DB: ユーザーの服一覧を取得<br/>（clothing_ids=必ず含める / exclude_clothing_ids=除外 / 未指定枠は自動補完）
+    BE->>DB: ユーザーの服一覧（クローゼット）を取得
 
     BE->>Redis: 天気キャッシュ確認<br/>キー: weather:{region_code}:{yyyymmdd}:{days}
     alt キャッシュHIT（TTL 30分以内）
@@ -38,35 +38,19 @@ sequenceDiagram
         BE->>Redis: 天気データをキャッシュ（TTL 30分）
     end
 
-    BE->>Redis: 提案結果キャッシュ確認<br/>キー: suggest:{user_id}:{region_code}:{tpo}:{date}
-    alt キャッシュHIT（TTL 24時間以内）
-        Redis-->>BE: キャッシュ済み提案結果
-        BE-->>FE: 200 { outfits, cached: true }
-        FE-->>User: コーデを表示
-    else キャッシュMISS
-        BE->>LLM: プロンプト送信<br/>（服一覧JSON + 天気 + TPO + responseSchema）
-        Note over LLM: 構造化出力（responseSchema）<br/>で JSON のみ返す
-        LLM-->>BE: { outfits: [ {items, comment} ] }
+    Note over BE: プロンプト構築<br/>・クローゼットを id 付きで提示<br/>・exclude は候補から除外<br/>・clothing_ids は「必ず含める服」として明記
 
-        Note over BE: バリデーション<br/>① JSONスキーマ検証<br/>② clothes_id がユーザー所有か確認<br/>③ comment に不審文字列チェック
+    BE->>LLM: プロンプト送信<br/>（id付きクローゼット + 天気 + TPO + 構造化出力）
+    Note over LLM: 手持ち優先で選定（clothes_idを返す）<br/>不足カテゴリのみ補完提案（clothes_id=null）
+    LLM-->>BE: { comment, items: [{name, role, color, pattern, clothes_id}] }
 
-        alt バリデーション失敗（リトライ上限3回）
-            BE->>LLM: プロンプト再送（最大3回）
-            LLM-->>BE: 再試行レスポンス
-        end
+    Note over BE: 解決処理<br/>・clothes_id が所有服に一致 → clothing_item に解決<br/>・不一致 / null → clothing_item=null（補完提案）
 
-        BE->>DB: outfits・outfit_items にレコード保存
-        BE->>Redis: 提案結果をキャッシュ（TTL 24時間）
-        BE-->>FE: 200 { outfits, weather_summary, region_used, cached: false }
-        FE-->>User: コーデを表示
-    end
+    Note over BE: 現状は DB 保存・提案結果キャッシュなし<br/>id / created_at は一時生成
+    BE-->>FE: 200 { outfits: [{ id, user_id, tpo, comment,<br/>is_favorite, items, created_at }] }
+    FE-->>User: コーデを表示
 
-    opt お気に入り保存
-        User->>FE: ♡ ボタン押下
-        FE->>BE: PATCH /api/v1/outfits/{id}<br/>{ is_favorite: true }
-        BE->>DB: outfits.is_favorite を更新
-        BE-->>FE: 200 更新済みOutfit
-    end
+    Note over BE,DB: ※ 履歴化（outfits・outfit_items 保存）と<br/>提案結果キャッシュ（TTL24h）は後続対応
 ```
 
 ---

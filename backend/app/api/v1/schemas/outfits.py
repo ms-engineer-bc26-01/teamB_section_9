@@ -4,7 +4,6 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.api.v1.schemas.clothes import ClothingItem
-from app.api.v1.schemas.regions import Region
 
 
 class OutfitSuggestRequest(BaseModel):
@@ -15,6 +14,7 @@ class OutfitSuggestRequest(BaseModel):
     exclude_clothing_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
 
 
+# --- 保存済みコーデ（GET /outfits）用スキーマ。DB 由来のため従来のまま温存する ---
 class SuggestedOutfitItem(BaseModel):
     clothes_id: uuid.UUID
     role: str
@@ -38,13 +38,33 @@ class SuggestedOutfit(BaseModel):
     created_at: datetime
 
 
-class OutfitSuggestResponse(BaseModel):
-    outfits: list[SuggestedOutfit]
-    weather_summary: str
-    region_used: Region
-    cached: bool
-
-
 class OutfitsListResponse(BaseModel):
     items: list[SuggestedOutfit]
     total: int
+
+
+# --- LLM 提案（POST /outfits/suggest）用スキーマ ---
+# 手持ち服はそのまま clothing_item に解決し、手持ちにない補完アイテムは
+# clothing_item=null（name/role/color/pattern のみ）で返すハイブリッド形式。
+# 現状は DB に保存しないため、id / created_at はレスポンス用に一時生成する。
+class SuggestOutfitItem(BaseModel):
+    name: str
+    role: str
+    color: str | None = None
+    pattern: str | None = None
+    display_order: int
+    clothing_item: ClothingItem | None = None
+
+
+class SuggestOutfit(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    tpo: str
+    comment: str | None = None
+    is_favorite: bool = False
+    items: list[SuggestOutfitItem]
+    created_at: datetime
+
+
+class OutfitSuggestResponse(BaseModel):
+    outfits: list[SuggestOutfit]
