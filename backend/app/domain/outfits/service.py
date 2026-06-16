@@ -3,8 +3,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from openai import APIError
+from pydantic import BaseModel, ConfigDict
 
 from app.api.v1.schemas.clothes import ClothingItem
+from app.services.base_llm import LLMStructuredResponseError
 from app.services.llm_client import get_llm_client
 
 _PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "outfit_suggest.md"
@@ -16,6 +18,22 @@ except OSError as exc:
 
 class OutfitSuggestionError(Exception):
     pass
+
+
+class LLMOutfitSuggestionItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    category: str
+    color: str | None
+    pattern: str | None
+
+
+class LLMOutfitSuggestionPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    comment: str
+    items: list[LLMOutfitSuggestionItem] = []
 
 
 class OutfitService:
@@ -61,12 +79,15 @@ class OutfitService:
         )
 
         try:
-            comment = await self.llm.generate(prompt)
-        except APIError as exc:
+            payload = await self.llm.generate_structured(
+                prompt,
+                response_format=LLMOutfitSuggestionPayload,
+            )
+        except (APIError, LLMStructuredResponseError) as exc:
             raise OutfitSuggestionError("failed to generate outfit suggestion") from exc
 
         return OutfitSuggestion(
-            comment=comment.strip(),
+            comment=payload.comment.strip(),
             weather_summary=weather_summary,
             items=selected,
         )
