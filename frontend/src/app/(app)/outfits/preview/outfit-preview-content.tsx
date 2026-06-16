@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   ChevronLeft,
@@ -82,8 +83,10 @@ function formatCreatedAt(value: string) {
 }
 
 export function OutfitPreviewContent() {
+  const searchParams = useSearchParams();
   const session = useAuthStore((state) => state.session);
   const isInitialized = useAuthStore((state) => state.isInitialized);
+  const selectedOutfitId = searchParams.get("id");
   const [{ outfit, errorMessage, isLoading }, setPreviewState] =
     useState<OutfitPreviewState>({
       outfit: null,
@@ -112,17 +115,22 @@ export function OutfitPreviewContent() {
 
     let isMounted = true;
 
-    getOutfits({ limit: 1 }, token)
+    getOutfits({ limit: selectedOutfitId ? 100 : 1 }, token)
       .then((response) => {
         if (!isMounted) {
           return;
         }
 
+        const selectedOutfit = selectedOutfitId
+          ? response.items.find((item) => item.id === selectedOutfitId) ?? null
+          : response.items[0] ?? null;
+
         setPreviewState({
-          outfit: response.items[0] ?? null,
-          errorMessage:
-            response.items.length > 0
-              ? null
+          outfit: selectedOutfit,
+          errorMessage: selectedOutfit
+            ? null
+            : selectedOutfitId
+              ? "選択したコーデが見つかりませんでした。"
               : "まだ提案履歴がありません。シーンを選んでコーデを作成してください。",
           isLoading: false,
         });
@@ -142,7 +150,7 @@ export function OutfitPreviewContent() {
     return () => {
       isMounted = false;
     };
-  }, [isInitialized, session?.access_token]);
+  }, [isInitialized, selectedOutfitId, session?.access_token]);
 
   const outfitTitle = outfit
     ? tpoLabels[outfit.tpo] ?? "おすすめコーデ"
