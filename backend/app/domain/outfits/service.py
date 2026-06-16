@@ -25,9 +25,12 @@ class LLMOutfitSuggestionItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
-    category: str
+    role: str
     color: str | None
     pattern: str | None
+    # 手持ち服を選んだ場合は、プロンプトで提示した clothes の id を返す。
+    # 手持ちにない補完アイテムを提案した場合は null。
+    clothes_id: str | None = None
 
 
 class LLMOutfitSuggestionPayload(BaseModel):
@@ -53,30 +56,27 @@ class OutfitService:
         clothing_ids: list[uuid.UUID] | None = None,
         exclude_clothing_ids: list[uuid.UUID] | None = None,
     ) -> "OutfitSuggestion":
-        selected = self._select_clothes(
-            tpo=tpo,
-            clothes=clothes,
-            clothing_ids=clothing_ids,
-            exclude_clothing_ids=exclude_clothing_ids,
-        )
-        selected_clothes = [s.clothing_item for s in selected]
+        """クローゼットを参照して LLM にコーデを提案させる。
 
-        clothes_summary = self._format_clothes(selected_clothes)
+        - 手持ち服（clothes）を id 付きでプロンプトに渡し、LLM が選定する。
+        - 手持ちで埋まらないカテゴリは、LLM が補完アイテム（clothes_id=null）を
+          提案してよい（ハイブリッド）。
+        - exclude_clothing_ids は候補から除外し、clothing_ids は必ず含める指示を出す。
+        """
+        pool = clothes
+        if exclude_clothing_ids:
+            excluded = set(exclude_clothing_ids)
+            pool = [c for c in pool if c.id not in excluded]
+
+        clothes_summary = self._format_clothes(pool)
         weather_summary = self._format_weather(weather)
+        must_include = self._format_must_include(pool, clothing_ids)
 
         prompt = (
-            _PROMPT_TEMPLATE.replace(
-                "{{ clothes }}",
-                clothes_summary,
-            )
-            .replace(
-                "{{ weather }}",
-                weather_summary,
-            )
-            .replace(
-                "{{ tpo }}",
-                tpo,
-            )
+            _PROMPT_TEMPLATE.replace("{{ clothes }}", clothes_summary)
+            .replace("{{ weather }}", weather_summary)
+            .replace("{{ tpo }}", tpo)
+            .replace("{{ must_include }}", must_include)
         )
 
         try:
@@ -87,11 +87,70 @@ class OutfitService:
         except (APIError, LLMStructuredResponseError) as exc:
             raise OutfitSuggestionError("failed to generate outfit suggestion") from exc
 
+        clothes_by_id = {str(item.id): item for item in pool}
+        items: list[SuggestedOutfitItemResult] = []
+        for display_order, llm_item in enumerate(payload.items, start=1):
+            owned = self._resolve_owned(llm_item.clothes_id, clothes_by_id)
+            if owned is not None:
+                # 手持ち服は DB の値を正として返す（LLM の表記揺れで
+                # clothing_item と食い違わせない）。role は提案上の役割なので LLM 値。
+                items.append(
+                    SuggestedOutfitItemResult(
+                        name=owned.name,
+                        role=llm_item.role,
+                        color=owned.color,
+                        pattern=owned.pattern,
+                        display_order=display_order,
+                        clothing_item=owned,
+                    )
+                )
+            else:
+                items.append(
+                    SuggestedOutfitItemResult(
+                        name=llm_item.name,
+                        role=llm_item.role,
+                        color=llm_item.color,
+                        pattern=llm_item.pattern,
+                        display_order=display_order,
+                        clothing_item=None,
+                    )
+                )
+
         return OutfitSuggestion(
             comment=payload.comment.strip(),
-            weather_summary=weather_summary,
-            items=selected,
+            items=items,
         )
+
+    @staticmethod
+    def _resolve_owned(
+        clothes_id: str | None,
+        clothes_by_id: dict[str, ClothingItem],
+    ) -> ClothingItem | None:
+        """LLM が返した clothes_id を手持ち服に解決する。
+
+        前後空白や、プロンプト提示の `id=<uuid>` 形式が混ざっても拾えるよう正規化する。
+        手持ちに無い ID / None は補完提案として None を返す。
+        """
+        if not clothes_id:
+            return None
+        key = clothes_id.strip()
+        if key.startswith("id="):
+            key = key[len("id=") :].strip()
+        return clothes_by_id.get(key)
+
+    @staticmethod
+    def _format_must_include(
+        pool: list[ClothingItem],
+        clothing_ids: list[uuid.UUID] | None,
+    ) -> str:
+        """clothing_ids で「必ず含める」指定された手持ち服を id 付きで列挙する。"""
+        if not clothing_ids:
+            return "指定なし"
+        forced = {str(cid) for cid in clothing_ids}
+        lines = [
+            f"- id={item.id} - {item.name}" for item in pool if str(item.id) in forced
+        ]
+        return "\n".join(lines) if lines else "指定なし"
 
     @staticmethod
     def _select_clothes(
@@ -101,7 +160,12 @@ class OutfitService:
         clothing_ids: list[uuid.UUID] | None = None,
         exclude_clothing_ids: list[uuid.UUID] | None = None,
     ) -> list["SuggestedClothingSelection"]:
-        """コーデを構成する服を選定する。
+        """アルゴリズムでコーデを構成する服を選定する（スコアリング選定）。
+
+        注: 現在の `suggest()` は LLM 主導選定に移行したため、本メソッドは
+        提案フローからは呼ばれていない（ユニットテストのみが参照）。スコアリング
+        選定ロジックは後続の画像生成フォールバック等での再利用を見込んで残置している。
+        不要が確定した場合は本メソッドと関連テストごと削除してよい。
 
         仕様 (Issue #61):
         - exclude_clothing_ids: その服を候補から完全に除外する（提案に出さない）。
@@ -261,7 +325,7 @@ class OutfitService:
 
         lines = []
         for item in clothes:
-            details = [item.category, item.name]
+            details = [f"id={item.id}", item.category, item.name]
             if item.color:
                 details.append(f"color={item.color}")
             if item.pattern:
@@ -300,7 +364,22 @@ class SuggestedClothingSelection:
 
 
 @dataclass(frozen=True, slots=True)
+class SuggestedOutfitItemResult:
+    """LLM 提案の 1 アイテム。
+
+    手持ちなら clothing_item に解決済みの服が入り、手持ちにない補完アイテムなら
+    clothing_item は None（name/role/color/pattern のみ）。
+    """
+
+    name: str
+    role: str
+    color: str | None
+    pattern: str | None
+    display_order: int
+    clothing_item: ClothingItem | None
+
+
+@dataclass(frozen=True, slots=True)
 class OutfitSuggestion:
     comment: str
-    weather_summary: str
-    items: list[SuggestedClothingSelection]
+    items: list[SuggestedOutfitItemResult]

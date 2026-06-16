@@ -1,3 +1,5 @@
+import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 import httpx
@@ -8,10 +10,9 @@ from app.api.v1.schemas.outfits import (
     OutfitsListResponse,
     OutfitSuggestRequest,
     OutfitSuggestResponse,
-    SuggestedOutfit,
-    SuggestedOutfitItem,
+    SuggestOutfit,
+    SuggestOutfitItem,
 )
-from app.api.v1.schemas.regions import Region
 from app.constants.regions import get_region
 from app.core.deps import get_db
 from app.core.logging import logger
@@ -73,6 +74,7 @@ async def suggest_outfit(
 
     latitude, longitude = region["lat"], region["lng"]
 
+    # NOTE: request.date は現状未使用（予報は常に現在＋当日。指定日提案は将来対応）
     try:
         weather = await fetch_weather_forecast_cached(
             region_code=region_code,
@@ -136,66 +138,38 @@ async def suggest_outfit(
             detail="failed to generate outfit suggestion",
         ) from exc
 
-    today_forecast = weather.get("daily", [{}])[0] if weather.get("daily") else {}
-    saved_outfit = await outfits_crud.create_suggested_outfit(
-        db,
-        user_id=current_user.id,
-        tpo=request.tpo,
-        region_code=region_code,
-        weather_summary=result.weather_summary,
-        weather_temp_max=today_forecast.get("temperature_max"),
-        weather_temp_min=today_forecast.get("temperature_min"),
-        comment=result.comment,
-        coordinate_image_url=None,  # TODO: 生成されたコーデ画像のURLを保存する
-        items=result.items,
-    )
+    # 現状はテキスト提案の表示を優先し DB 保存はしない（履歴化は後続 PR）。
+    # id / created_at はレスポンス用に一時生成する。
+    outfit_id = uuid.uuid4()
+    created_at = datetime.now(UTC)
 
     logger.info(
-        "outfit suggested (user=%s, outfit=%s, region=%s, items=%d)",
+        "outfit suggested (user=%s, region=%s, items=%d)",
         current_user.id,
-        saved_outfit.id,
         region_code,
         len(result.items),
     )
 
     return OutfitSuggestResponse(
         outfits=[
-            SuggestedOutfit(
-                id=saved_outfit.id,
+            SuggestOutfit(
+                id=outfit_id,
                 user_id=current_user.id,
                 tpo=request.tpo,
-                region_code=region_code,
-                weather_summary=result.weather_summary,
-                weather_temp_max=today_forecast.get("temperature_max"),
-                weather_temp_min=today_forecast.get("temperature_min"),
                 comment=result.comment,
-                coordinate_image_url=saved_outfit.coordinate_image_url,
-                is_favorite=saved_outfit.is_favorite,
-                source=saved_outfit.source,
+                is_favorite=False,
                 items=[
-                    SuggestedOutfitItem(
-                        clothes_id=item.clothing_item.id,
+                    SuggestOutfitItem(
+                        name=item.name,
                         role=item.role,
+                        color=item.color,
+                        pattern=item.pattern,
                         display_order=item.display_order,
                         clothing_item=item.clothing_item,
                     )
                     for item in result.items
                 ],
-                created_at=saved_outfit.created_at,
+                created_at=created_at,
             )
         ],
-        weather_summary=result.weather_summary,
-        region_used=Region(
-            code=region_code,
-            prefecture_code=region_code.split("_")[0],
-            prefecture_name=region["prefecture"],
-            name=region["name"],
-            city=region["city"],
-            latitude=region["lat"],
-            longitude=region["lng"],
-        ),
-        # cached は「提案結果キャッシュ」（suggest:... TTL24h）由来を示す仕様。
-        # 天気キャッシュがヒットしても LLM 提案と DB 保存は毎回走るため、
-        # 提案結果キャッシュ未実装の現状は常に False（天気キャッシュとは別概念）。
-        cached=False,
     )
