@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, TypedDict
 
 import httpx
 
@@ -17,6 +17,62 @@ DAILY_FIELDS = (
 
 class WeatherForecastResponseError(Exception):
     """Open-Meteo のレスポンス形式が想定外の場合のエラー。"""
+
+
+class OutfitPromptWeather(TypedDict):
+    current_temperature: float
+    current_weather: str
+    today_weather: str
+    today_temperature_max: float
+    today_temperature_min: float
+    today_precipitation_probability: int
+
+
+def get_weather_label(weather_code: int) -> str:
+    if weather_code == 0:
+        return "快晴"
+
+    if weather_code == 1:
+        return "晴れ"
+
+    if weather_code == 2:
+        return "くもり時々晴れ"
+
+    if weather_code == 3:
+        return "くもり"
+
+    if weather_code in {45, 48}:
+        return "霧"
+
+    if weather_code in {51, 53, 55, 56, 57}:
+        return "霧雨"
+
+    if weather_code in {61, 63, 65, 66, 67, 80, 81, 82}:
+        return "雨"
+
+    if weather_code in {71, 73, 75, 77, 85, 86}:
+        return "雪"
+
+    if weather_code in {95, 96, 99}:
+        return "雷雨"
+
+    return "不明"
+
+
+def extract_outfit_prompt_weather(forecast: dict[str, Any]) -> OutfitPromptWeather:
+    try:
+        current = forecast["current"]
+        today = forecast["daily"][0]
+        return {
+            "current_temperature": current["temperature_2m"],
+            "current_weather": get_weather_label(current["weather_code"]),
+            "today_weather": get_weather_label(today["weather_code"]),
+            "today_temperature_max": today["temperature_max"],
+            "today_temperature_min": today["temperature_min"],
+            "today_precipitation_probability": today["precipitation_probability_max"],
+        }
+    except (IndexError, KeyError, TypeError) as exc:
+        raise WeatherForecastResponseError("invalid weather forecast response") from exc
 
 
 async def fetch_weather_forecast(
