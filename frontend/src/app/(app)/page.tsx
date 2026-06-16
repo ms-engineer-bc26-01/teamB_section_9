@@ -312,26 +312,9 @@ export default function HomeDashboard() {
 
   return (
     <div className="space-y-5">
-      {/* <section aria-labelledby="home-heading" className="space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium text-[#8C715C]">Climo</p>
-            <h1
-              id="home-heading"
-              className="mt-1 text-2xl font-bold leading-tight text-[#2B2926]"
-            >
-              今日の天気に合う服を選びましょう
-            </h1>
-          </div>
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#EAF4F0] text-[#2F6F63]">
-            {renderWeatherIcon(weatherCode, 25)}
-          </div>
-        </div>
-        <p className="text-sm leading-6 text-[#6F6258]">
-          クローゼットの服と天気をもとに、外出前のコーデ選びを手早くサポートします。
-        </p>
-      </section> */}
-
+      <h1 className="sr-only">
+        Climo | 天気と手持ち服から今日のコーデを提案するAIスタイリスト
+      </h1>
       <section aria-labelledby="weather-heading" className="space-y-3">
         <h2 id="weather-heading" className="sr-only">
           今日の天気
