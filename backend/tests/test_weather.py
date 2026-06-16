@@ -9,8 +9,67 @@ from app.dependencies import auth
 from app.services import weather_client
 from app.services.weather_client import (
     WeatherForecastResponseError,
+    extract_outfit_prompt_weather,
     fetch_weather_forecast_cached,
+    get_weather_label,
 )
+
+
+def test_get_weather_label_matches_frontend_mapping() -> None:
+    assert get_weather_label(0) == "快晴"
+    assert get_weather_label(1) == "晴れ"
+    assert get_weather_label(2) == "くもり時々晴れ"
+    assert get_weather_label(3) == "くもり"
+    assert get_weather_label(45) == "霧"
+    assert get_weather_label(53) == "霧雨"
+    assert get_weather_label(61) == "雨"
+    assert get_weather_label(71) == "雪"
+    assert get_weather_label(95) == "雷雨"
+    assert get_weather_label(999) == "不明"
+
+
+def test_extract_outfit_prompt_weather_returns_reduced_fields() -> None:
+    result = extract_outfit_prompt_weather(
+        {
+            "current": {
+                "temperature_2m": 25.4,
+                "weather_code": 1,
+                "precipitation_probability": 10,
+            },
+            "daily": [
+                {
+                    "date": "2026-06-01",
+                    "temperature_max": 27.1,
+                    "temperature_min": 19.8,
+                    "weather_code": 2,
+                    "precipitation_probability_max": 20,
+                }
+            ],
+        }
+    )
+
+    assert result == {
+        "current_temperature": 25.4,
+        "current_weather": "晴れ",
+        "today_weather": "くもり時々晴れ",
+        "today_temperature_max": 27.1,
+        "today_temperature_min": 19.8,
+        "today_precipitation_probability": 20,
+    }
+
+
+def test_extract_outfit_prompt_weather_raises_for_missing_today_forecast() -> None:
+    with pytest.raises(WeatherForecastResponseError):
+        extract_outfit_prompt_weather(
+            {
+                "current": {
+                    "temperature_2m": 25.4,
+                    "weather_code": 1,
+                    "precipitation_probability": 10,
+                },
+                "daily": [],
+            }
+        )
 
 
 def _auth_headers(token: str = "supabase-test-token") -> dict[str, str]:

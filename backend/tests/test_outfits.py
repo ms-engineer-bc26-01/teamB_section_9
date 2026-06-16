@@ -23,6 +23,56 @@ from app.services.weather_client import WeatherForecastResponseError
 TEST_TIMESTAMP = datetime(2026, 6, 4, tzinfo=UTC)
 
 
+def _make_forecast(
+    *,
+    current_temperature: float = 25.4,
+    current_weather_code: int = 1,
+    current_precipitation_probability: int = 10,
+    date: str = "2026-06-04",
+    today_temperature_max: float = 27.1,
+    today_temperature_min: float = 19.8,
+    today_weather_code: int = 1,
+    today_precipitation_probability: int = 10,
+    cached: bool = False,
+) -> dict[str, object]:
+    return {
+        "current": {
+            "temperature_2m": current_temperature,
+            "weather_code": current_weather_code,
+            "precipitation_probability": current_precipitation_probability,
+        },
+        "daily": [
+            {
+                "date": date,
+                "temperature_max": today_temperature_max,
+                "temperature_min": today_temperature_min,
+                "weather_code": today_weather_code,
+                "precipitation_probability_max": today_precipitation_probability,
+            }
+        ],
+        "cached": cached,
+    }
+
+
+def _make_prompt_weather(
+    *,
+    current_temperature: float = 25.0,
+    current_weather: str = "晴れ",
+    today_weather: str = "晴れ",
+    today_temperature_max: float = 27.0,
+    today_temperature_min: float = 19.0,
+    today_precipitation_probability: int = 10,
+) -> dict[str, object]:
+    return {
+        "current_temperature": current_temperature,
+        "current_weather": current_weather,
+        "today_weather": today_weather,
+        "today_temperature_max": today_temperature_max,
+        "today_temperature_min": today_temperature_min,
+        "today_precipitation_probability": today_precipitation_probability,
+    }
+
+
 @pytest.mark.asyncio
 async def test_outfit_service_uses_prompt_template_independent_of_cwd(
     monkeypatch,
@@ -76,28 +126,22 @@ async def test_outfit_service_uses_prompt_template_independent_of_cwd(
             )
         ],
         weather={
-            "current": {
-                "temperature_2m": 25.0,
-                "weather_code": 1,
-                "precipitation_probability": 10,
-            },
-            "daily": [
-                {
-                    "date": "2026-06-04",
-                    "temperature_max": 27.0,
-                    "temperature_min": 19.0,
-                    "weather_code": 1,
-                    "precipitation_probability_max": 10,
-                }
-            ],
+            "current_temperature": 25.0,
+            "current_weather": "晴れ",
+            "today_weather": "晴れ",
+            "today_temperature_max": 27.0,
+            "today_temperature_min": 19.0,
+            "today_precipitation_probability": 10,
         },
     )
 
     assert result.comment == "generated-coordinate"
     assert "casual" in captured["prompt"]
     assert "tops - white shirt - color=white" in captured["prompt"]
-    assert "current: temp=25.0C" in captured["prompt"]
-    assert result.weather_summary.startswith("current: temp=25.0C")
+    assert "現在の気温: 25.0C" in captured["prompt"]
+    assert "現在の天気: 晴れ" in captured["prompt"]
+    assert "今日の降水確率: 10%" in captured["prompt"]
+    assert result.weather_summary.startswith("現在の気温: 25.0C")
     assert [item.role for item in result.items] == ["tops"]
 
 
@@ -136,23 +180,7 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
         assert latitude == 35.6895
         assert longitude == 139.6917
         assert days == 3
-        return {
-            "current": {
-                "temperature_2m": 25.4,
-                "weather_code": 1,
-                "precipitation_probability": 10,
-            },
-            "daily": [
-                {
-                    "date": "2026-06-04",
-                    "temperature_max": 27.1,
-                    "temperature_min": 19.8,
-                    "weather_code": 1,
-                    "precipitation_probability_max": 10,
-                }
-            ],
-            "cached": False,
-        }
+        return _make_forecast()
 
     async def fake_list_clothes(db, user_id, **kwargs):
         assert user_id == resolved_user_id
@@ -220,9 +248,13 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
     class FakeLLMClient:
         async def generate_structured(self, prompt: str, *, response_format):
             assert "casual" in prompt
-            assert "current: temp=25.4C" in prompt
+            assert "現在の気温: 25.4C" in prompt
+            assert "現在の天気: 晴れ" in prompt
+            assert "今日の天気: 晴れ" in prompt
+            assert "今日の最高気温: 27.1C" in prompt
+            assert "今日の最低気温: 19.8C" in prompt
+            assert "今日の降水確率: 10%" in prompt
             assert "tops - white shirt - color=white" in prompt
-            assert "2026-06-04" in prompt
             assert response_format is LLMOutfitSuggestionPayload
             return LLMOutfitSuggestionPayload(
                 comment="generated-coordinate",
@@ -273,10 +305,12 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
                 "tpo": "casual",
                 "region_code": "13_01",
                 "weather_summary": (
-                    "current: temp=25.4C, weather_code=1, "
-                    "precipitation_probability=10%\n"
-                    "2026-06-04: max=27.1C, min=19.8C, weather_code=1, "
-                    "precipitation_probability_max=10%"
+                    "現在の気温: 25.4C\n"
+                    "現在の天気: 晴れ\n"
+                    "今日の天気: 晴れ\n"
+                    "今日の最高気温: 27.1C\n"
+                    "今日の最低気温: 19.8C\n"
+                    "今日の降水確率: 10%"
                 ),
                 "weather_temp_max": 27.1,
                 "weather_temp_min": 19.8,
@@ -314,9 +348,12 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
             }
         ],
         "weather_summary": (
-            "current: temp=25.4C, weather_code=1, precipitation_probability=10%\n"
-            "2026-06-04: max=27.1C, min=19.8C, weather_code=1, "
-            "precipitation_probability_max=10%"
+            "現在の気温: 25.4C\n"
+            "現在の天気: 晴れ\n"
+            "今日の天気: 晴れ\n"
+            "今日の最高気温: 27.1C\n"
+            "今日の最低気温: 19.8C\n"
+            "今日の降水確率: 10%"
         ),
         "region_used": {
             "code": "13_01",
@@ -363,15 +400,15 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
         expected_coordinates = get_region_coordinates("13_01")
         assert expected_coordinates is not None
         assert (latitude, longitude) == expected_coordinates
-        return {
-            "current": {
-                "temperature_2m": 20.0,
-                "weather_code": 2,
-                "precipitation_probability": 20,
-            },
-            "daily": [],
-            "cached": False,
-        }
+        return _make_forecast(
+            current_temperature=20.0,
+            current_weather_code=2,
+            current_precipitation_probability=20,
+            today_temperature_max=23.0,
+            today_temperature_min=18.0,
+            today_weather_code=3,
+            today_precipitation_probability=20,
+        )
 
     async def fake_list_clothes(db, user_id, **kwargs):
         return type("ClothesListResponse", (), {"items": []})()
@@ -500,14 +537,7 @@ async def test_suggest_outfit_filters_to_specified_clothing_ids(monkeypatch) -> 
     result = await service.suggest(
         tpo="casual",
         clothes=[tops_a, tops_b],
-        weather={
-            "current": {
-                "temperature_2m": 25.0,
-                "weather_code": 1,
-                "precipitation_probability": 10,
-            },
-            "daily": [],
-        },
+        weather=_make_prompt_weather(),
         clothing_ids=[tops_b.id],
     )
 
@@ -544,14 +574,7 @@ async def test_suggest_outfit_excludes_specified_clothing_ids(monkeypatch) -> No
     result = await service.suggest(
         tpo="casual",
         clothes=[tops_keep, tops_drop],
-        weather={
-            "current": {
-                "temperature_2m": 25.0,
-                "weather_code": 1,
-                "precipitation_probability": 10,
-            },
-            "daily": [],
-        },
+        weather=_make_prompt_weather(),
         exclude_clothing_ids=[tops_drop.id],
     )
 
@@ -666,14 +689,7 @@ async def test_outfit_service_wraps_llm_api_errors(monkeypatch) -> None:
         await service.suggest(
             tpo="casual",
             clothes=[],
-            weather={
-                "current": {
-                    "temperature_2m": 25.0,
-                    "weather_code": 1,
-                    "precipitation_probability": 10,
-                },
-                "daily": [],
-            },
+            weather=_make_prompt_weather(),
         )
 
     assert str(exc_info.value) == "failed to generate outfit suggestion"
@@ -698,14 +714,7 @@ async def test_outfit_service_wraps_structured_output_errors(monkeypatch) -> Non
         await service.suggest(
             tpo="casual",
             clothes=[],
-            weather={
-                "current": {
-                    "temperature_2m": 25.0,
-                    "weather_code": 1,
-                    "precipitation_probability": 10,
-                },
-                "daily": [],
-            },
+            weather=_make_prompt_weather(),
         )
 
     assert str(exc_info.value) == "failed to generate outfit suggestion"
@@ -749,14 +758,11 @@ def test_suggest_outfit_returns_bad_gateway_on_llm_failure(
         *, region_code: str, latitude: float, longitude: float, days: int
     ):
         del latitude, longitude, days
-        return {
-            "current": {
-                "temperature_2m": 25.0,
-                "weather_code": 1,
-                "precipitation_probability": 10,
-            },
-            "daily": [],
-        }
+        return _make_forecast(
+            current_temperature=25.0,
+            today_temperature_max=27.0,
+            today_temperature_min=19.0,
+        )
 
     async def fake_list_clothes(db, user_id, **kwargs):
         del db, user_id, kwargs
@@ -791,14 +797,11 @@ def test_suggest_outfit_returns_bad_gateway_on_service_initialization_failure(
         *, region_code: str, latitude: float, longitude: float, days: int
     ):
         del latitude, longitude, days
-        return {
-            "current": {
-                "temperature_2m": 25.0,
-                "weather_code": 1,
-                "precipitation_probability": 10,
-            },
-            "daily": [],
-        }
+        return _make_forecast(
+            current_temperature=25.0,
+            today_temperature_max=27.0,
+            today_temperature_min=19.0,
+        )
 
     async def fake_list_clothes(db, user_id, **kwargs):
         del db, user_id, kwargs
@@ -907,14 +910,7 @@ async def test_tops_wins_over_onepiece_on_equal_score(
     result = await service.suggest(
         tpo="casual",
         clothes=[tops_item, onepiece_item],
-        weather={
-            "current": {
-                "temperature_2m": 25.0,
-                "weather_code": 1,
-                "precipitation_probability": 10,
-            },
-            "daily": [],
-        },
+        weather=_make_prompt_weather(),
     )
 
     assert "white shirt" in captured["prompt"]

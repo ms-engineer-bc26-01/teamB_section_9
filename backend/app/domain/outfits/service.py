@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict
 from app.api.v1.schemas.clothes import ClothingItem
 from app.services.base_llm import LLMStructuredResponseError
 from app.services.llm_client import get_llm_client
+from app.services.weather_client import OutfitPromptWeather
 
 _PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "outfit_suggest.md"
 try:
@@ -48,7 +49,7 @@ class OutfitService:
         *,
         tpo: str,
         clothes: list[ClothingItem],
-        weather: dict,
+        weather: OutfitPromptWeather,
         clothing_ids: list[uuid.UUID] | None = None,
         exclude_clothing_ids: list[uuid.UUID] | None = None,
     ) -> "OutfitSuggestion":
@@ -278,33 +279,17 @@ class OutfitService:
         return "\n".join(lines)
 
     @staticmethod
-    def _format_weather(weather: dict) -> str:
-        current = weather["current"]
-        daily = weather["daily"]
-
-        lines = [
-            (
-                "current: "
-                f"temp={current['temperature_2m']}C, "
-                f"weather_code={current['weather_code']}, "
-                "precipitation_probability="
-                f"{current['precipitation_probability']}%"
-            )
-        ]
-
-        for forecast in daily:
-            lines.append(
-                (
-                    f"{forecast['date']}: "
-                    f"max={forecast['temperature_max']}C, "
-                    f"min={forecast['temperature_min']}C, "
-                    f"weather_code={forecast['weather_code']}, "
-                    "precipitation_probability_max="
-                    f"{forecast['precipitation_probability_max']}%"
-                )
-            )
-
-        return "\n".join(lines)
+    def _format_weather(weather: OutfitPromptWeather) -> str:
+        return "\n".join(
+            [
+                f"現在の気温: {weather['current_temperature']}C",
+                f"現在の天気: {weather['current_weather']}",
+                f"今日の天気: {weather['today_weather']}",
+                f"今日の最高気温: {weather['today_temperature_max']}C",
+                f"今日の最低気温: {weather['today_temperature_min']}C",
+                f"今日の降水確率: {weather['today_precipitation_probability']}%",
+            ]
+        )
 
 
 @dataclass(frozen=True, slots=True)
