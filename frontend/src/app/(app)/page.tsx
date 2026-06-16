@@ -446,7 +446,7 @@ export default function HomeDashboard() {
         aria-label="クローゼットサマリー"
         className="grid grid-cols-2 gap-3"
       >
-        {/* <Card className="rounded-lg border border-[#E8DED4]">
+        <Card className="rounded-lg border border-[#E8DED4]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
               <Shirt aria-hidden="true" size={16} className="text-[#6B4F3A]" />
@@ -459,9 +459,9 @@ export default function HomeDashboard() {
             </p>
             <p className="mt-1 text-xs text-[#8C715C]">クローゼット内の服</p>
           </CardContent>
-        </Card> */}
+        </Card>
 
-        {/* <Card className="rounded-lg border border-[#E8DED4]">
+        <Card className="rounded-lg border border-[#E8DED4]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
               <CalendarDays
@@ -478,7 +478,7 @@ export default function HomeDashboard() {
             </p>
             <p className="mt-1 text-xs text-[#8C715C]">提案されたコーデ</p>
           </CardContent>
-        </Card> */}
+        </Card>
       </section>
     </div>
   );
