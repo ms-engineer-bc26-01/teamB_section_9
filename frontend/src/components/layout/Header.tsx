@@ -5,10 +5,36 @@ import Link from "next/link";
 import { ChevronLeft, Settings } from "lucide-react";
 import { usePathname } from "next/navigation";
 
+const pageTitles: Record<string, string> = {
+  "/mypage": "マイページ",
+  "/settings": "設定",
+  "/clothes": "服一覧",
+  "/clothes/register": "服登録",
+  "/outfits/scenes": "シーン選択",
+  "/outfits/loading": "提案生成中",
+  "/outfits/detail": "コーデ詳細",
+  "/outfits/preview": "コーデ確認",
+  "/register": "アカウント登録",
+  "/login": "ログイン",
+};
+
+function getPageTitle(pathname: string) {
+  if (pathname.startsWith("/outfits/detail")) {
+    return pageTitles["/outfits/detail"];
+  }
+
+  if (pathname.startsWith("/outfits/preview")) {
+    return pageTitles["/outfits/preview"];
+  }
+
+  return pageTitles[pathname] ?? "";
+}
+
 export function Header() {
   const pathname = usePathname();
   const isHome = pathname === "/";
   const isSettings = pathname === "/settings";
+  const title = getPageTitle(pathname);
 
   return (
     <header className="sticky top-0 z-40 border-b border-[#E8DED4] bg-[#FAF8F5]/95 backdrop-blur">
@@ -41,7 +67,13 @@ export function Header() {
         </div>
 
         <div className="min-w-0 text-center">
-          <span className="sr-only">Climo</span>
+          {isHome ? (
+            <span className="sr-only">Climo</span>
+          ) : (
+            <h1 className="truncate text-base font-bold text-[#2B2926]">
+              {title}
+            </h1>
+          )}
         </div>
 
         <div className="flex justify-end">
