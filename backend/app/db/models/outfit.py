@@ -92,7 +92,8 @@ class OutfitItem(Base):
     role: Mapped[str] = mapped_column(String(20), nullable=False)
     # owned: 手持ち服 / suggested: LLM 補完アイテム
     source_type: Mapped[str] = mapped_column(String(20), nullable=False)
-    # 補完アイテムの表示用スナップショット {name, color, pattern}。owned は NULL。
+    # 表示用スナップショット {name, color, pattern}。owned/suggested とも保存する
+    # （owned は DB 値、suggested は入力値）。服削除後の履歴表示にも使う。
     item_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     display_order: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

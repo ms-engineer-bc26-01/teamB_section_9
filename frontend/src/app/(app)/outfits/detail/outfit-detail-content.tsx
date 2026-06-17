@@ -100,7 +100,13 @@ function formatTemperature(value: number | null | undefined) {
   return `${Math.round(value)}℃`;
 }
 
-function formatCurrentTemperature(weatherSummary: string) {
+function formatCurrentTemperature(
+  weatherSummary: string | null | undefined,
+) {
+  if (!weatherSummary) {
+    return null;
+  }
+
   const match = weatherSummary.match(/current: temp=([\d.]+)C/);
 
   if (!match) {
