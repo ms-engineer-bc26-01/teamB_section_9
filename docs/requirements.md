@@ -168,8 +168,8 @@ POST /api/v1/outfits/suggest  { tpo, date, region_code? }
        - 一致しない / null → clothing_item=null（補完提案）
   8. レスポンス返却（outfits のみ。id / created_at は一時生成）
 
-  ※ 現状はテキスト提案の表示を優先するため DB 保存・提案結果キャッシュは行わない。
-    履歴化（outfits + outfit_items への保存）と提案結果キャッシュは後続対応。
+  ※ suggest 自体は非保存（テキスト提案）。履歴化はユーザーが選んだコーデのみ
+    別途 POST /outfits（オンデマンド保存）で行う。提案結果キャッシュは後続対応。
 ```
 
 ### 3.5 服登録フロー（画像アップロード + LLM 属性推定）
@@ -261,16 +261,18 @@ outfits
   source            string  -- enum: llm / manual
   created_at        timestamp
 
-outfit_items  （中間テーブル: コーデ × 服）
+outfit_items  （コーデ × アイテム。手持ち／補完提案の両方を保存）
+  id             uuid  PK
   outfit_id      uuid  FK → outfits.id
-  clothes_id     uuid  FK → clothes.id
-  role           string  -- enum: tops / bottoms / outer / shoes / bag / accessory
+  clothes_id     uuid  FK → clothes.id  nullable  -- 補完提案は null。服削除時 SET NULL
+  role           string  -- enum: tops / bottoms / outer / onepiece / shoes / bag / accessory
+  source_type    string  -- owned（手持ち）/ suggested（LLM 補完）
+  item_snapshot  jsonb  nullable  -- 表示用 {name, color, pattern}。owned/suggested とも保存（owned は DB 値、suggested は入力値）。服削除後の履歴表示にも使用
   display_order  integer
+  created_at     timestamp
 
-  ※ 現状の LLM コーデ提案（POST /outfits/suggest）は DB 保存しないため、本テーブルは未使用。
-    将来 LLM 提案を履歴化する際は、手持ちでない補完アイテムも保存できるよう
-    clothes_id を nullable 化し、source_type(owned/suggested)・item_snapshot(JSONB) を
-    追加する想定（後続「コーデ提案 CRUD 実装」で対応）。
+  ※ 保存はオンデマンド（ユーザーが選んだコーデのみ POST /outfits で履歴化）。
+    POST /outfits/suggest 自体は非保存（テキスト提案）のまま。
 
 usage_logs  （レート制限・分析用）
   id          uuid  PK
@@ -369,14 +371,14 @@ REGIONS: dict[str, dict] = {
 | GET      | `/clothes/{id}`          | 必須 | 服の詳細取得                                                                                                   |
 | PUT      | `/clothes/{id}`          | 必須 | 服情報の全フィールド置換                                                                                       |
 | PATCH    | `/clothes/{id}`          | 必須 | 服情報の部分更新（`is_favorite` トグルなど）                                                                   |
-| DELETE   | `/clothes/{id}`          | 必須 | 服の削除。関連する `outfit_items` も CASCADE 削除 → 204                                                        |
+| DELETE   | `/clothes/{id}`          | 必須 | 服の削除。関連する `outfit_items` は `clothes_id` を SET NULL（保存済みコーデは履歴として残る） → 204                |
 
 ### コーデ（提案・履歴）
 
 | メソッド | パス               | 認証 | 概要                                                                                                         |
 | -------- | ------------------ | ---- | ------------------------------------------------------------------------------------------------------------ |
 | POST     | `/outfits/suggest` | 必須 | LLM によるコーデ提案（フロー詳細は 3.4 節）                                                                  |
-| GET      | `/outfits`         | 必須 | 提案履歴一覧。フィルタ: `is_favorite` / `tpo` / `from` / `to`。ページネーション: `limit`(max 100) / `offset` |
+| GET      | `/outfits`         | 必須 | 提案履歴一覧。フィルタ: `is_favorite`。ページネーション: `limit`(max 100) / `offset`（`tpo`/`from`/`to` は将来対応） |
 | GET      | `/outfits/{id}`    | 必須 | コーデ詳細取得                                                                                               |
 | PATCH    | `/outfits/{id}`    | 必須 | お気に入りトグルなど                                                                                         |
 

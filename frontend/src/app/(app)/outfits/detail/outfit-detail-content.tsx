@@ -104,7 +104,9 @@ function formatTemperature(value: number | null | undefined) {
   return `${Math.round(value)}℃`;
 }
 
-function formatCurrentTemperature(weatherSummary: string | null | undefined) {
+function formatCurrentTemperature(
+  weatherSummary: string | null | undefined,
+) {
   if (!weatherSummary) {
     return null;
   }
