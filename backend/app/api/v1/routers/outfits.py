@@ -209,7 +209,7 @@ async def suggest_outfit(
             detail="failed to generate outfit suggestion",
         ) from exc
 
-    # 現状はテキスト提案の表示を優先し DB 保存はしない（履歴化は後続 PR）。
+    # suggest は非保存（テキスト提案）。履歴化は別途 POST /outfits（オンデマンド）。
     # id / created_at はレスポンス用に一時生成する。
     outfit_id = uuid.uuid4()
     created_at = datetime.now(UTC)

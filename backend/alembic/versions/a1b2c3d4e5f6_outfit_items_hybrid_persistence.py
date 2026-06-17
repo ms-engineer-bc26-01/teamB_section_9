@@ -45,6 +45,11 @@ def upgrade() -> None:
             server_default="owned",
         ),
     )
+    op.create_check_constraint(
+        "ck_outfit_items_source_type",
+        "outfit_items",
+        "source_type IN ('owned', 'suggested')",
+    )
     op.add_column(
         "outfit_items",
         sa.Column(
@@ -135,6 +140,7 @@ def downgrade() -> None:
         "outfit_items_pkey", "outfit_items", ["outfit_id", "clothes_id"]
     )
 
+    op.drop_constraint("ck_outfit_items_source_type", "outfit_items", type_="check")
     op.drop_column("outfit_items", "created_at")
     op.drop_column("outfit_items", "item_snapshot")
     op.drop_column("outfit_items", "source_type")

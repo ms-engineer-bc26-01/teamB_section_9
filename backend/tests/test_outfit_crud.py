@@ -73,6 +73,25 @@ def test_to_outfit_item_schema_suggested_uses_snapshot() -> None:
     assert out.role == "bottoms"
 
 
+def test_to_outfit_item_schema_owned_deleted_falls_back_to_snapshot() -> None:
+    """owned だった服が削除（clothes_id=SET NULL, clothes=None）されても、
+    item_snapshot から name/color を表示し続ける（履歴保持）。"""
+    item = SimpleNamespace(
+        clothes=None,  # 服が削除され clothes_id が SET NULL になった状態
+        role="tops",
+        source_type="owned",
+        item_snapshot={"name": "white shirt", "color": "white", "pattern": None},
+        display_order=1,
+    )
+
+    out = _to_outfit_item_schema(item)
+
+    assert out.clothing_item is None
+    assert out.name == "white shirt"
+    assert out.color == "white"
+    assert out.role == "tops"
+
+
 def _saved_outfit(items: list[SuggestedOutfitItem]) -> SuggestedOutfit:
     return SuggestedOutfit(
         id=uuid.UUID("00000000-0000-0000-0000-000000000777"),

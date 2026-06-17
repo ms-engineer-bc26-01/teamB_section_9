@@ -590,6 +590,7 @@ components:
     OutfitUpdateRequest:
       type: object
       description: お気に入りトグルなど、提案済みコーデの属性更新
+      required: [is_favorite]
       properties:
         is_favorite:
           type: boolean
@@ -616,7 +617,10 @@ components:
           type: string
           format: uuid
           nullable: true
-          description: 手持ち服の場合は clothing_item.id。補完提案は null
+          description: >-
+            手持ち服の場合は clothing_item.id、補完提案は null。
+            clothes_id がある場合は表示・snapshot ともサーバ側で DB 値を正とする
+            （入力の name/color/pattern は補完提案=null時のみ採用）。
 
     OutfitCreateRequest:
       type: object
@@ -1156,7 +1160,9 @@ paths:
       tags: [Clothes]
       operationId: deleteClothingById
       summary: 服を削除
-      description: 服を削除する。関連する outfit_items も CASCADE で削除される。
+      description: >-
+        服を削除する。関連する outfit_items は clothes_id を SET NULL にする
+        （保存済みコーデは履歴として残り、item_snapshot から表示を継続）。
       responses:
         "204":
           description: 削除成功
@@ -1180,7 +1186,8 @@ paths:
         手持ち服を優先し、手持ちで埋まらないカテゴリは LLM が補完アイテムを提案する
         （ハイブリッド）。手持ちに一致したアイテムは clothing_item に解決して返す。
 
-        現状はテキスト提案の表示を優先するため DB 保存は行わない（履歴化は後続対応）。
+        suggest 自体は非保存（テキスト提案）。履歴化はユーザーが選んだコーデのみ
+        別途 POST /outfits（オンデマンド保存）で行う。提案結果キャッシュは後続対応。
         天気キャッシュ（Redis 30分）は提案入力として利用する。
 
         レート制限: 1ユーザー1分10回 / 1日の上限はプランによる
@@ -1249,33 +1256,19 @@ paths:
           schema:
             type: boolean
           description: true の場合、お気に入りのみ返す
-        - name: tpo
-          in: query
-          schema:
-            $ref: "#/components/schemas/TpoTag"
-        - name: from
-          in: query
-          schema:
-            type: string
-            format: date
-          description: 取得開始日（created_at）
-        - name: to
-          in: query
-          schema:
-            type: string
-            format: date
-          description: 取得終了日（created_at）
         - name: limit
           in: query
           schema:
             type: integer
             default: 20
+            minimum: 1
             maximum: 100
         - name: offset
           in: query
           schema:
             type: integer
             default: 0
+            minimum: 0
       responses:
         "200":
           description: コーデ一覧

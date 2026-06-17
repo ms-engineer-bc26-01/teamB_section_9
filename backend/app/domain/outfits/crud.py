@@ -166,18 +166,18 @@ async def create_outfit(
     それ以外は item_snapshot を伴う suggested として保存する。
     """
     requested_clothes_ids = {it.clothes_id for it in items if it.clothes_id is not None}
-    owned_ids: set[uuid.UUID] = set()
+    owned_by_id: dict[uuid.UUID, Clothes] = {}
     if requested_clothes_ids:
         rows = (
             await db.scalars(
-                select(Clothes.id).where(
+                select(Clothes).where(
                     Clothes.user_id == user_id,
                     Clothes.id.in_(requested_clothes_ids),
                 )
             )
         ).all()
-        owned_ids = set(rows)
-        not_owned = requested_clothes_ids - owned_ids
+        owned_by_id = {c.id: c for c in rows}
+        not_owned = requested_clothes_ids - set(owned_by_id)
         if not_owned:
             raise OutfitItemNotOwnedError(not_owned)
 
@@ -194,14 +194,21 @@ async def create_outfit(
     await db.flush()
 
     for it in items:
-        if it.clothes_id is not None and it.clothes_id in owned_ids:
+        owned = owned_by_id.get(it.clothes_id) if it.clothes_id is not None else None
+        if owned is not None:
+            # owned も item_snapshot を DB 値で持たせる。服削除（clothes_id=SET NULL）
+            # 後でも履歴として name/color/pattern を表示できるようにするため。
             db.add(
                 OutfitItem(
                     outfit_id=outfit.id,
-                    clothes_id=it.clothes_id,
+                    clothes_id=owned.id,
                     role=it.role,
                     source_type="owned",
-                    item_snapshot=None,
+                    item_snapshot={
+                        "name": owned.name,
+                        "color": owned.color,
+                        "pattern": owned.pattern,
+                    },
                     display_order=it.display_order,
                 )
             )
@@ -223,8 +230,8 @@ async def create_outfit(
 
     await db.commit()
     saved = await _get_outfit_orm(db, user_id, outfit.id)
-    # 直前に commit した自分の outfit なので必ず取得できる
-    assert saved is not None
+    if saved is None:
+        raise RuntimeError("failed to load just-created outfit")
     return _to_outfit_schema(saved)
 
 
@@ -241,5 +248,6 @@ async def update_outfit(
     outfit.is_favorite = is_favorite
     await db.commit()
     refreshed = await _get_outfit_orm(db, user_id, outfit_id)
-    assert refreshed is not None
+    if refreshed is None:
+        raise RuntimeError("failed to reload updated outfit")
     return _to_outfit_schema(refreshed)

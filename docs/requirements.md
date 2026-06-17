@@ -371,7 +371,7 @@ REGIONS: dict[str, dict] = {
 | GET      | `/clothes/{id}`          | 必須 | 服の詳細取得                                                                                                   |
 | PUT      | `/clothes/{id}`          | 必須 | 服情報の全フィールド置換                                                                                       |
 | PATCH    | `/clothes/{id}`          | 必須 | 服情報の部分更新（`is_favorite` トグルなど）                                                                   |
-| DELETE   | `/clothes/{id}`          | 必須 | 服の削除。関連する `outfit_items` も CASCADE 削除 → 204                                                        |
+| DELETE   | `/clothes/{id}`          | 必須 | 服の削除。関連する `outfit_items` は `clothes_id` を SET NULL（保存済みコーデは履歴として残る） → 204                |
 
 ### コーデ（提案・履歴）
 
