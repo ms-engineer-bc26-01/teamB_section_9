@@ -175,6 +175,10 @@ class OutfitService:
         LLM フローとの乖離（死蔵コード化）を避けるため本メソッド・`_select_torso`・
         `_score_item`・`SuggestedClothingSelection` と関連テストごと削除する。
 
+        ※ 下記の clothing_ids「必ず含める」保証は、アルゴリズムで強制 include する
+          本メソッド固有の挙動。LLM 主導の `suggest()` 側は LLM への優先指示に留まる
+          best-effort（含有はサーバ保証ではない）であり、契約レベルの扱いが異なる。
+
         仕様 (Issue #61):
         - exclude_clothing_ids: その服を候補から完全に除外する（提案に出さない）。
         - clothing_ids: その服を必ず提案に含める（ユーザー指定を最優先）。
