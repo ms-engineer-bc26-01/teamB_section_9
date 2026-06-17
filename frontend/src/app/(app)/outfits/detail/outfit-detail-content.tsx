@@ -13,11 +13,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { getOutfits } from "@/features/outfits/api";
 import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
 import {
   getSuggestedOutfitItemName,
 } from "@/features/outfits/types";
-import type { OutfitSuggestResponse } from "@/features/outfits/types";
+import type {
+  OutfitSuggestResponse,
+  SuggestedOutfit,
+} from "@/features/outfits/types";
 import { useAuthStore } from "@/stores/auth-store";
 
 const tpoLabels: Record<string, string> = {
@@ -37,7 +41,7 @@ const tpoSceneLabels: Record<string, string> = {
 };
 
 type OutfitDetailState = {
-  suggestion: OutfitSuggestResponse | null;
+  outfit: SuggestedOutfit | null;
   errorMessage: string | null;
   isLoading: boolean;
 };
@@ -52,7 +56,7 @@ function loadOutfitSuggestion(
 
   if (!rawSuggestion) {
     return {
-      suggestion: null,
+      outfit: null,
       errorMessage: "コーデ提案結果が見つかりません。",
       isLoading: false,
     };
@@ -66,20 +70,20 @@ function loadOutfitSuggestion(
 
     if (outfitUserId !== userId || savedOutfitId !== outfitId) {
       return {
-        suggestion: null,
+        outfit: null,
         errorMessage: "ログイン中のユーザーまたはコーデ提案結果が一致しません。",
         isLoading: false,
       };
     }
 
     return {
-      suggestion,
+      outfit,
       errorMessage: null,
       isLoading: false,
     };
   } catch {
     return {
-      suggestion: null,
+      outfit: null,
       errorMessage: "コーデ提案結果の読み込みに失敗しました。",
       isLoading: false,
     };
@@ -100,7 +104,11 @@ function formatTemperature(value: number | null | undefined) {
   return `${Math.round(value)}℃`;
 }
 
-function formatCurrentTemperature(weatherSummary: string) {
+function formatCurrentTemperature(weatherSummary: string | null | undefined) {
+  if (!weatherSummary) {
+    return null;
+  }
+
   const match = weatherSummary.match(/current: temp=([\d.]+)C/);
 
   if (!match) {
@@ -125,9 +133,9 @@ export function OutfitDetailContent() {
   const user = useAuthStore((state) => state.user);
   const isInitialized = useAuthStore((state) => state.isInitialized);
 
-  const [{ suggestion, errorMessage, isLoading }, setDetailState] =
+  const [{ outfit, errorMessage, isLoading }, setDetailState] =
     useState<OutfitDetailState>({
-      suggestion: null,
+      outfit: null,
       errorMessage: null,
       isLoading: true,
     });
@@ -137,10 +145,10 @@ export function OutfitDetailContent() {
       return;
     }
 
-    const timeoutId = window.setTimeout(() => {
+    const timeoutId = window.setTimeout(async () => {
       if (!user) {
         setDetailState({
-          suggestion: null,
+          outfit: null,
           errorMessage: "ログインが必要です。",
           isLoading: false,
         });
@@ -151,20 +159,44 @@ export function OutfitDetailContent() {
 
       if (!outfitId) {
         setDetailState({
-          suggestion: null,
+          outfit: null,
           errorMessage: "コーデ提案IDが見つかりません。",
           isLoading: false,
         });
         return;
       }
 
-      setDetailState(loadOutfitSuggestion(user.id, outfitId));
+      const sessionStorageState = loadOutfitSuggestion(user.id, outfitId);
+
+      if (sessionStorageState.outfit) {
+        setDetailState(sessionStorageState);
+        return;
+      }
+
+      try {
+        const response = await getOutfits({ limit: 100 });
+        const foundOutfit =
+          response.items.find((item) => item.id === outfitId) ?? null;
+
+        setDetailState({
+          outfit: foundOutfit,
+          errorMessage: foundOutfit
+            ? null
+            : "コーデ提案結果が見つかりません。",
+          isLoading: false,
+        });
+      } catch {
+        setDetailState({
+          outfit: null,
+          errorMessage: "コーデ情報を取得できませんでした。",
+          isLoading: false,
+        });
+      }
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
   }, [isInitialized, user]);
 
-  const outfit = suggestion?.outfits[0] ?? null;
   const outfitTitle = outfit ? tpoLabels[outfit.tpo] ?? "おすすめコーデ" : "";
   const sceneLabel = outfit ? tpoSceneLabels[outfit.tpo] ?? outfit.tpo : "";
   const maxTemperature = formatTemperature(outfit?.weather_temp_max);
