@@ -45,7 +45,7 @@ erDiagram
     uuid user_id FK "→ users.id"
     string tpo "提案時のTPO"
     string region_code "提案時の地域コード (例: 19_02)"
-    string weather_summary "提案時の天気スナップショット"
+    string weather_summary "提案時の天気スナップショット, nullable"
     float weather_temp_max "nullable"
     float weather_temp_min "nullable"
     string comment "LLMのおすすめポイント, nullable"
@@ -56,10 +56,14 @@ erDiagram
   }
 
   outfit_items {
+    uuid id PK
     uuid outfit_id FK "→ outfits.id"
-    uuid clothes_id FK "→ clothes.id"
+    uuid clothes_id FK "→ clothes.id, nullable (補完提案は null, 服削除時 SET NULL)"
     string role "tops / bottoms / outer / onepiece / shoes / bag / accessory"
+    string source_type "owned / suggested"
+    jsonb item_snapshot "nullable: 補完提案の表示用 {name, color, pattern}"
     int display_order
+    timestamp created_at
   }
 
   usage_logs {

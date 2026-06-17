@@ -62,10 +62,13 @@ class Clothes(Base):
         back_populates="clothes",
         cascade="all, delete-orphan",
     )
+    # 服を削除しても保存済みコーデ（履歴）は残す。ORM では削除せず、
+    # DB 側 FK の ondelete=SET NULL に委ねる（passive_deletes）。
+    # 表示は outfit_items.item_snapshot から継続する。
     outfit_items = relationship(
         "OutfitItem",
         back_populates="clothes",
-        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
 

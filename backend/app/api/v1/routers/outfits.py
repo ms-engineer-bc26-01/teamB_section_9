@@ -7,9 +7,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.schemas.outfits import (
+    OutfitCreateRequest,
     OutfitsListResponse,
     OutfitSuggestRequest,
     OutfitSuggestResponse,
+    OutfitUpdateRequest,
+    SuggestedOutfit,
     SuggestOutfit,
     SuggestOutfitItem,
 )
@@ -19,6 +22,7 @@ from app.core.logging import logger
 from app.dependencies.auth import CurrentUser, get_current_user
 from app.domain.clothes import crud as clothes_crud
 from app.domain.outfits import crud as outfits_crud
+from app.domain.outfits.crud import OutfitItemNotOwnedError
 from app.domain.outfits.service import OutfitService, OutfitSuggestionError
 from app.services.weather_client import (
     WeatherForecastResponseError,
@@ -50,6 +54,73 @@ async def list_outfits(
         limit=limit,
         offset=offset,
     )
+
+
+@router.post("", response_model=SuggestedOutfit, status_code=status.HTTP_201_CREATED)
+async def create_outfit(
+    request: OutfitCreateRequest,
+    current_user: AuthenticatedUser,
+    db: DbSession,
+) -> SuggestedOutfit:
+    """提案コーデ（手持ち＋補完アイテム）を履歴として保存する。"""
+    region = get_region(request.region_code)
+    if region is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invalid region_code",
+        )
+
+    try:
+        return await outfits_crud.create_outfit(
+            db,
+            user_id=current_user.id,
+            tpo=request.tpo,
+            region_code=request.region_code,
+            comment=request.comment,
+            is_favorite=request.is_favorite,
+            items=request.items,
+        )
+    except OutfitItemNotOwnedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="clothes_id contains items not owned by the user",
+        ) from exc
+
+
+@router.get("/{outfit_id}", response_model=SuggestedOutfit)
+async def get_outfit(
+    outfit_id: uuid.UUID,
+    current_user: AuthenticatedUser,
+    db: DbSession,
+) -> SuggestedOutfit:
+    outfit = await outfits_crud.get_outfit(db, current_user.id, outfit_id)
+    if outfit is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="outfit not found",
+        )
+    return outfit
+
+
+@router.patch("/{outfit_id}", response_model=SuggestedOutfit)
+async def update_outfit(
+    outfit_id: uuid.UUID,
+    request: OutfitUpdateRequest,
+    current_user: AuthenticatedUser,
+    db: DbSession,
+) -> SuggestedOutfit:
+    outfit = await outfits_crud.update_outfit(
+        db,
+        current_user.id,
+        outfit_id,
+        is_favorite=request.is_favorite,
+    )
+    if outfit is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="outfit not found",
+        )
+    return outfit
 
 
 @router.post(
@@ -138,7 +209,7 @@ async def suggest_outfit(
             detail="failed to generate outfit suggestion",
         ) from exc
 
-    # 現状はテキスト提案の表示を優先し DB 保存はしない（履歴化は後続 PR）。
+    # suggest は非保存（テキスト提案）。履歴化は別途 POST /outfits（オンデマンド）。
     # id / created_at はレスポンス用に一時生成する。
     outfit_id = uuid.uuid4()
     created_at = datetime.now(UTC)

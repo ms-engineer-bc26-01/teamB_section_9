@@ -50,7 +50,21 @@ sequenceDiagram
     BE-->>FE: 200 { outfits: [{ id, user_id, tpo, comment,<br/>is_favorite, items, created_at }] }
     FE-->>User: コーデを表示
 
-    Note over BE,DB: ※ 履歴化（outfits・outfit_items 保存）と<br/>提案結果キャッシュ（TTL24h）は後続対応
+    Note over BE,DB: ※ suggest は非保存。保存はユーザー操作で別途行う（下記）
+
+    opt コーデを保存（オンデマンド履歴化）
+        User->>FE: 「保存」または ♡ 押下
+        Note over FE: 各 item に clothes_id = clothing_item?.id ?? null を詰める
+        FE->>BE: POST /api/v1/outfits<br/>{ tpo, region_code, comment, items[] }
+        Note over BE: clothes_id 所有検証 →<br/>owned は clothes_id, suggested は item_snapshot
+        BE->>DB: outfits + outfit_items に保存
+        BE-->>FE: 201 保存済みコーデ
+        opt お気に入り更新
+            FE->>BE: PATCH /api/v1/outfits/{id} { is_favorite }
+            BE->>DB: is_favorite を更新
+            BE-->>FE: 200 更新後コーデ
+        end
+    end
 ```
 
 ---

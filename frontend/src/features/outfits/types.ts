@@ -23,7 +23,8 @@ export type SuggestedOutfit = {
   user_id: string;
   tpo: string;
   region_code: string;
-  weather_summary: string;
+  // 保存済みコーデ（オンデマンド保存）では null。
+  weather_summary: string | null;
   weather_temp_max: number | null;
   weather_temp_min: number | null;
   comment: string | null;
