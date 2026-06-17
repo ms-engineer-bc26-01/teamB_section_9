@@ -3,8 +3,10 @@ import { supabase } from "@/lib/auth";
 
 import type {
   OutfitsListResponse,
+  OutfitCreateRequest,
   OutfitSuggestRequest,
   OutfitSuggestResponse,
+  SuggestedOutfit,
 } from "./types";
 
 type GetOutfitsParams = {
@@ -59,6 +61,17 @@ export async function getOutfits(
       cache: "no-store",
     },
   );
+}
+
+export async function createOutfit(
+  payload: OutfitCreateRequest,
+): Promise<SuggestedOutfit> {
+  const token = await getAccessToken();
+
+  return apiClient.post<SuggestedOutfit>("/outfits", payload, {
+    token,
+    cache: "no-store",
+  });
 }
 
 export async function suggestOutfit(

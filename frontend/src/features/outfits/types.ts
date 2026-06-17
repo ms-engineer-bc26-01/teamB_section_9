@@ -8,6 +8,23 @@ export type OutfitSuggestRequest = {
   exclude_clothing_ids?: string[];
 };
 
+export type OutfitCreateItem = {
+  name: string;
+  role: string;
+  color?: string | null;
+  pattern?: string | null;
+  display_order: number;
+  clothes_id?: string | null;
+};
+
+export type OutfitCreateRequest = {
+  tpo: string;
+  region_code: string;
+  comment?: string | null;
+  is_favorite?: boolean;
+  items: OutfitCreateItem[];
+};
+
 export type SuggestedOutfitItem = {
   clothes_id?: string | null;
   name?: string | null;
