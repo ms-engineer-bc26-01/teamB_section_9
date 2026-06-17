@@ -18,8 +18,6 @@ const allowedTpos = [
   "leisure",
 ] as const;
 
-const DEFAULT_REGION_CODE = "13_01";
-
 const outfitSuggestionRequests = new Map<
   string,
   Promise<OutfitSuggestResponse>
@@ -80,8 +78,9 @@ export function OutfitLoadingContent() {
 
         const suggestedOutfit = result.outfits[0];
         const responseUserId = suggestedOutfit?.user_id;
+        const suggestedOutfitId = suggestedOutfit?.id;
 
-        if (!responseUserId || !suggestedOutfit) {
+        if (!responseUserId || !suggestedOutfitId || !suggestedOutfit) {
           throw new Error("コーデ提案の識別情報が見つかりません。");
         }
 
@@ -89,9 +88,21 @@ export function OutfitLoadingContent() {
           throw new Error("ログイン中のユーザーとコーデ提案結果が一致しません。");
         }
 
+        if (suggestedOutfit.items.length === 0) {
+          window.sessionStorage.setItem(
+            getOutfitSuggestionStorageKey(responseUserId, suggestedOutfitId),
+            JSON.stringify(result),
+          );
+
+          router.replace(
+            `/outfits/detail?tpo=${encodeURIComponent(tpo)}&outfitId=${encodeURIComponent(suggestedOutfitId)}`,
+          );
+          return;
+        }
+
         const savedOutfit = await createOutfit({
           tpo: suggestedOutfit.tpo,
-          region_code: suggestedOutfit.region_code ?? DEFAULT_REGION_CODE,
+          region_code: suggestedOutfit.region_code,
           comment: suggestedOutfit.comment,
           is_favorite: suggestedOutfit.is_favorite,
           items: suggestedOutfit.items.map((item) => ({

@@ -227,6 +227,7 @@ async def suggest_outfit(
                 id=outfit_id,
                 user_id=current_user.id,
                 tpo=request.tpo,
+                region_code=region_code,
                 comment=result.comment,
                 is_favorite=False,
                 items=[

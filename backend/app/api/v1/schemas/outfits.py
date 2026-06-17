@@ -88,6 +88,7 @@ class SuggestOutfit(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
     tpo: str
+    region_code: str
     comment: str | None = None
     is_favorite: bool = False
     items: list[SuggestOutfitItem]

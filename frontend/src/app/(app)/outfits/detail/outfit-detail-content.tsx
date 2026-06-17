@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getOutfits } from "@/features/outfits/api";
+import { getOutfit } from "@/features/outfits/api";
 import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
 import {
   getSuggestedOutfitItemName,
@@ -176,15 +176,11 @@ export function OutfitDetailContent() {
       }
 
       try {
-        const response = await getOutfits({ limit: 100 });
-        const foundOutfit =
-          response.items.find((item) => item.id === outfitId) ?? null;
+        const foundOutfit = await getOutfit(outfitId);
 
         setDetailState({
           outfit: foundOutfit,
-          errorMessage: foundOutfit
-            ? null
-            : "コーデ提案結果が見つかりません。",
+          errorMessage: null,
           isLoading: false,
         });
       } catch {

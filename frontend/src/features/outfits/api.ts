@@ -63,6 +63,18 @@ export async function getOutfits(
   );
 }
 
+export async function getOutfit(
+  outfitId: string,
+  tokenOverride?: string,
+): Promise<SuggestedOutfit> {
+  const token = await getAccessToken(tokenOverride);
+
+  return apiClient.get<SuggestedOutfit>(`/outfits/${outfitId}`, {
+    token,
+    cache: "no-store",
+  });
+}
+
 export async function createOutfit(
   payload: OutfitCreateRequest,
 ): Promise<SuggestedOutfit> {
