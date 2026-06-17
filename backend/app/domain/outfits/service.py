@@ -61,7 +61,8 @@ class OutfitService:
         - 手持ち服（clothes）を id 付きでプロンプトに渡し、LLM が選定する。
         - 手持ちで埋まらないカテゴリは、LLM が補完アイテム（clothes_id=null）を
           提案してよい（ハイブリッド）。
-        - exclude_clothing_ids は候補から除外し、clothing_ids は必ず含める指示を出す。
+        - exclude_clothing_ids は候補から除外し、clothing_ids は優先使用を
+          指示する（LLM 選定のため含有はサーバ保証ではなく best-effort）。
         """
         pool = clothes
         if exclude_clothing_ids:
@@ -143,7 +144,11 @@ class OutfitService:
         pool: list[ClothingItem],
         clothing_ids: list[uuid.UUID] | None,
     ) -> str:
-        """clothing_ids で「必ず含める」指定された手持ち服を id 付きで列挙する。"""
+        """clothing_ids で優先使用を指示する手持ち服を id 付きで列挙する。
+
+        プロンプトで「優先して含めたい服」として提示するための整形。含有自体は
+        LLM 選定に委ねるため best-effort（サーバ側で含有を保証はしない）。
+        """
         if not clothing_ids:
             return "指定なし"
         forced = {str(cid) for cid in clothing_ids}
@@ -165,7 +170,14 @@ class OutfitService:
         注: 現在の `suggest()` は LLM 主導選定に移行したため、本メソッドは
         提案フローからは呼ばれていない（ユニットテストのみが参照）。スコアリング
         選定ロジックは後続の画像生成フォールバック等での再利用を見込んで残置している。
-        不要が確定した場合は本メソッドと関連テストごと削除してよい。
+
+        TODO: 画像生成フォールバックで再利用するか判断する。再利用しないと決まったら、
+        LLM フローとの乖離（死蔵コード化）を避けるため本メソッド・`_select_torso`・
+        `_score_item`・`SuggestedClothingSelection` と関連テストごと削除する。
+
+        ※ 下記の clothing_ids「必ず含める」保証は、アルゴリズムで強制 include する
+          本メソッド固有の挙動。LLM 主導の `suggest()` 側は LLM への優先指示に留まる
+          best-effort（含有はサーバ保証ではない）であり、契約レベルの扱いが異なる。
 
         仕様 (Issue #61):
         - exclude_clothing_ids: その服を候補から完全に除外する（提案に出さない）。
