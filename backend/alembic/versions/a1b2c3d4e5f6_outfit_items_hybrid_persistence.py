@@ -1,7 +1,7 @@
-"""outfit_items hybrid persistence (id PK, nullable clothes_id, source_type, item_snapshot)
+"""outfit_items hybrid persistence
 
 提案コーデ（手持ち＋補完アイテム）を永続化できるよう outfit_items の役割を変更する。
-あわせて 2 つの head をマージする。
+id PK / clothes_id nullable / source_type / item_snapshot。あわせて 2 head をマージ。
 
 Revision ID: a1b2c3d4e5f6
 Revises: b7d3a1c9e2f4, 37168f27136b
@@ -26,7 +26,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     # --- outfit_items: 提案アイテム（手持ち/補完）を保存できる構造へ ---
-    # 既存行（旧 suggest 保存の owned アイテム）は id 採番 + source_type=owned で埋める。
+    # 既存行（旧 suggest 保存の owned）は id 採番 + source_type=owned で埋める。
     op.add_column(
         "outfit_items",
         sa.Column(
@@ -47,7 +47,11 @@ def upgrade() -> None:
     )
     op.add_column(
         "outfit_items",
-        sa.Column("item_snapshot", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column(
+            "item_snapshot",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=True,
+        ),
     )
     op.add_column(
         "outfit_items",
