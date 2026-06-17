@@ -35,7 +35,6 @@ const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
 const DEFAULT_REGION_CODE = "13_01";
 
 const mockHomeData = {
-  clothesCount: 18,
   weeklyOutfitCount: 5,
 };
 
@@ -59,6 +58,15 @@ type HomeWeatherState = {
 type HomeOutfitState = {
   outfit: SuggestedOutfit | null;
   errorMessage: string | null;
+};
+
+type HomeClothesState = {
+  count: number | null;
+  errorMessage: string | null;
+};
+
+type Summary = {
+  total: number;
 };
 
 function getWeatherLabel(weatherCode: number) {
@@ -148,6 +156,11 @@ async function fetchHomeWeather(token: string) {
   return getWeatherForecast(token, regionCode);
 }
 
+async function fetchHomeClothesCount(token: string) {
+  const clothes = await apiClient.get<Summary>("/clothes?limit=1", { token });
+  return clothes.total;
+}
+
 function formatOutfitComment(comment: string | null | undefined) {
   if (!comment) {
     return null;
@@ -168,6 +181,10 @@ export default function HomeDashboard() {
   });
   const [outfitState, setOutfitState] = useState<HomeOutfitState>({
     outfit: null,
+    errorMessage: null,
+  });
+  const [clothesState, setClothesState] = useState<HomeClothesState>({
+    count: null,
     errorMessage: null,
   });
 
@@ -203,6 +220,46 @@ export default function HomeDashboard() {
         setWeatherState({
           weather: null,
           errorMessage: "天気情報を取得できませんでした。",
+        });
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isInitialized, session?.access_token]);
+
+  useEffect(() => {
+    if (!isInitialized) {
+      return;
+    }
+
+    const token = session?.access_token;
+
+    if (!token) {
+      return;
+    }
+
+    let isMounted = true;
+
+    fetchHomeClothesCount(token)
+      .then((count) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setClothesState({
+          count,
+          errorMessage: null,
+        });
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setClothesState({
+          count: null,
+          errorMessage: "登録済み件数を取得できませんでした。",
         });
       });
 
@@ -312,6 +369,15 @@ export default function HomeDashboard() {
     isInitialized &&
     outfitState.outfit === null &&
     outfitErrorMessage === null;
+  const isClothesCountLoading =
+    Boolean(token) &&
+    isInitialized &&
+    clothesState.count === null &&
+    clothesState.errorMessage === null;
+  const clothesCountText =
+    isClothesCountLoading || clothesState.errorMessage
+      ? "-"
+      : String(clothesState.count ?? 0);
 
   return (
     <div className="space-y-5">
@@ -432,20 +498,30 @@ export default function HomeDashboard() {
         aria-label="クローゼットサマリー"
         className="grid grid-cols-2 gap-3"
       >
-        <Card className="rounded-lg border border-[#E8DED4]">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Shirt aria-hidden="true" size={16} className="text-[#6B4F3A]" />
-              登録済み
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-[#2B2926]">
-              {mockHomeData.clothesCount}
-            </p>
-            <p className="mt-1 text-xs text-[#8C715C]">クローゼット内の服</p>
-          </CardContent>
-        </Card>
+        <Link
+          href="/clothes"
+          aria-label="登録済みの服一覧を見る"
+          className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F6F63] focus-visible:ring-offset-2"
+        >
+          <Card className="h-full rounded-lg border border-[#E8DED4] transition-colors hover:bg-[#FFFCF8]">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Shirt
+                  aria-hidden="true"
+                  size={16}
+                  className="text-[#6B4F3A]"
+                />
+                登録済み
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-[#2B2926]">
+                {clothesCountText}
+              </p>
+              <p className="mt-1 text-xs text-[#8C715C]">クローゼット内の服</p>
+            </CardContent>
+          </Card>
+        </Link>
 
         <Card className="rounded-lg border border-[#E8DED4]">
           <CardHeader>
