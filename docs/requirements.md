@@ -168,8 +168,8 @@ POST /api/v1/outfits/suggest  { tpo, date, region_code? }
        - 一致しない / null → clothing_item=null（補完提案）
   8. レスポンス返却（outfits のみ。id / created_at は一時生成）
 
-  ※ 現状はテキスト提案の表示を優先するため DB 保存・提案結果キャッシュは行わない。
-    履歴化（outfits + outfit_items への保存）と提案結果キャッシュは後続対応。
+  ※ suggest 自体は非保存（テキスト提案）。履歴化はユーザーが選んだコーデのみ
+    別途 POST /outfits（オンデマンド保存）で行う。提案結果キャッシュは後続対応。
 ```
 
 ### 3.5 服登録フロー（画像アップロード + LLM 属性推定）
@@ -261,16 +261,18 @@ outfits
   source            string  -- enum: llm / manual
   created_at        timestamp
 
-outfit_items  （中間テーブル: コーデ × 服）
+outfit_items  （コーデ × アイテム。手持ち／補完提案の両方を保存）
+  id             uuid  PK
   outfit_id      uuid  FK → outfits.id
-  clothes_id     uuid  FK → clothes.id
-  role           string  -- enum: tops / bottoms / outer / shoes / bag / accessory
+  clothes_id     uuid  FK → clothes.id  nullable  -- 補完提案は null。服削除時 SET NULL
+  role           string  -- enum: tops / bottoms / outer / onepiece / shoes / bag / accessory
+  source_type    string  -- owned（手持ち）/ suggested（LLM 補完）
+  item_snapshot  jsonb  nullable  -- 補完提案の表示用 {name, color, pattern}。owned は null
   display_order  integer
+  created_at     timestamp
 
-  ※ 現状の LLM コーデ提案（POST /outfits/suggest）は DB 保存しないため、本テーブルは未使用。
-    将来 LLM 提案を履歴化する際は、手持ちでない補完アイテムも保存できるよう
-    clothes_id を nullable 化し、source_type(owned/suggested)・item_snapshot(JSONB) を
-    追加する想定（後続「コーデ提案 CRUD 実装」で対応）。
+  ※ 保存はオンデマンド（ユーザーが選んだコーデのみ POST /outfits で履歴化）。
+    POST /outfits/suggest 自体は非保存（テキスト提案）のまま。
 
 usage_logs  （レート制限・分析用）
   id          uuid  PK

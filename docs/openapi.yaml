@@ -501,22 +501,32 @@ components:
     # ===== コーデ（Outfit）=====
     OutfitItem:
       type: object
-      description: コーデを構成する1アイテムと、そのコーデ内での役割
+      description: >-
+        コーデを構成する1アイテム。手持ち（owned）／補完提案（suggested）が混在しうる。
+        手持ちは clothing_item を解決、補完は clothing_item=null で name/color/pattern を返す。
       properties:
-        clothes_id:
+        name:
           type: string
-          format: uuid
+          description: アイテム名（owned は DB 値、suggested は item_snapshot 由来）
         role:
-          allOf:
-            - $ref: "#/components/schemas/ClothingCategory"
-          description: このコーデ内でのアイテムの役割
+          type: string
+          description: >-
+            このコーデ内でのアイテムの役割（tops / bottoms / outer / onepiece / shoes / bag / accessory）。
+            提案上の役割であり clothing_item.category と必ずしも一致しない
+        color:
+          type: string
+          nullable: true
+        pattern:
+          type: string
+          nullable: true
         display_order:
           type: integer
           description: 表示順
         clothing_item:
           allOf:
             - $ref: "#/components/schemas/ClothingItem"
-          description: 服の詳細情報（outfit_items JOIN clothes）
+          nullable: true
+          description: 手持ち服の詳細（owned のみ。suggested は null）
 
     Outfit:
       type: object
@@ -583,6 +593,55 @@ components:
       properties:
         is_favorite:
           type: boolean
+
+    OutfitCreateItem:
+      type: object
+      description: 保存する 1 アイテム。手持ちは clothes_id を、補完提案は null を入れる
+      required: [name, role, display_order]
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          description: tops / bottoms / outer / onepiece / shoes / bag / accessory
+        color:
+          type: string
+          nullable: true
+        pattern:
+          type: string
+          nullable: true
+        display_order:
+          type: integer
+        clothes_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: 手持ち服の場合は clothing_item.id。補完提案は null
+
+    OutfitCreateRequest:
+      type: object
+      description: >-
+        提案コーデを履歴として保存する。FE は suggest レスポンスの item から
+        clothes_id = clothing_item?.id ?? null を詰めて送る。
+      required: [tpo, region_code, items]
+      properties:
+        tpo:
+          $ref: "#/components/schemas/TpoTag"
+        region_code:
+          type: string
+          example: "13_01"
+        comment:
+          type: string
+          nullable: true
+        is_favorite:
+          type: boolean
+          default: false
+        items:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/OutfitCreateItem"
 
     # ===== コーデ提案リクエスト／レスポンス =====
     CoordinateSuggestRequest:
@@ -1150,6 +1209,35 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
 
   /api/v1/outfits:
+    post:
+      tags: [Outfit]
+      operationId: createOutfit
+      summary: 提案コーデの保存（履歴化）
+      description: >-
+        ユーザーが選んだ提案コーデを履歴として保存する。clothes_id 付きアイテムは
+        所有を検証して owned 保存、それ以外は item_snapshot を伴う suggested 保存。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OutfitCreateRequest"
+      responses:
+        "201":
+          description: 保存されたコーデ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Outfit"
+        "400":
+          description: 不正な region_code、または所有外の clothes_id を含む
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
     get:
       tags: [Outfit]
       operationId: listOutfits
