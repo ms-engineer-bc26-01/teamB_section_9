@@ -45,6 +45,7 @@ export type SuggestedOutfit = {
   weather_temp_max: number | null;
   weather_temp_min: number | null;
   comment: string | null;
+  coordinate_image_url: string | null;
   is_favorite: boolean;
   source: string;
   items: SuggestedOutfitItem[];
@@ -63,9 +64,9 @@ export type Region = {
 
 export type OutfitSuggestResponse = {
   outfits: SuggestedOutfit[];
-  weather_summary: string;
-  region_used: Region;
-  cached: boolean;
+  weather_summary?: string;
+  region_used?: Region;
+  cached?: boolean;
 };
 
 export type OutfitsListResponse = {
