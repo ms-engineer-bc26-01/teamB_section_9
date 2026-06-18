@@ -22,7 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getOutfits } from "@/features/outfits/api";
+import { getOutfit, getOutfits } from "@/features/outfits/api";
 import {
   getSuggestedOutfitItemColor,
   getSuggestedOutfitItemName,
@@ -119,15 +119,17 @@ export function OutfitPreviewContent() {
 
     let isMounted = true;
 
-    getOutfits({ limit: selectedOutfitId ? 100 : 1 }, token)
-      .then((response) => {
+    const request = selectedOutfitId
+      ? getOutfit(selectedOutfitId, token)
+      : getOutfits({ limit: 1 }, token).then(
+          (response) => response.items[0] ?? null,
+        );
+
+    request
+      .then((selectedOutfit) => {
         if (!isMounted) {
           return;
         }
-
-        const selectedOutfit = selectedOutfitId
-          ? response.items.find((item) => item.id === selectedOutfitId) ?? null
-          : response.items[0] ?? null;
 
         setPreviewState({
           outfit: selectedOutfit,
