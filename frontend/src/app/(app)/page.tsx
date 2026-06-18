@@ -494,6 +494,15 @@ export default function HomeDashboard() {
         別のシーンで提案を見る
       </Link>
 
+      <Link
+        href="/outfits/closet"
+        aria-label="クローゼット服で提案を見る"
+        className="flex h-14 items-center justify-center gap-3 rounded-lg border border-[#E8DED4] bg-white text-base font-bold text-[#2B2926] shadow-sm hover:bg-[#FFFCF8]"
+      >
+        <Shirt aria-hidden="true" size={20} className="text-[#6B4F3A]" />
+        クローゼット服で提案を見る
+      </Link>
+
       <section
         aria-label="クローゼットサマリー"
         className="grid grid-cols-2 gap-3"
