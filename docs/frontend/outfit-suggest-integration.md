@@ -13,7 +13,7 @@
 - `POST /api/v1/outfits/suggest` のレスポンスには、LLM が提案したアイテム一覧 `items` が入る想定。
 - レスポンスの `outfit.id` は、現状のフロント実装でも必要。
 - `outfit.id` は詳細画面への遷移、`sessionStorage` の保存キー、保存済みコーデ取得に使う。
-- 今回のフロント実装では、`POST /api/v1/outfits/suggest` のレスポンスをそのまま詳細画面表示に使う。
+- 今回のフロント実装では、`POST /api/v1/outfits/suggest` のレスポンスに含まれる `items` をもとに `POST /outfits` でコーデを保存し、保存済み outfit を詳細画面表示に使う。
 
 ---
 
@@ -56,9 +56,13 @@
 
 ## フロント実装方針
 
-### 1. suggestOutfit() の結果を詳細画面表示に使う
+### 1. `suggestOutfit()` の結果をもとに保存済み outfit を作成する
 
-`/outfits/loading` で `suggestOutfit({ tpo })` を呼び、返ってきた `outfits[0]` を詳細画面表示に使う。
+`/outfits/loading` で `suggestOutfit({ tpo })` を呼び、返ってきた `outfits[0].items` を表示用のアイテム情報として利用する。
+
+ただし、`POST /api/v1/outfits/suggest` のレスポンスに含まれる `id` は、詳細画面をリロードしたときに `GET /outfits/{id}` で再取得できない可能性がある。
+
+そのため、現時点のフロント実装では、`suggestOutfit()` の結果をもとに `createOutfit()` を呼び出し、保存済み outfit の `id` を詳細画面URLに渡す。
 
 基本フローは以下。
 
@@ -69,11 +73,15 @@
 ↓
 POST /api/v1/outfits/suggest
 ↓
-result.outfits[0] を sessionStorage に保存
+result.outfits[0].items を受け取る
 ↓
-/outfits/detail?outfitId=<outfit.id>
+POST /outfits で保存
 ↓
-result.outfits[0].items を表示
+保存済み outfit を sessionStorage に保存
+↓
+/outfits/detail?outfitId=<savedOutfit.id>
+↓
+保存済み outfit.items を表示
 ```
 
 ### 2. items をコーデ詳細画面に表示する
@@ -90,11 +98,13 @@ result.outfits[0].items を表示
 
 `clothing_item` が `null` の場合でも、`name` / `role` / `color` / `pattern` を使って表示できるようにする。
 
-### 3. POST /outfits の追加呼び出しは行わない
+### 3. 詳細画面では保存済み outfit の ID を使う
 
-今回のフロント実装では、`POST /api/v1/outfits/suggest` のレスポンスに含まれる `outfits[0]` をそのまま詳細画面表示に使う。
+`POST /api/v1/outfits/suggest` のレスポンスに含まれる `items` は、コーデ提案の表示内容として利用する。
 
-そのため、`/outfits/loading` では追加で `POST /outfits` を呼ばない。
+ただし、詳細画面の URL に渡す `outfitId` は、リロードや別タブ表示でも再取得できる必要がある。
+
+そのため、現時点のフロント実装では、`POST /api/v1/outfits/suggest` の結果をもとに `POST /outfits` で保存し、保存済み outfit の `id` を `/outfits/detail?outfitId=...` に渡す。
 
 ---
 
@@ -125,48 +135,3 @@ frontend/src/app/(app)/outfits/detail/outfit-detail-content.tsx
 - 服画像アップロード
 - 画面ベース作成
 - 大きなデザイン変更
-
----
-
-## 保存する
-
-貼り付けたら保存してください。
-
-### Mac の場合
-
-```text
-Cmd + S
-```
-
-### Windows / Linux の場合
-
-```text
-Ctrl + S
-```
-
----
-
-## 保存できたか確認する
-
-保存したら、ターミナルで以下を実行してください。
-
-```bash
-git status
-```
-
-### 期待する表示
-
-次のように出れば OK です。
-
-```text
-Untracked files:
-  docs/frontend/outfit-suggest-integration.md
-```
-
-また、今までの 2 ファイルも引き続き表示される想定です。
-
-```text
-modified:
-  frontend/src/app/(app)/outfits/detail/outfit-detail-content.tsx
-  frontend/src/app/(app)/outfits/loading/outfit-loading-content.tsx
-```

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { suggestOutfit } from "@/features/outfits/api";
+import { createOutfit, suggestOutfit } from "@/features/outfits/api";
 import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
 import type { OutfitSuggestResponse } from "@/features/outfits/types";
 import { useAuthStore } from "@/stores/auth-store";
@@ -92,13 +92,38 @@ export function OutfitLoadingContent() {
           throw new Error("コーデ提案のアイテム情報が見つかりません。");
         }
 
+        const savedOutfit = await createOutfit({
+          tpo: suggestedOutfit.tpo,
+          region_code: suggestedOutfit.region_code,
+          comment: suggestedOutfit.comment,
+          is_favorite: suggestedOutfit.is_favorite,
+          items: suggestedOutfit.items.map((item) => ({
+            name:
+              item.name ??
+              item.clothing_item?.name ??
+              "アイテム名未設定",
+            role: item.role,
+            color: item.color,
+            pattern: item.pattern,
+            display_order: item.display_order,
+            clothes_id: item.clothing_item?.id ?? item.clothes_id ?? null,
+          })),
+        });
+
+        if (!isMounted) return;
+
+        const savedResult: OutfitSuggestResponse = {
+          ...result,
+          outfits: [savedOutfit],
+        };
+
         window.sessionStorage.setItem(
-          getOutfitSuggestionStorageKey(responseUserId, suggestedOutfitId),
-          JSON.stringify(result),
+          getOutfitSuggestionStorageKey(savedOutfit.user_id, savedOutfit.id),
+          JSON.stringify(savedResult),
         );
 
         router.replace(
-          `/outfits/detail?tpo=${encodeURIComponent(tpo)}&outfitId=${encodeURIComponent(suggestedOutfitId)}`,
+          `/outfits/detail?tpo=${encodeURIComponent(tpo)}&outfitId=${encodeURIComponent(savedOutfit.id)}`,
         );
       } catch (error) {
         if (!isMounted) return;
