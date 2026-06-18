@@ -212,8 +212,9 @@ export function OutfitDetailContent() {
       ? `現在${currentTemperature} / ${temperatureText}`
       : temperatureText ?? outfit?.weather_summary ?? "";
   const commentText = formatComment(outfit?.comment);
-  const outfitItems =
-    outfit?.items.toSorted((a, b) => a.display_order - b.display_order) ?? [];
+  const outfitItems = [...(outfit?.items ?? [])].sort(
+    (a, b) => a.display_order - b.display_order,
+  );
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] px-5 py-6 text-[#2F2925]">
