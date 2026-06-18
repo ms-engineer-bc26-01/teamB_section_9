@@ -169,6 +169,24 @@ export default function RegisterPage() {
                             >
                                 {isSubmitting ? "登録中..." : "登録する"}
                             </Button>
+
+                            <p className="text-xs leading-5 text-[#8C715C]">
+                                登録することで、
+                                <Link
+                                    href="/terms"
+                                    className="font-medium underline-offset-4 hover:underline"
+                                >
+                                    利用規約
+                                </Link>
+                                および
+                                <Link
+                                    href="/privacy"
+                                    className="font-medium underline-offset-4 hover:underline"
+                                >
+                                    プライバシーポリシー
+                                </Link>
+                                に同意したものとみなします。
+                            </p>
                         </form>
 
                         <p className="mt-6 text-center text-sm text-[#666666]">
