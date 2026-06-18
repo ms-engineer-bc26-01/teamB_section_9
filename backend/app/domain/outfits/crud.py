@@ -235,6 +235,25 @@ async def create_outfit(
     return _to_outfit_schema(saved)
 
 
+async def set_coordinate_image_url(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    outfit_id: uuid.UUID,
+    *,
+    coordinate_image_url: str,
+) -> SuggestedOutfit | None:
+    """生成済みコラージュ画像の公開 URL を保存済みコーデに反映する。"""
+    outfit = await _get_outfit_orm(db, user_id, outfit_id)
+    if outfit is None:
+        return None
+    outfit.coordinate_image_url = coordinate_image_url
+    await db.commit()
+    refreshed = await _get_outfit_orm(db, user_id, outfit_id)
+    if refreshed is None:
+        raise RuntimeError("failed to reload outfit after setting image url")
+    return _to_outfit_schema(refreshed)
+
+
 async def update_outfit(
     db: AsyncSession,
     user_id: uuid.UUID,

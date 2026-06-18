@@ -23,6 +23,7 @@ from app.dependencies.auth import CurrentUser, get_current_user
 from app.domain.clothes import crud as clothes_crud
 from app.domain.outfits import crud as outfits_crud
 from app.domain.outfits.crud import OutfitItemNotOwnedError
+from app.domain.outfits.image_service import generate_coordinate_image_url
 from app.domain.outfits.service import OutfitService, OutfitSuggestionError
 from app.services.weather_client import (
     WeatherForecastResponseError,
@@ -71,7 +72,7 @@ async def create_outfit(
         )
 
     try:
-        return await outfits_crud.create_outfit(
+        saved = await outfits_crud.create_outfit(
             db,
             user_id=current_user.id,
             tpo=request.tpo,
@@ -85,6 +86,25 @@ async def create_outfit(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="clothes_id contains items not owned by the user",
         ) from exc
+
+    # コラージュ画像生成は best-effort。失敗してもコーデ保存は成功扱いとし、
+    # coordinate_image_url=null のまま返す。
+    image_url = await generate_coordinate_image_url(
+        outfit_id=saved.id,
+        comment=saved.comment,
+        items=saved.items,
+    )
+    if image_url is not None:
+        updated = await outfits_crud.set_coordinate_image_url(
+            db,
+            current_user.id,
+            saved.id,
+            coordinate_image_url=image_url,
+        )
+        if updated is not None:
+            return updated
+
+    return saved
 
 
 @router.get("/{outfit_id}", response_model=SuggestedOutfit)
