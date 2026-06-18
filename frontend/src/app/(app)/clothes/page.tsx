@@ -24,6 +24,11 @@ const seasonLabels: Record<string, string> = {
   all: "通年",
 };
 
+const tpoLabels: Record<string, string> = {
+  casual: "カジュアル",
+  business: "オフィス",
+};
+
 export default function ClothesPage() {
   const [clothes, setClothes] = useState<ClothingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,6 +144,7 @@ export default function ClothesPage() {
           {clothes.map((item) => {
             const imageSrc = item.thumbnail_url ?? item.image_url;
             const seasons = item.season ?? [];
+            const tpoTags = item.tpo_tags ?? [];
 
             return (
               <article
@@ -173,7 +179,7 @@ export default function ClothesPage() {
                     {item.color ? ` / ${item.color}` : ""}
                   </p>
 
-                  {seasons.length > 0 ? (
+                  {seasons.length > 0 || tpoTags.length > 0 ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {seasons.map((season) => (
                         <span
@@ -181,6 +187,14 @@ export default function ClothesPage() {
                           className="rounded-full bg-[#FAF8F5] px-3 py-1 text-xs font-bold text-[#8C715C]"
                         >
                           {seasonLabels[season] ?? season}
+                        </span>
+                      ))}
+                      {tpoTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full border border-[#E8DED4] bg-white px-3 py-1 text-xs font-bold text-[#6F6A63]"
+                        >
+                          {tpoLabels[tag] ?? tag}
                         </span>
                       ))}
                     </div>
