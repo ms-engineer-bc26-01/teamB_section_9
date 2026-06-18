@@ -150,9 +150,11 @@ export function OutfitClosetContent() {
     Boolean(session?.access_token) &&
     !clothesState.isLoading &&
     !hasNoClothes &&
-    !isSuggesting;
+    !isSuggesting &&
+    !isSaving;
   const outfitItems =
     outfit?.items.toSorted((a, b) => a.display_order - b.display_order) ?? [];
+  const canSaveOutfit = Boolean(outfit) && outfitItems.length > 0;
 
   async function handleSuggest() {
     if (!canSuggest) {
@@ -202,7 +204,7 @@ export function OutfitClosetContent() {
   }
 
   async function handleSave() {
-    if (!outfit || isSaving || savedOutfit) {
+    if (!outfit || !canSaveOutfit || isSaving || savedOutfit) {
       return;
     }
 
@@ -463,7 +465,7 @@ export function OutfitClosetContent() {
               <Button
                 type="button"
                 variant="outline"
-                disabled={isSaving || Boolean(savedOutfit)}
+                disabled={!canSaveOutfit || isSaving || Boolean(savedOutfit)}
                 onClick={handleSave}
                 className="h-11 rounded-lg border-[#8C715C] bg-white text-[#6B4F3A]"
               >
