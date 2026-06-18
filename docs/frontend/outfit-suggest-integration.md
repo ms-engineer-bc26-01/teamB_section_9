@@ -98,13 +98,21 @@ POST /outfits で保存
 
 `clothing_item` が `null` の場合でも、`name` / `role` / `color` / `pattern` を使って表示できるようにする。
 
-### 3. 詳細画面では保存済み outfit の ID を使う
+### 3. `items` がある場合は保存済み outfit の ID を使う
 
 `POST /api/v1/outfits/suggest` のレスポンスに含まれる `items` は、コーデ提案の表示内容として利用する。
 
 ただし、詳細画面の URL に渡す `outfitId` は、リロードや別タブ表示でも再取得できる必要がある。
 
-そのため、現時点のフロント実装では、`POST /api/v1/outfits/suggest` の結果をもとに `POST /outfits` で保存し、保存済み outfit の `id` を `/outfits/detail?outfitId=...` に渡す。
+そのため、`items` がある場合は、現時点のフロント実装では `POST /api/v1/outfits/suggest` の結果をもとに `POST /outfits` で保存し、保存済み outfit の `id` を `/outfits/detail?outfitId=...` に渡す。
+
+### 4. `items` が空の場合は詳細画面の空状態を表示する
+
+`POST /api/v1/outfits/suggest` が有効なコーデ提案を返していても、`items` が空になる場合がある。
+
+その場合、`POST /outfits` では保存できない可能性があるため、フロントでは `POST /outfits` を呼ばずに `POST /api/v1/outfits/suggest` の結果を `sessionStorage` に保存し、詳細画面へ遷移する。
+
+詳細画面では、コーデコメントを表示しつつ、アイテム一覧は空状態として表示する。
 
 ---
 

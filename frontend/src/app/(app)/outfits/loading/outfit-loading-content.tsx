@@ -89,7 +89,15 @@ export function OutfitLoadingContent() {
         }
 
         if (suggestedOutfit.items.length === 0) {
-          throw new Error("コーデ提案のアイテム情報が見つかりません。");
+          window.sessionStorage.setItem(
+            getOutfitSuggestionStorageKey(responseUserId, suggestedOutfitId),
+            JSON.stringify(result),
+          );
+
+          router.replace(
+            `/outfits/detail?tpo=${encodeURIComponent(tpo)}&outfitId=${encodeURIComponent(suggestedOutfitId)}`,
+          );
+          return;
         }
 
         const savedOutfit = await createOutfit({
