@@ -6,6 +6,7 @@ from app.services.base_llm import (
     LLMStructuredResponseError,
     StructuredResponseT,
 )
+from app.services.usage import log_llm_usage
 
 
 class OpenAIClient(BaseLLMClient):
@@ -21,6 +22,11 @@ class OpenAIClient(BaseLLMClient):
             input=prompt,
         )
 
+        log_llm_usage(
+            action="generate",
+            model=settings.OPENAI_MODEL,
+            usage=getattr(response, "usage", None),
+        )
         return response.output_text
 
     async def generate_structured(
@@ -33,6 +39,12 @@ class OpenAIClient(BaseLLMClient):
             model=settings.OPENAI_MODEL,
             input=prompt,
             text_format=response_format,
+        )
+
+        log_llm_usage(
+            action="generate_structured",
+            model=settings.OPENAI_MODEL,
+            usage=getattr(response, "usage", None),
         )
 
         if response.output_parsed is not None:
