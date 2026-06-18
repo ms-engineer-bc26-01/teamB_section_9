@@ -11,12 +11,18 @@ class Settings(BaseSettings):
     AUTH_BYPASS_ENABLED: bool = False
     SUPABASE_URL: str | None = None
     SUPABASE_ANON_KEY: str | None = None
+    # サーバ側からの Storage アップロードに使う（RLS をバイパスする service role key）。
+    SUPABASE_SERVICE_ROLE_KEY: str | None = None
     SUPABASE_JWT_AUDIENCE: str = "authenticated"
     SUPABASE_JWKS_CACHE_TTL_SECONDS: int = 600
+    # コラージュ画像・服画像を保存する Supabase Storage バケット。
+    STORAGE_BUCKET: str = "clothes-images"
     LOG_LEVEL: str = Field(default="INFO")
     LLM_PROVIDER: str = "openai"
     OPENAI_API_KEY: str | None = None
     OPENAI_MODEL: str = "gpt-5"
+    OPENAI_IMAGE_MODEL: str = "gpt-image-1"
+    OPENAI_IMAGE_SIZE: str = "1024x1024"
 
     # Redis
     REDIS_URL: str = Field(default="redis://redis:6379/0")
