@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = Field(default="INFO")
     LLM_PROVIDER: str = "openai"
     OPENAI_API_KEY: str | None = None
-    OPENAI_MODEL: str = "gpt-5"
-    OPENAI_IMAGE_MODEL: str = "gpt-image-1"
+    OPENAI_MODEL: str = "gpt-5-nano"
+    OPENAI_IMAGE_MODEL: str = "gpt-image-1-mini"
     OPENAI_IMAGE_SIZE: str = "1024x1024"
 
     # Redis
