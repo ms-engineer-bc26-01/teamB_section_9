@@ -75,7 +75,7 @@ POST /api/v1/outfits/suggest
 ↓
 result.outfits[0].items を受け取る
 ↓
-POST /outfits で保存
+POST /api/v1/outfits で保存
 ↓
 保存済み outfit を sessionStorage に保存
 ↓
