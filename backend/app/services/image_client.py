@@ -40,7 +40,7 @@ class OpenAIImageClient:
             raise ImageGenerationError("failed to generate outfit image") from exc
 
         log_llm_usage(
-            action="generate_image",
+            op="generate_image",
             model=settings.OPENAI_IMAGE_MODEL,
             usage=getattr(response, "usage", None),
         )

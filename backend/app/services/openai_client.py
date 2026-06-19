@@ -23,7 +23,7 @@ class OpenAIClient(BaseLLMClient):
         )
 
         log_llm_usage(
-            action="generate",
+            op="generate",
             model=settings.OPENAI_MODEL,
             usage=getattr(response, "usage", None),
         )
@@ -42,7 +42,7 @@ class OpenAIClient(BaseLLMClient):
         )
 
         log_llm_usage(
-            action="generate_structured",
+            op="generate_structured",
             model=settings.OPENAI_MODEL,
             usage=getattr(response, "usage", None),
         )
