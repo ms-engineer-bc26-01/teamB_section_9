@@ -60,7 +60,7 @@
 
 `/outfits/loading` で `suggestOutfit({ tpo })` を呼び、返ってきた `outfits[0].items` を表示用のアイテム情報として利用する。
 
-ただし、`POST /api/v1/outfits/suggest` のレスポンスに含まれる `id` は、詳細画面をリロードしたときに `GET /outfits/{id}` で再取得できない可能性がある。
+ただし、`POST /api/v1/outfits/suggest` のレスポンスに含まれる `id` は、詳細画面をリロードしたときに `GET /api/v1/outfits/{id}` で再取得できない可能性がある。
 
 そのため、現時点のフロント実装では、`suggestOutfit()` の結果をもとに `createOutfit()` を呼び出し、保存済み outfit の `id` を詳細画面URLに渡す。
 
