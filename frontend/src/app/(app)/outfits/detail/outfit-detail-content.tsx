@@ -16,6 +16,7 @@ import {
 import { getOutfit } from "@/features/outfits/api";
 import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
 import {
+  getSuggestedOutfitItemColor,
   getSuggestedOutfitItemName,
 } from "@/features/outfits/types";
 import type {
@@ -211,6 +212,9 @@ export function OutfitDetailContent() {
       ? `現在${currentTemperature} / ${temperatureText}`
       : temperatureText ?? outfit?.weather_summary ?? "";
   const commentText = formatComment(outfit?.comment);
+  const outfitItems = [...(outfit?.items ?? [])].sort(
+    (a, b) => a.display_order - b.display_order,
+  );
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] px-5 py-6 text-[#2F2925]">
@@ -273,20 +277,36 @@ export function OutfitDetailContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {outfit.items.length > 0 ? (
-                  outfit.items.map((item) => (
-                    <div
-                      key={`${item.role}-${item.display_order}`}
-                      className="flex items-center justify-between rounded-xl bg-[#FAF8F5] px-4 py-3"
-                    >
-                      <span className="text-sm text-[#6F6259]">
-                        {item.role}
-                      </span>
-                      <span className="text-sm font-medium">
-                        {getSuggestedOutfitItemName(item)}
-                      </span>
-                    </div>
-                  ))
+                {outfitItems.length > 0 ? (
+                  outfitItems.map((item) => {
+                    const itemColor = getSuggestedOutfitItemColor(item);
+                    const itemPattern =
+                      item.pattern ?? item.clothing_item?.pattern ?? null;
+
+                    return (
+                      <div
+                        key={`${item.role}-${item.display_order}`}
+                        className="rounded-xl bg-[#FAF8F5] px-4 py-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm text-[#6F6259]">
+                            {item.role}
+                          </span>
+                          <span className="text-right text-sm font-medium">
+                            {getSuggestedOutfitItemName(item)}
+                          </span>
+                        </div>
+
+                        {itemColor || itemPattern ? (
+                          <p className="mt-1 text-xs text-[#8C715C]">
+                            {[itemColor, itemPattern]
+                              .filter(Boolean)
+                              .join(" / ")}
+                          </p>
+                        ) : null}
+                      </div>
+                    );
+                  })
                 ) : (
                   <p className="rounded-xl bg-[#FAF8F5] px-4 py-3 text-sm text-[#6F6259]">
                     アイテム情報がありません。
