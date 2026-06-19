@@ -60,6 +60,11 @@ async def generate_and_store_coordinate_image(
     coordinate_image_url を保存する。背景タスクはレスポンス返却後に実行され、
     リクエストスコープの DB セッションは既に閉じているため、ここで SessionLocal から
     新しいセッションを開く。例外はリクエストへ波及しないよう必ずログ化して握りつぶす。
+
+    NOTE: FastAPI の BackgroundTasks はアプリプロセス内の簡易非同期実行であり、
+    **実行保証・再試行保証はない**（プロセス停止・デプロイ等で未完了になり得る／
+    一度失敗した画像は自然回復しない）。永続化・リトライが必要になった場合は
+    ジョブキュー（Celery / arq + Redis 等）への移行を検討する。
     """
     try:
         url = await generate_coordinate_image_url(
@@ -70,11 +75,19 @@ async def generate_and_store_coordinate_image(
         if url is None:
             return
         async with SessionLocal() as db:
-            await set_coordinate_image_url(
+            updated = await set_coordinate_image_url(
                 db,
                 user_id,
                 outfit_id,
                 coordinate_image_url=url,
+            )
+        # 生成中にコーデが削除される等で対象が見つからなかった場合は観測できるよう残す。
+        if updated is None:
+            logger.warning(
+                "coordinate image generated but outfit not found for update "
+                "(outfit=%s, user=%s)",
+                outfit_id,
+                user_id,
             )
     except Exception as exc:  # noqa: BLE001 - 背景タスクの失敗をリクエストに波及させない
         logger.warning(

@@ -151,7 +151,7 @@ async def test_generate_and_store_saves_url_on_success(monkeypatch):
         captured["user_id"] = user_id
         captured["outfit_id"] = outfit_id
         captured["url"] = coordinate_image_url
-        return None
+        return object()  # 更新成功（対象コーデが見つかった）を表す
 
     monkeypatch.setattr(image_service, "generate_coordinate_image_url", fake_generate)
     monkeypatch.setattr(image_service, "SessionLocal", lambda: _FakeSession(captured))
@@ -167,6 +167,34 @@ async def test_generate_and_store_saves_url_on_success(monkeypatch):
     assert captured["outfit_id"] == OUTFIT_ID
     assert captured["user_id"] == USER_ID
     assert isinstance(captured["db"], _FakeSession)  # SessionLocal から開いたセッション
+
+
+@pytest.mark.asyncio
+async def test_generate_and_store_logs_when_outfit_missing_on_update(
+    monkeypatch, caplog
+):
+    """生成後に対象コーデが見つからない（削除済み等）場合は警告ログを残す。"""
+    # Arrange
+    store: dict = {}
+
+    async def fake_generate(*, outfit_id, comment, items):
+        return "https://proj.supabase.co/storage/v1/object/public/x/outfits/x.png"
+
+    async def fake_set_url(db, user_id, outfit_id, *, coordinate_image_url):
+        return None  # 対象が見つからず更新できなかった
+
+    monkeypatch.setattr(image_service, "generate_coordinate_image_url", fake_generate)
+    monkeypatch.setattr(image_service, "SessionLocal", lambda: _FakeSession(store))
+    monkeypatch.setattr(image_service, "set_coordinate_image_url", fake_set_url)
+
+    # Act
+    with caplog.at_level(logging.WARNING, logger="climo"):
+        await image_service.generate_and_store_coordinate_image(
+            outfit_id=OUTFIT_ID, user_id=USER_ID, comment="c", items=_items()
+        )
+
+    # Assert
+    assert "outfit not found for update" in caplog.text
 
 
 @pytest.mark.asyncio
