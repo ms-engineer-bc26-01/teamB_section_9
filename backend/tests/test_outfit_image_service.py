@@ -1,3 +1,4 @@
+import logging
 import uuid
 from types import SimpleNamespace
 
@@ -73,7 +74,9 @@ async def test_generate_coordinate_image_url_returns_none_on_image_error(monkeyp
 
 
 @pytest.mark.asyncio
-async def test_generate_coordinate_image_url_returns_none_on_storage_error(monkeypatch):
+async def test_generate_coordinate_image_url_returns_none_on_storage_error(
+    monkeypatch, caplog
+):
     # Arrange
     class FakeClient:
         async def generate_image(self, prompt):
@@ -86,12 +89,15 @@ async def test_generate_coordinate_image_url_returns_none_on_storage_error(monke
     monkeypatch.setattr(image_service, "upload_image", fake_upload)
 
     # Act
-    url = await image_service.generate_coordinate_image_url(
-        outfit_id=OUTFIT_ID, comment="c", items=_items()
-    )
+    with caplog.at_level(logging.WARNING, logger="climo"):
+        url = await image_service.generate_coordinate_image_url(
+            outfit_id=OUTFIT_ID, comment="c", items=_items()
+        )
 
-    # Assert
+    # Assert: best-effort で None。失敗フェーズと例外種別が構造化ログに残る
     assert url is None
+    assert "phase=storage_upload" in caplog.text
+    assert "error=StorageError" in caplog.text
 
 
 @pytest.mark.asyncio

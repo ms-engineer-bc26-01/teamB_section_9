@@ -15,8 +15,10 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str | None = None
     SUPABASE_JWT_AUDIENCE: str = "authenticated"
     SUPABASE_JWKS_CACHE_TTL_SECONDS: int = 600
-    # コラージュ画像・服画像を保存する Supabase Storage バケット。
+    # コラージュ画像・服画像を保存する Supabase Storage バケット（バケット規約を共有）。
     SUPABASE_STORAGE_BUCKET: str = "clothes-images"
+    # Storage アップロードのタイムアウト（秒）。OpenAI 側 timeout とは責務分離。
+    SUPABASE_STORAGE_TIMEOUT_SECONDS: float = 30.0
     LOG_LEVEL: str = Field(default="INFO")
     LLM_PROVIDER: str = "openai"
     OPENAI_API_KEY: str | None = None

@@ -1,8 +1,13 @@
 """Supabase Storage への画像アップロードユーティリティ。
 
-コラージュ画像・服画像の双方から共通利用できる汎用関数。Supabase Storage の
-REST API（`/storage/v1/object/...`）を httpx で直接叩く（重い SDK を足さない）。
-サーバ側アップロードは RLS をバイパスする service role key を用いる。
+**コラージュ画像（AI 生成）専用の BE 経由アップロード**。OpenAI が base64 を返す
+ため BE で受け取って Storage へ送る必要がある。Supabase Storage の REST API
+（`/storage/v1/object/...`）を httpx で直接叩く（重い SDK を足さない）。サーバ側
+アップロードは RLS をバイパスする service role key を用いる。
+
+NOTE: 服画像は設計どおり「BE が署名付き upload URL を発行 → FE が直接 PUT →
+storage_path 通知」の別フロー（requirements.md:147、BE をプロキシにしない）。
+本関数は服画像には流用しない。共有するのはバケット規約のみ。
 """
 
 import httpx
@@ -23,8 +28,9 @@ async def upload_image(
 ) -> str:
     """画像を Storage の `SUPABASE_STORAGE_BUCKET/{path}` に保存し、公開 URL を返す。
 
-    path 例: ``"outfits/<outfit_id>.png"`` / ``"clothes/<clothes_id>.png"``。
-    バケットが public 前提で公開オブジェクト URL を組み立てて返す。
+    path 例: ``"outfits/<outfit_id>.png"``。バケットが public 前提で公開オブジェクト
+    URL を組み立てて返す（署名 URL 化は follow-up）。
+    upsert=True のため同一 path への再生成は上書きされる（同一 outfit の再生成想定）。
     """
     if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
         raise StorageError(
@@ -44,7 +50,8 @@ async def upload_image(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        timeout = settings.SUPABASE_STORAGE_TIMEOUT_SECONDS
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(upload_url, content=data, headers=headers)
             response.raise_for_status()
     except httpx.HTTPError as exc:

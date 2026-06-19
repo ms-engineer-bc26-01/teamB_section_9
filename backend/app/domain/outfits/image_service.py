@@ -25,13 +25,21 @@ async def generate_coordinate_image_url(
     失敗時（API キー未設定・生成エラー・アップロード失敗など）は警告ログを残して
     None を返す。呼び出し側はこの None を coordinate_image_url 未設定として扱う。
     """
+    phase = "prompt_build"
     try:
         prompt = build_image_prompt(comment, items)
+        phase = "image_generate"
         client = OpenAIImageClient()
         data = await client.generate_image(prompt)
+        phase = "storage_upload"
         return await upload_image(path=f"outfits/{outfit_id}.png", data=data)
     except (ImageGenerationError, StorageError, ValueError) as exc:
+        # best-effort: 失敗フェーズと例外種別を残し、後から観測できるようにする。
         logger.warning(
-            "coordinate image generation skipped for outfit %s: %s", outfit_id, exc
+            "coordinate image generation skipped (outfit=%s, phase=%s, error=%s): %s",
+            outfit_id,
+            phase,
+            type(exc).__name__,
+            exc,
         )
         return None
