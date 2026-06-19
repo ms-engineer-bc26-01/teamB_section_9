@@ -21,7 +21,7 @@ async def upload_image(
     content_type: str = "image/png",
     upsert: bool = True,
 ) -> str:
-    """画像を Storage の `STORAGE_BUCKET/{path}` に保存し、公開 URL を返す。
+    """画像を Storage の `SUPABASE_STORAGE_BUCKET/{path}` に保存し、公開 URL を返す。
 
     path 例: ``"outfits/<outfit_id>.png"`` / ``"clothes/<clothes_id>.png"``。
     バケットが public 前提で公開オブジェクト URL を組み立てて返す。
@@ -33,7 +33,7 @@ async def upload_image(
         )
 
     base = settings.SUPABASE_URL.rstrip("/")
-    bucket = settings.STORAGE_BUCKET
+    bucket = settings.SUPABASE_STORAGE_BUCKET
     object_path = path.lstrip("/")
     upload_url = f"{base}/storage/v1/object/{bucket}/{object_path}"
     headers = {

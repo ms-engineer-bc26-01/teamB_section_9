@@ -16,13 +16,15 @@ class Settings(BaseSettings):
     SUPABASE_JWT_AUDIENCE: str = "authenticated"
     SUPABASE_JWKS_CACHE_TTL_SECONDS: int = 600
     # コラージュ画像・服画像を保存する Supabase Storage バケット。
-    STORAGE_BUCKET: str = "clothes-images"
+    SUPABASE_STORAGE_BUCKET: str = "clothes-images"
     LOG_LEVEL: str = Field(default="INFO")
     LLM_PROVIDER: str = "openai"
     OPENAI_API_KEY: str | None = None
     OPENAI_MODEL: str = "gpt-5-nano"
     OPENAI_IMAGE_MODEL: str = "gpt-image-1-mini"
     OPENAI_IMAGE_SIZE: str = "1024x1024"
+    # 画像生成 API 呼び出しのタイムアウト（秒）。保存APIの長時間ブロックを防ぐ。
+    OPENAI_IMAGE_TIMEOUT_SECONDS: float = 60.0
 
     # Redis
     REDIS_URL: str = Field(default="redis://redis:6379/0")

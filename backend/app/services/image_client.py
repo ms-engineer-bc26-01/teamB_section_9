@@ -21,7 +21,10 @@ class OpenAIImageClient:
         if not settings.OPENAI_API_KEY:
             raise ValueError("OPENAI_API_KEY is required for image generation")
 
-        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        self.client = AsyncOpenAI(
+            api_key=settings.OPENAI_API_KEY,
+            timeout=settings.OPENAI_IMAGE_TIMEOUT_SECONDS,
+        )
 
     async def generate_image(self, prompt: str) -> bytes:
         """プロンプトから画像を生成し、PNG バイト列を返す。"""

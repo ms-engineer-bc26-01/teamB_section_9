@@ -39,7 +39,7 @@ class _FakeAsyncClient:
 def _configure(monkeypatch):
     monkeypatch.setattr(settings, "SUPABASE_URL", "https://proj.supabase.co")
     monkeypatch.setattr(settings, "SUPABASE_SERVICE_ROLE_KEY", "service-role-key")
-    monkeypatch.setattr(settings, "STORAGE_BUCKET", "clothes-images")
+    monkeypatch.setattr(settings, "SUPABASE_STORAGE_BUCKET", "clothes-images")
 
 
 @pytest.mark.asyncio

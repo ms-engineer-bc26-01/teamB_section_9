@@ -22,8 +22,9 @@ def _fake_openai_factory(*, captured: dict, b64: str | None, data_present: bool 
             return type("Resp", (), {"data": [item]})()
 
     class FakeAsyncOpenAI:
-        def __init__(self, *, api_key):
+        def __init__(self, *, api_key, timeout=None):
             captured["api_key"] = api_key
+            captured["timeout"] = timeout
             self.images = FakeImages()
 
     return FakeAsyncOpenAI
@@ -60,6 +61,25 @@ async def test_generate_image_returns_decoded_bytes(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_generate_image_passes_timeout_to_client(monkeypatch):
+    # Arrange: 保存APIの長時間ブロックを防ぐため timeout が SDK に渡ること
+    captured: dict = {}
+    b64 = base64.b64encode(_PNG_BYTES).decode("ascii")
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(settings, "OPENAI_IMAGE_TIMEOUT_SECONDS", 42.0)
+    monkeypatch.setattr(
+        "app.services.image_client.AsyncOpenAI",
+        _fake_openai_factory(captured=captured, b64=b64),
+    )
+
+    # Act
+    await OpenAIImageClient().generate_image("prompt")
+
+    # Assert
+    assert captured["timeout"] == 42.0
+
+
+@pytest.mark.asyncio
 async def test_generate_image_wraps_api_error(monkeypatch):
     # Arrange
     class FakeImages:
@@ -67,8 +87,8 @@ async def test_generate_image_wraps_api_error(monkeypatch):
             raise APIError("boom", request=None, body=None)
 
     class FakeAsyncOpenAI:
-        def __init__(self, *, api_key):
-            del api_key
+        def __init__(self, *, api_key, timeout=None):
+            del api_key, timeout
             self.images = FakeImages()
 
     monkeypatch.setattr(settings, "OPENAI_API_KEY", "test-key")
