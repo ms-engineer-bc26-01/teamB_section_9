@@ -13,7 +13,7 @@
 - `POST /api/v1/outfits/suggest` のレスポンスには、LLM が提案したアイテム一覧 `items` が入る想定。
 - レスポンスの `outfit.id` は、現状のフロント実装でも必要。
 - `outfit.id` は詳細画面への遷移、`sessionStorage` の保存キー、保存済みコーデ取得に使う。
-- 今回のフロント実装では、`POST /api/v1/outfits/suggest` のレスポンスに含まれる `items` をもとに `POST /outfits` でコーデを保存し、保存済み outfit を詳細画面表示に使う。
+- 今回のフロント実装では、`POST /api/v1/outfits/suggest` のレスポンスに含まれる `items` をもとに `POST /api/v1/outfits` でコーデを保存し、保存済み outfit を詳細画面表示に使う。
 
 ---
 
