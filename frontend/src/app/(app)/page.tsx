@@ -443,7 +443,11 @@ export default function HomeDashboard() {
               role="img"
               style={{ backgroundImage: `url(${latestOutfitImageUrl})` }}
             />
-          ) : null}
+          ) : (
+            <div className="flex h-40 items-center justify-center rounded-lg border border-[#EFE5DC] bg-[#FFFCF8] px-3 py-3 text-center text-sm leading-6 text-[#6F6258]">
+              コーデ画像は準備中です。アイテム一覧とコーデのポイントは確認できます。
+            </div>
+          )}
 
           {latestOutfitItems.length > 0 ? (
             <div className="grid grid-cols-2 gap-2">
