@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.schemas.outfits import (
@@ -23,7 +23,7 @@ from app.dependencies.auth import CurrentUser, get_current_user
 from app.domain.clothes import crud as clothes_crud
 from app.domain.outfits import crud as outfits_crud
 from app.domain.outfits.crud import OutfitItemNotOwnedError
-from app.domain.outfits.image_service import generate_coordinate_image_url
+from app.domain.outfits.image_service import generate_and_store_coordinate_image
 from app.domain.outfits.service import OutfitService, OutfitSuggestionError
 from app.services.weather_client import (
     WeatherForecastResponseError,
@@ -62,8 +62,15 @@ async def create_outfit(
     request: OutfitCreateRequest,
     current_user: AuthenticatedUser,
     db: DbSession,
+    background_tasks: BackgroundTasks,
 ) -> SuggestedOutfit:
-    """提案コーデ（手持ち＋補完アイテム）を履歴として保存する。"""
+    """提案コーデ（手持ち＋補完アイテム）を履歴として保存する。
+
+    コラージュ画像の生成・Storage アップロードは時間がかかる（最大数十秒）ため、
+    保存 API のレスポンスをブロックしない。コーデを保存して即時 201 を返し
+    （coordinate_image_url=null）、画像生成は背景タスクへ切り出して
+    完了後に URL を反映する。
+    """
     region = get_region(request.region_code)
     if region is None:
         raise HTTPException(
@@ -87,22 +94,16 @@ async def create_outfit(
             detail="clothes_id contains items not owned by the user",
         ) from exc
 
-    # コラージュ画像生成は best-effort。失敗してもコーデ保存は成功扱いとし、
-    # coordinate_image_url=null のまま返す。
-    image_url = await generate_coordinate_image_url(
+    # コラージュ画像生成は best-effort かつ低速なため背景タスクで実行する。
+    # saved は ORM ではなく Pydantic スキーマなので、
+    # セッション境界をまたいで安全に渡せる。
+    background_tasks.add_task(
+        generate_and_store_coordinate_image,
         outfit_id=saved.id,
+        user_id=current_user.id,
         comment=saved.comment,
         items=saved.items,
     )
-    if image_url is not None:
-        updated = await outfits_crud.set_coordinate_image_url(
-            db,
-            current_user.id,
-            saved.id,
-            coordinate_image_url=image_url,
-        )
-        if updated is not None:
-            return updated
 
     return saved
 

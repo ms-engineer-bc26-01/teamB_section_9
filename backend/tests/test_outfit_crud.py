@@ -176,10 +176,11 @@ def test_create_outfit_persists_and_returns_201(
     assert captured["items"][1].clothes_id is None
 
 
-def test_create_outfit_sets_coordinate_image_url_on_success(
+def test_create_outfit_returns_immediately_and_schedules_image_task(
     client: TestClient, monkeypatch
 ) -> None:
-    """画像生成成功時、coordinate_image_url が保存され 201 で返る。"""
+    """保存 API は画像生成を待たず即時 201 / coordinate_image_url=null を返し、
+    画像生成は背景タスクへ保存済みコーデの id / ユーザーで委譲する。"""
     monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", True)
     monkeypatch.setattr(settings, "APP_ENV", "development")
 
@@ -197,70 +198,30 @@ def test_create_outfit_sets_coordinate_image_url_on_success(
             ]
         )
 
-    image_url = (
-        "https://proj.supabase.co/storage/v1/object/public/clothes-images/outfits/x.png"
-    )
-
     captured: dict = {}
 
-    async def fake_generate(*, outfit_id, comment, items):
+    async def fake_background(*, outfit_id, user_id, comment, items):
         captured["outfit_id"] = outfit_id
-        return image_url
-
-    async def fake_set_url(db, user_id, outfit_id, *, coordinate_image_url):
-        captured["set_url"] = coordinate_image_url
-        out = _saved_outfit([])
-        out.coordinate_image_url = coordinate_image_url
-        return out
+        captured["user_id"] = user_id
+        captured["comment"] = comment
+        captured["items"] = items
 
     monkeypatch.setattr(
         outfits_router.outfits_crud, "create_outfit", fake_create_outfit
     )
-    monkeypatch.setattr(outfits_router, "generate_coordinate_image_url", fake_generate)
     monkeypatch.setattr(
-        outfits_router.outfits_crud, "set_coordinate_image_url", fake_set_url
+        outfits_router, "generate_and_store_coordinate_image", fake_background
     )
 
     response = client.post("/api/v1/outfits", json=_create_payload())
 
     assert response.status_code == 201
-    assert response.json()["coordinate_image_url"] == image_url
-    assert captured["set_url"] == image_url
-
-
-def test_create_outfit_succeeds_without_image_when_generation_fails(
-    client: TestClient, monkeypatch
-) -> None:
-    """画像生成が失敗（None）でも 201 で保存され、coordinate_image_url は null。"""
-    monkeypatch.setattr(settings, "AUTH_BYPASS_ENABLED", True)
-    monkeypatch.setattr(settings, "APP_ENV", "development")
-
-    async def fake_create_outfit(db, **kwargs):
-        return _saved_outfit([])
-
-    async def fake_generate(*, outfit_id, comment, items):
-        return None
-
-    called = {"set_url": False}
-
-    async def fake_set_url(db, user_id, outfit_id, *, coordinate_image_url):
-        called["set_url"] = True
-        return _saved_outfit([])
-
-    monkeypatch.setattr(
-        outfits_router.outfits_crud, "create_outfit", fake_create_outfit
-    )
-    monkeypatch.setattr(outfits_router, "generate_coordinate_image_url", fake_generate)
-    monkeypatch.setattr(
-        outfits_router.outfits_crud, "set_coordinate_image_url", fake_set_url
-    )
-
-    response = client.post("/api/v1/outfits", json=_create_payload())
-
-    assert response.status_code == 201
+    # 画像はまだ生成されていないため応答時点では null
     assert response.json()["coordinate_image_url"] is None
-    # 画像生成が失敗したら URL 保存は呼ばれない
-    assert called["set_url"] is False
+    # 背景タスクが保存済みコーデの id / ユーザーで呼ばれている
+    # （TestClient は背景タスクをレスポンス後に同期実行する）
+    assert captured["outfit_id"] == uuid.UUID("00000000-0000-0000-0000-000000000777")
+    assert captured["user_id"] == BYPASS_USER_ID
 
 
 def test_create_outfit_rejects_invalid_region(client: TestClient, monkeypatch) -> None:

@@ -117,3 +117,95 @@ async def test_generate_coordinate_image_url_returns_none_when_api_key_missing(
 
     # Assert
     assert url is None
+
+
+USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+
+class _FakeSession:
+    """async with SessionLocal() as db: を満たす最小のフェイク。"""
+
+    def __init__(self, store: dict):
+        self._store = store
+
+    async def __aenter__(self):
+        self._store["db"] = self
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+
+@pytest.mark.asyncio
+async def test_generate_and_store_saves_url_on_success(monkeypatch):
+    """画像生成成功時、独自セッションで set_coordinate_image_url が呼ばれる。"""
+    # Arrange
+    captured: dict = {}
+    image_url = "https://proj.supabase.co/storage/v1/object/public/x/outfits/x.png"
+
+    async def fake_generate(*, outfit_id, comment, items):
+        return image_url
+
+    async def fake_set_url(db, user_id, outfit_id, *, coordinate_image_url):
+        captured["db"] = db
+        captured["user_id"] = user_id
+        captured["outfit_id"] = outfit_id
+        captured["url"] = coordinate_image_url
+        return None
+
+    monkeypatch.setattr(image_service, "generate_coordinate_image_url", fake_generate)
+    monkeypatch.setattr(image_service, "SessionLocal", lambda: _FakeSession(captured))
+    monkeypatch.setattr(image_service, "set_coordinate_image_url", fake_set_url)
+
+    # Act
+    await image_service.generate_and_store_coordinate_image(
+        outfit_id=OUTFIT_ID, user_id=USER_ID, comment="c", items=_items()
+    )
+
+    # Assert: SessionLocal から開いたセッションで保存されている
+    assert captured["url"] == image_url
+    assert captured["outfit_id"] == OUTFIT_ID
+    assert captured["user_id"] == USER_ID
+    assert isinstance(captured["db"], _FakeSession)  # SessionLocal から開いたセッション
+
+
+@pytest.mark.asyncio
+async def test_generate_and_store_skips_save_when_no_image(monkeypatch):
+    """画像生成が None のときは set_coordinate_image_url を呼ばない。"""
+    # Arrange
+    called = {"set_url": False}
+
+    async def fake_generate(*, outfit_id, comment, items):
+        return None
+
+    async def fake_set_url(*args, **kwargs):
+        called["set_url"] = True
+
+    monkeypatch.setattr(image_service, "generate_coordinate_image_url", fake_generate)
+    monkeypatch.setattr(image_service, "set_coordinate_image_url", fake_set_url)
+
+    # Act
+    await image_service.generate_and_store_coordinate_image(
+        outfit_id=OUTFIT_ID, user_id=USER_ID, comment="c", items=_items()
+    )
+
+    # Assert
+    assert called["set_url"] is False
+
+
+@pytest.mark.asyncio
+async def test_generate_and_store_swallows_unexpected_errors(monkeypatch, caplog):
+    """背景タスクの予期せぬ例外は握りつぶし、ログに残す（リクエストへ波及させない）。"""
+
+    # Arrange
+    async def fake_generate(*, outfit_id, comment, items):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(image_service, "generate_coordinate_image_url", fake_generate)
+
+    # Act / Assert: 例外が伝播しないこと
+    with caplog.at_level(logging.WARNING, logger="climo"):
+        await image_service.generate_and_store_coordinate_image(
+            outfit_id=OUTFIT_ID, user_id=USER_ID, comment="c", items=_items()
+        )
+    assert "background coordinate image task failed" in caplog.text
