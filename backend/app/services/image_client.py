@@ -10,6 +10,7 @@ import base64
 from openai import APIError, AsyncOpenAI
 
 from app.core.config import settings
+from app.services.usage import log_llm_usage
 
 
 class ImageGenerationError(Exception):
@@ -37,6 +38,12 @@ class OpenAIImageClient:
             )
         except APIError as exc:
             raise ImageGenerationError("failed to generate outfit image") from exc
+
+        log_llm_usage(
+            op="generate_image",
+            model=settings.OPENAI_IMAGE_MODEL,
+            usage=getattr(response, "usage", None),
+        )
 
         data = getattr(response, "data", None)
         if not data:
