@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, RefreshCw, Shirt } from "lucide-react";
 
 import { fetchClothes } from "@/features/clothes/api";
@@ -29,61 +29,78 @@ const tpoLabels: Record<string, string> = {
   business: "オフィス",
 };
 
+type LoadClothesOptions = {
+  showLoading?: boolean;
+};
+
+function getClothesErrorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "服一覧の取得に失敗しました。時間をおいて再度お試しください。";
+}
+
 export default function ClothesPage() {
   const [clothes, setClothes] = useState<ClothingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const isMountedRef = useRef(true);
 
-  const loadClothes = useCallback(async () => {
-    setIsLoading(true);
-    setErrorMessage("");
+  const loadClothes = useCallback(async (
+    shouldIgnore: () => boolean = () => false,
+    { showLoading = true }: LoadClothesOptions = {},
+  ) => {
+    const isIgnored = () => shouldIgnore() || !isMountedRef.current;
+
+    if (showLoading) {
+      setIsLoading(true);
+      setErrorMessage("");
+    }
 
     try {
       const data = await fetchClothes();
+      if (isIgnored()) {
+        return;
+      }
       setClothes(data.items);
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "服一覧の取得に失敗しました。時間をおいて再度お試しください。",
-      );
+      if (isIgnored()) {
+        return;
+      }
+      setErrorMessage(getClothesErrorMessage(error));
     } finally {
-      setIsLoading(false);
+      if (!isIgnored()) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     let ignore = false;
+    isMountedRef.current = true;
 
-    async function load() {
-      setIsLoading(true);
-      setErrorMessage("");
-
+    async function loadInitialClothes() {
       try {
         const data = await fetchClothes();
 
-        if (!ignore) {
+        if (!ignore && isMountedRef.current) {
           setClothes(data.items);
         }
       } catch (error) {
-        if (!ignore) {
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : "服一覧の取得に失敗しました。時間をおいて再度お試しください。",
-          );
+        if (!ignore && isMountedRef.current) {
+          setErrorMessage(getClothesErrorMessage(error));
         }
       } finally {
-        if (!ignore) {
+        if (!ignore && isMountedRef.current) {
           setIsLoading(false);
         }
       }
     }
 
-    void load();
+    void loadInitialClothes();
 
     return () => {
       ignore = true;
+      isMountedRef.current = false;
     };
   }, []);
 
@@ -166,7 +183,7 @@ export default function ClothesPage() {
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <h2 className="truncate text-base font-bold">{item.name}</h2>
+                    <h3 className="truncate text-base font-bold">{item.name}</h3>
                     {item.is_favorite ? (
                       <span className="text-sm text-[#8C715C]" aria-label="お気に入り">
                         ♥
@@ -177,6 +194,10 @@ export default function ClothesPage() {
                   <p className="mt-1 text-sm text-[#6F6A63]">
                     {categoryLabels[item.category] ?? item.category}
                     {item.color ? ` / ${item.color}` : ""}
+                  </p>
+
+                  <p className="mt-1 text-xs text-[#6F6A63]">
+                    着用回数 {item.wear_count}回
                   </p>
 
                   {seasons.length > 0 || tpoTags.length > 0 ? (
