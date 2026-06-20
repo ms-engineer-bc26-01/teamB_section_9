@@ -216,9 +216,10 @@ export function OutfitDetailContent() {
   const outfitItems = [...(outfit?.items ?? [])].sort(
     (a, b) => a.display_order - b.display_order,
   );
+  const canUpdateFavorite = outfitItems.length > 0;
 
   async function handleToggleFavorite() {
-    if (!outfit || isSavingFavorite) {
+    if (!outfit || !canUpdateFavorite || isSavingFavorite) {
       return;
     }
 
@@ -375,11 +376,13 @@ export function OutfitDetailContent() {
                 variant="outline"
                 className="border-[#D8C9BB] bg-white text-[#6B4F3A]"
                 aria-label={
-                  outfit.is_favorite
-                    ? "このコーデのお気に入りを解除する"
-                    : "このコーデをお気に入りに登録する"
+                  !canUpdateFavorite
+                    ? "アイテム情報がないためこのコーデは保存できません"
+                    : outfit.is_favorite
+                      ? "このコーデのお気に入りを解除する"
+                      : "このコーデをお気に入りに登録する"
                 }
-                disabled={isSavingFavorite}
+                disabled={isSavingFavorite || !canUpdateFavorite}
                 onClick={handleToggleFavorite}
               >
                 <Heart
@@ -390,7 +393,13 @@ export function OutfitDetailContent() {
                       : "mr-2 h-4 w-4"
                   }
                 />
-                {isSavingFavorite ? "保存中..." : outfit.is_favorite ? "保存済み" : "保存"}
+                {!canUpdateFavorite
+                  ? "保存不可"
+                  : isSavingFavorite
+                    ? "保存中..."
+                    : outfit.is_favorite
+                      ? "保存済み"
+                      : "保存"}
               </Button>
 
               <Button
