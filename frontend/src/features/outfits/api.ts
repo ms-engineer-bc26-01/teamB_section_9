@@ -6,6 +6,7 @@ import type {
   OutfitCreateRequest,
   OutfitSuggestRequest,
   OutfitSuggestResponse,
+  OutfitUpdateRequest,
   SuggestedOutfit,
 } from "./types";
 
@@ -70,6 +71,18 @@ export async function getOutfit(
   const token = await getAccessToken(tokenOverride);
 
   return apiClient.get<SuggestedOutfit>(`/outfits/${outfitId}`, {
+    token,
+    cache: "no-store",
+  });
+}
+
+export async function updateOutfit(
+  outfitId: string,
+  payload: OutfitUpdateRequest,
+): Promise<SuggestedOutfit> {
+  const token = await getAccessToken();
+
+  return apiClient.patch<SuggestedOutfit>(`/outfits/${outfitId}`, payload, {
     token,
     cache: "no-store",
   });

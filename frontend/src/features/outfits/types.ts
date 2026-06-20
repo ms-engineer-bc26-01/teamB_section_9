@@ -25,6 +25,10 @@ export type OutfitCreateRequest = {
   items: OutfitCreateItem[];
 };
 
+export type OutfitUpdateRequest = {
+  is_favorite: boolean;
+};
+
 export type SuggestedOutfitItem = {
   clothes_id?: string | null;
   name?: string | null;
@@ -47,7 +51,7 @@ export type SuggestedOutfit = {
   comment: string | null;
   coordinate_image_url: string | null;
   is_favorite: boolean;
-  source: string;
+  source?: string;
   items: SuggestedOutfitItem[];
   created_at: string;
 };

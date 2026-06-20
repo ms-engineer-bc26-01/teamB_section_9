@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getOutfit } from "@/features/outfits/api";
+import { getOutfit, updateOutfit } from "@/features/outfits/api";
 import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
 import {
   getSuggestedOutfitItemColor,
@@ -142,6 +142,7 @@ export function OutfitDetailContent() {
       errorMessage: null,
       isLoading: true,
     });
+  const [isSavingFavorite, setIsSavingFavorite] = useState(false);
 
   useEffect(() => {
     if (!isInitialized) {
@@ -215,6 +216,50 @@ export function OutfitDetailContent() {
   const outfitItems = [...(outfit?.items ?? [])].sort(
     (a, b) => a.display_order - b.display_order,
   );
+  // 未保存の /outfits/suggest 結果には source がないため PATCH 対象外にする。
+  const canUpdateFavorite = Boolean(outfit?.source);
+
+  async function handleToggleFavorite() {
+    if (!outfit || !canUpdateFavorite || isSavingFavorite) {
+      return;
+    }
+
+    setIsSavingFavorite(true);
+    setDetailState((current) => ({
+      ...current,
+      errorMessage: null,
+    }));
+
+    try {
+      const updatedOutfit = await updateOutfit(outfit.id, {
+        is_favorite: !outfit.is_favorite,
+      });
+
+      window.sessionStorage.setItem(
+        getOutfitSuggestionStorageKey(updatedOutfit.user_id, updatedOutfit.id),
+        JSON.stringify({
+          outfits: [updatedOutfit],
+        } satisfies OutfitSuggestResponse),
+      );
+
+      setDetailState((current) => ({
+        ...current,
+        outfit: updatedOutfit,
+        errorMessage: null,
+        isLoading: false,
+      }));
+    } catch (error) {
+      setDetailState((current) => ({
+        ...current,
+        errorMessage:
+          error instanceof Error
+            ? error.message
+            : "コーデの保存状態を更新できませんでした。",
+      }));
+    } finally {
+      setIsSavingFavorite(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] px-5 py-6 text-[#2F2925]">
@@ -328,12 +373,34 @@ export function OutfitDetailContent() {
 
             <div className="grid grid-cols-2 gap-3">
               <Button
+                type="button"
                 variant="outline"
                 className="border-[#D8C9BB] bg-white text-[#6B4F3A]"
-                aria-label="このコーデをお気に入りに登録する"
+                aria-label={
+                  !canUpdateFavorite
+                    ? "未保存のコーデのためお気に入りを更新できません"
+                    : outfit.is_favorite
+                      ? "このコーデのお気に入りを解除する"
+                      : "このコーデをお気に入りに登録する"
+                }
+                disabled={isSavingFavorite || !canUpdateFavorite}
+                onClick={handleToggleFavorite}
               >
-                <Heart aria-hidden="true" className="mr-2 h-4 w-4" />
-                保存
+                <Heart
+                  aria-hidden="true"
+                  className={
+                    outfit.is_favorite
+                      ? "mr-2 h-4 w-4 fill-[#6B4F3A] text-[#6B4F3A]"
+                      : "mr-2 h-4 w-4"
+                  }
+                />
+                {!canUpdateFavorite
+                  ? "保存不可"
+                  : isSavingFavorite
+                    ? "保存中..."
+                    : outfit.is_favorite
+                      ? "保存済み"
+                      : "保存"}
               </Button>
 
               <Button
