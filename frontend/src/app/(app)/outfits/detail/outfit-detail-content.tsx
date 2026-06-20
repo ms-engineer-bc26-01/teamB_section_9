@@ -216,7 +216,8 @@ export function OutfitDetailContent() {
   const outfitItems = [...(outfit?.items ?? [])].sort(
     (a, b) => a.display_order - b.display_order,
   );
-  const canUpdateFavorite = outfitItems.length > 0;
+  // 未保存の /outfits/suggest 結果には source がないため PATCH 対象外にする。
+  const canUpdateFavorite = Boolean(outfit?.source);
 
   async function handleToggleFavorite() {
     if (!outfit || !canUpdateFavorite || isSavingFavorite) {
