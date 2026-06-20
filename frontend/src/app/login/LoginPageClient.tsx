@@ -139,6 +139,24 @@ export default function LoginPageClient({
             <Button asChild variant="outline" className="w-full">
               <Link href="/register">新規登録はこちら</Link>
             </Button>
+
+            <p className="text-center text-xs leading-5 text-[#8C715C]">
+              ご利用にあたっては{" "}
+              <Link
+                href="/terms"
+                className="font-medium underline-offset-4 hover:underline"
+              >
+                利用規約
+              </Link>
+              と{" "}
+              <Link
+                href="/privacy"
+                className="font-medium underline-offset-4 hover:underline"
+              >
+                プライバシーポリシー
+              </Link>
+              をご確認ください。
+            </p>
           </CardContent>
         </Card>
       </div>

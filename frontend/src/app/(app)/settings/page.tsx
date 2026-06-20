@@ -590,6 +590,26 @@ export default function SettingsPage() {
                 </CardContent>
             </Card>
 
+            <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
+                <CardHeader>
+                    <CardTitle className="text-base">規約・ポリシー</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                    <Link
+                        href="/terms"
+                        className="block font-medium text-[#6B4F3A] underline-offset-4 hover:underline"
+                    >
+                        利用規約
+                    </Link>
+                    <Link
+                        href="/privacy"
+                        className="block font-medium text-[#6B4F3A] underline-offset-4 hover:underline"
+                    >
+                        プライバシーポリシー
+                    </Link>
+                </CardContent>
+            </Card>
+
             <div className="space-y-3">
                 <Button
                     type="button"

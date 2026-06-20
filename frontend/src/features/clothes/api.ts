@@ -1,74 +1,76 @@
+import { apiClient } from "@/lib/api/client";
 import { supabase } from "@/lib/auth";
 
 import type {
-    ClothingCreateRequest,
-    ClothingItem,
-    ClothesListResponse,
+  ClothingCreateRequest,
+  ClothingItem,
+  ClothesListResponse,
 } from "./types";
 
-const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+async function getAccessToken() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const token = session?.access_token;
+
+  if (!token) {
+    throw new Error("ログインが必要です");
+  }
+
+  return token;
+}
+
+function isUnauthorizedApiError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return (
+    error.message === "Not authenticated" ||
+    error.message === "Invalid authentication credentials" ||
+    error.message === "API Error: 401"
+  );
+}
+
+async function handleClothesApiError<T>(
+  request: () => Promise<T>,
+  fallbackMessage: string,
+) {
+  try {
+    return await request();
+  } catch (error) {
+    if (isUnauthorizedApiError(error)) {
+      throw new Error("ログインが必要です", { cause: error });
+    }
+
+    throw new Error(fallbackMessage, { cause: error });
+  }
+}
 
 export async function fetchClothes(): Promise<ClothesListResponse> {
-    const {
-        data: { session },
-    } = await supabase.auth.getSession();
+  const token = await getAccessToken();
 
-    const token = session?.access_token;
-
-    if (!token) {
-        throw new Error("ログインが必要です");
-    }
-
-    const response = await fetch(`${API_BASE_URL}/clothes?limit=100`, {
-        headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
-        },
+  return handleClothesApiError(
+    () =>
+      apiClient.get<ClothesListResponse>("/clothes?limit=100", {
+        token,
         cache: "no-store",
-    });
-
-    if (response.status === 401) {
-        throw new Error("ログインが必要です");
-    }
-
-    if (!response.ok) {
-        throw new Error("服一覧の取得に失敗しました");
-    }
-
-    return response.json();
+      }),
+    "服一覧の取得に失敗しました",
+  );
 }
 
 export async function createClothing(
-    payload: ClothingCreateRequest,
+  payload: ClothingCreateRequest,
 ): Promise<ClothingItem> {
-    const {
-        data: { session },
-    } = await supabase.auth.getSession();
+  const token = await getAccessToken();
 
-    const token = session?.access_token;
-
-    if (!token) {
-        throw new Error("ログインが必要です");
-    }
-
-    const response = await fetch(`${API_BASE_URL}/clothes`, {
-        method: "POST",
-        headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-    });
-
-    if (response.status === 401) {
-        throw new Error("ログインが必要です");
-    }
-
-    if (!response.ok) {
-        throw new Error("服の登録に失敗しました");
-    }
-
-    return response.json();
+  return handleClothesApiError(
+    () =>
+      apiClient.post<ClothingItem>("/clothes", payload, {
+        token,
+      }),
+    "服の登録に失敗しました",
+  );
 }

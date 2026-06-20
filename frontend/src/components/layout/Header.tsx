@@ -16,6 +16,8 @@ const pageTitles: Record<string, string> = {
   "/outfits/preview": "コーデ確認",
   "/register": "アカウント登録",
   "/login": "ログイン",
+  "/terms": "利用規約",
+  "/privacy": "プライバシーポリシー",
 };
 
 function getPageTitle(pathname: string) {
