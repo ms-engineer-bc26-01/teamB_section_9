@@ -393,6 +393,11 @@ export default function HomeDashboard() {
     isInitialized &&
     outfitState.outfit === null &&
     outfitErrorMessage === null;
+  const shouldShowCreateOutfitLinks =
+    Boolean(token) &&
+    !isOutfitLoading &&
+    latestOutfit === null &&
+    outfitState.errorMessage === HOME_OUTFIT_EMPTY_MESSAGE;
   const isClothesCountLoading =
     Boolean(token) &&
     isInitialized &&
