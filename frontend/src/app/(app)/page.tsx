@@ -439,12 +439,18 @@ export default function HomeDashboard() {
           {latestOutfitImageUrl ? (
             <div
               aria-label={`${sceneLabel}のコーデ画像`}
-              className="h-40 rounded-lg border border-[#EFE5DC] bg-[#F4EEE8] bg-cover bg-center"
+              className="w-full rounded-lg border border-[#EFE5DC] bg-[#F4EEE8] bg-contain bg-center bg-no-repeat"
               role="img"
-              style={{ backgroundImage: `url(${latestOutfitImageUrl})` }}
+              style={{
+                aspectRatio: "1 / 1",
+                backgroundImage: `url(${latestOutfitImageUrl})`,
+              }}
             />
           ) : (
-            <div className="flex h-40 items-center justify-center rounded-lg border border-[#EFE5DC] bg-[#FFFCF8] px-3 py-3 text-center text-sm leading-6 text-[#6F6258]">
+            <div
+              className="flex w-full items-center justify-center rounded-lg border border-[#EFE5DC] bg-[#FFFCF8] px-3 py-3 text-center text-sm leading-6 text-[#6F6258]"
+              style={{ aspectRatio: "1 / 1" }}
+            >
               コーデ画像は準備中です。アイテム一覧とコーデのポイントは確認できます。
             </div>
           )}
