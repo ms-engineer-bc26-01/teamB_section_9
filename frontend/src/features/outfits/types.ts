@@ -25,6 +25,10 @@ export type OutfitCreateRequest = {
   items: OutfitCreateItem[];
 };
 
+export type OutfitUpdateRequest = {
+  is_favorite: boolean;
+};
+
 export type SuggestedOutfitItem = {
   clothes_id?: string | null;
   name?: string | null;
