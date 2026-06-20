@@ -378,7 +378,7 @@ export function OutfitDetailContent() {
                 className="border-[#D8C9BB] bg-white text-[#6B4F3A]"
                 aria-label={
                   !canUpdateFavorite
-                    ? "アイテム情報がないためこのコーデは保存できません"
+                    ? "未保存のコーデのためお気に入りを更新できません"
                     : outfit.is_favorite
                       ? "このコーデのお気に入りを解除する"
                       : "このコーデをお気に入りに登録する"

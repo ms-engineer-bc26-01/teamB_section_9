@@ -51,7 +51,7 @@ export type SuggestedOutfit = {
   comment: string | null;
   coordinate_image_url: string | null;
   is_favorite: boolean;
-  source?: string | null;
+  source?: string;
   items: SuggestedOutfitItem[];
   created_at: string;
 };
