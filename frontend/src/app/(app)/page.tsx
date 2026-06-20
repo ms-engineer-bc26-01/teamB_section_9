@@ -33,6 +33,8 @@ import { useAuthStore } from "@/stores/auth-store";
 
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
 const DEFAULT_REGION_CODE = "13_01";
+const HOME_OUTFIT_EMPTY_MESSAGE =
+  "まだ提案履歴がありません。シーンを選んでコーデを作成してください。";
 
 const mockHomeData = {
   weeklyOutfitCount: 5,
@@ -172,6 +174,27 @@ function formatOutfitComment(comment: string | null | undefined) {
     .trim();
 }
 
+function getOutfitImageUrl(outfit: SuggestedOutfit | null) {
+  if (!outfit) {
+    return null;
+  }
+
+  if (outfit.coordinate_image_url) {
+    return outfit.coordinate_image_url;
+  }
+
+  const imageItem = outfit.items.find(
+    (item) =>
+      item.clothing_item?.thumbnail_url ?? item.clothing_item?.image_url,
+  );
+
+  return (
+    imageItem?.clothing_item?.thumbnail_url ??
+    imageItem?.clothing_item?.image_url ??
+    null
+  );
+}
+
 export default function HomeDashboard() {
   const session = useAuthStore((state) => state.session);
   const isInitialized = useAuthStore((state) => state.isInitialized);
@@ -292,7 +315,7 @@ export default function HomeDashboard() {
           errorMessage:
             response.items.length > 0
               ? null
-              : "まだ提案履歴がありません。シーンを選んでコーデを作成してください。",
+              : HOME_OUTFIT_EMPTY_MESSAGE,
         });
       })
       .catch(() => {
@@ -364,6 +387,7 @@ export default function HomeDashboard() {
     ? tpoSceneLabels[latestOutfit.tpo] ?? latestOutfit.tpo
     : "最新の提案";
   const outfitComment = formatOutfitComment(latestOutfit?.comment);
+  const latestOutfitImageUrl = getOutfitImageUrl(latestOutfit);
   const isOutfitLoading =
     Boolean(token) &&
     isInitialized &&
@@ -407,6 +431,19 @@ export default function HomeDashboard() {
           </Badge>
         </CardHeader>
         <CardContent className="space-y-4">
+          {latestOutfitImageUrl ? (
+            <div
+              aria-label={`${sceneLabel}のコーデ画像`}
+              className="aspect-square w-full rounded-lg border border-[#EFE5DC] bg-[#F4EEE8] bg-contain bg-center bg-no-repeat"
+              role="img"
+              style={{ backgroundImage: `url(${latestOutfitImageUrl})` }}
+            />
+          ) : (
+            <div className="flex aspect-square w-full items-center justify-center rounded-lg border border-[#EFE5DC] bg-[#FFFCF8] px-3 py-3 text-center text-sm leading-6 text-[#6F6258]">
+              コーデ画像は準備中です。アイテム一覧とコーデのポイントは確認できます。
+            </div>
+          )}
+
           {latestOutfitItems.length > 0 ? (
             <div className="grid grid-cols-2 gap-2">
               {latestOutfitItems.map((item) => (
@@ -428,6 +465,23 @@ export default function HomeDashboard() {
                 : outfitErrorMessage}
             </p>
           )}
+
+          {shouldShowCreateOutfitLinks ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Link
+                href="/outfits/scenes"
+                className="flex min-h-11 items-center justify-center rounded-lg border border-[#8C715C] bg-white px-3 py-2 text-center text-sm font-bold text-[#6B4F3A] hover:bg-[#FFFCF8]"
+              >
+                シーンを選んで作成
+              </Link>
+              <Link
+                href="/outfits/closet"
+                className="flex min-h-11 items-center justify-center rounded-lg bg-[#6B4F3A] px-3 py-2 text-center text-sm font-bold text-white hover:bg-[#5A4231]"
+              >
+                クローゼット服で提案
+              </Link>
+            </div>
+          ) : null}
 
           {latestOutfit ? (
             <div className="flex flex-wrap gap-2">
@@ -462,7 +516,8 @@ export default function HomeDashboard() {
               コーデのポイントを見る
               <ChevronRight aria-hidden="true" size={20} />
             </Link>
-          ) : null}          </CardContent>
+          ) : null}
+        </CardContent>
       </Card>
 
       <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
