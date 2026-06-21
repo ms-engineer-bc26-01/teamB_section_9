@@ -11,7 +11,6 @@ storage_path 通知」の別フロー（requirements.md:147、BE をプロキシ
 """
 
 import uuid
-from pathlib import Path
 
 import httpx
 
@@ -104,11 +103,6 @@ def _ensure_storage_config() -> tuple[str, str, str]:
 
 
 def _resolve_extension(filename: str, content_type: str) -> str:
-    suffix = Path(filename).suffix.lower()
-    if suffix in {".jpg", ".jpeg"}:
-        return ".jpg"
-    if suffix in {".png", ".webp"}:
-        return suffix
     return _ALLOWED_EXTENSIONS[content_type]
 
 

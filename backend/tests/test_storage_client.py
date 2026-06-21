@@ -208,6 +208,34 @@ async def test_create_signed_upload_url_accepts_storage_v1_path(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_create_signed_upload_url_uses_content_type_extension(monkeypatch):
+    _configure(monkeypatch)
+    captured: dict = {}
+    user_id = uuid.UUID("61bf9d18-48c5-44ec-8b15-fb0b22518c5c")
+    monkeypatch.setattr(storage_client.uuid, "uuid4", lambda: uuid.UUID(int=1))
+    monkeypatch.setattr(
+        storage_client.httpx,
+        "AsyncClient",
+        lambda **kw: _FakeAsyncClient(
+            captured=captured,
+            json_data={
+                "url": "/object/upload/sign/clothes-images/clothes/"
+                "61bf9d18-48c5-44ec-8b15-fb0b22518c5c/00000000000000000000000000000001.jpg?token=test-token"
+            },
+            **kw,
+        ),
+    )
+
+    _, storage_path = await create_signed_upload_url(
+        user_id=user_id,
+        filename="shirt.png",
+        content_type="image/jpeg",
+    )
+
+    assert storage_path.endswith("00000000000000000000000000000001.jpg")
+
+
+@pytest.mark.asyncio
 async def test_create_signed_upload_url_raises_when_signed_url_missing(monkeypatch):
     _configure(monkeypatch)
     captured: dict = {}
