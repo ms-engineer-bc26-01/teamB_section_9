@@ -71,15 +71,20 @@ _ALLOWED_EXTENSIONS = {
 
 
 def _ensure_storage_config() -> tuple[str, str, str]:
-    if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
+    base = settings.SUPABASE_URL
+    service_role_key = settings.SUPABASE_SERVICE_ROLE_KEY
+    bucket = settings.SUPABASE_STORAGE_BUCKET
+
+    if not base or not service_role_key or not bucket:
         raise StorageError(
             "Supabase storage is not configured "
-            "(SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)"
+            "(SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / SUPABASE_STORAGE_BUCKET)"
         )
+
     return (
-        settings.SUPABASE_URL.rstrip("/"),
-        settings.SUPABASE_SERVICE_ROLE_KEY,
-        settings.SUPABASE_STORAGE_BUCKET,
+        base.rstrip("/"),
+        service_role_key,
+        bucket,
     )
 
 
@@ -122,7 +127,17 @@ async def create_signed_upload_url(
                 headers=headers,
             )
             response.raise_for_status()
-            payload = response.json()
+            try:
+                payload = response.json()
+            except ValueError as exc:
+                raise StorageError(
+                    "failed to create signed upload url: invalid JSON response"
+                ) from exc
+
+            if not isinstance(payload, dict):
+                raise StorageError(
+                    "failed to create signed upload url: unexpected response payload"
+                )
     except httpx.HTTPError as exc:
         raise StorageError(f"failed to create signed upload url: {exc}") from exc
 
