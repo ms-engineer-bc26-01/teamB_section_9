@@ -22,7 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getOutfit, getOutfits } from "@/features/outfits/api";
+import { getOutfit, getOutfits, updateOutfit } from "@/features/outfits/api";
 import {
   getSuggestedOutfitItemColor,
   getSuggestedOutfitItemName,
@@ -97,6 +97,7 @@ export function OutfitPreviewContent() {
       errorMessage: null,
       isLoading: true,
     });
+  const [isSavingFavorite, setIsSavingFavorite] = useState(false);
 
   useEffect(() => {
     if (!isInitialized) {
@@ -157,6 +158,39 @@ export function OutfitPreviewContent() {
       isMounted = false;
     };
   }, [isInitialized, selectedOutfitId, session?.access_token]);
+
+  async function handleToggleFavorite() {
+    if (!outfit || isSavingFavorite) {
+      return;
+    }
+
+    setIsSavingFavorite(true);
+    setPreviewState((current) => ({
+      ...current,
+      errorMessage: null,
+    }));
+
+    try {
+      const updatedOutfit = await updateOutfit(outfit.id, {
+        is_favorite: !outfit.is_favorite,
+      });
+
+      setPreviewState((current) => ({
+        ...current,
+        outfit: updatedOutfit,
+        errorMessage: null,
+        isLoading: false,
+      }));
+    } catch {
+      setPreviewState((current) => ({
+        ...current,
+        errorMessage: "お気に入りの更新に失敗しました。",
+        isLoading: false,
+      }));
+    } finally {
+      setIsSavingFavorite(false);
+    }
+  }
 
   const outfitTitle = outfit
     ? tpoLabels[outfit.tpo] ?? "おすすめコーデ"
@@ -306,6 +340,33 @@ export function OutfitPreviewContent() {
                 )}
               </CardContent>
             </Card>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="border-[#D8C9BB] bg-white text-[#6B4F3A]"
+              aria-label={
+                outfit.is_favorite
+                  ? "このコーデのお気に入りを解除する"
+                  : "このコーデをお気に入りに登録する"
+              }
+              disabled={isSavingFavorite}
+              onClick={handleToggleFavorite}
+            >
+              <Heart
+                aria-hidden="true"
+                className={
+                  outfit.is_favorite
+                    ? "mr-2 h-4 w-4 fill-[#6B4F3A] text-[#6B4F3A]"
+                    : "mr-2 h-4 w-4"
+                }
+              />
+              {isSavingFavorite
+                ? "保存中..."
+                : outfit.is_favorite
+                  ? "保存済み"
+                  : "保存"}
+            </Button>
 
             <Button
               asChild

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CloudSun, Heart, RefreshCw, Save, Shirt, Sparkles } from "lucide-react";
+import { CloudSun, Heart, RefreshCw, Shirt, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -476,7 +476,7 @@ export function OutfitClosetContent() {
                   </>
                 ) : (
                   <>
-                    <Save aria-hidden="true" className="mr-2 h-4 w-4" />
+                    <Heart aria-hidden="true" className="mr-2 h-4 w-4" />
                     保存
                   </>
                 )}
