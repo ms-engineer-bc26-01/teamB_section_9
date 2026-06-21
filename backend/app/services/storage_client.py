@@ -22,6 +22,21 @@ class StorageError(Exception):
     """Storage への保存失敗（未設定・HTTP エラー等）を表す。"""
 
 
+def _resolve_signed_upload_url(base: str, payload: dict[str, object]) -> str:
+    signed = payload.get("url") or payload.get("signedURL") or payload.get("signedUrl")
+
+    if not isinstance(signed, str) or not signed:
+        raise StorageError("signed upload url response missing signed URL")
+
+    if signed.startswith("http"):
+        return signed
+
+    if signed.startswith("/storage/v1"):
+        return f"{base}{signed}"
+
+    return f"{base}/storage/v1{signed}"
+
+
 async def upload_image(
     *,
     path: str,
@@ -141,20 +156,5 @@ async def create_signed_upload_url(
     except httpx.HTTPError as exc:
         raise StorageError(f"failed to create signed upload url: {exc}") from exc
 
-    signed_url = payload.get("signedURL") or payload.get("signedUrl")
-    token = payload.get("token")
-
-    if signed_url:
-        upload_url = (
-            signed_url if signed_url.startswith("http") else f"{base}{signed_url}"
-        )
-        return upload_url, storage_path
-
-    if token:
-        upload_url = (
-            f"{base}/storage/v1/object/upload/sign/"
-            f"{bucket}/{storage_path}?token={token}"
-        )
-        return upload_url, storage_path
-
-    raise StorageError("signed upload url response missing signed URL")
+    upload_url = _resolve_signed_upload_url(base, payload)
+    return upload_url, storage_path
