@@ -10,6 +10,9 @@ storage_path 通知」の別フロー（requirements.md:147、BE をプロキシ
 本関数は服画像には流用しない。共有するのはバケット規約のみ。
 """
 
+import uuid
+from pathlib import Path
+
 import httpx
 
 from app.core.config import settings
@@ -58,3 +61,85 @@ async def upload_image(
         raise StorageError(f"failed to upload image to storage: {exc}") from exc
 
     return f"{base}/storage/v1/object/public/{bucket}/{object_path}"
+
+
+_ALLOWED_EXTENSIONS = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+
+
+def _ensure_storage_config() -> tuple[str, str, str]:
+    if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
+        raise StorageError(
+            "Supabase storage is not configured "
+            "(SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)"
+        )
+    return (
+        settings.SUPABASE_URL.rstrip("/"),
+        settings.SUPABASE_SERVICE_ROLE_KEY,
+        settings.SUPABASE_STORAGE_BUCKET,
+    )
+
+
+def _resolve_extension(filename: str, content_type: str) -> str:
+    suffix = Path(filename).suffix.lower()
+    if suffix in {".jpg", ".jpeg"}:
+        return ".jpg"
+    if suffix in {".png", ".webp"}:
+        return suffix
+    return _ALLOWED_EXTENSIONS[content_type]
+
+
+def _build_clothing_storage_path(
+    user_id: uuid.UUID, filename: str, content_type: str
+) -> str:
+    ext = _resolve_extension(filename, content_type)
+    return f"clothes/{user_id}/{uuid.uuid4().hex}{ext}"
+
+
+async def create_signed_upload_url(
+    *,
+    user_id: uuid.UUID,
+    filename: str,
+    content_type: str,
+) -> tuple[str, str]:
+    base, service_role_key, bucket = _ensure_storage_config()
+    storage_path = _build_clothing_storage_path(user_id, filename, content_type)
+    sign_endpoint = f"{base}/storage/v1/object/upload/sign/{bucket}/{storage_path}"
+    headers = {
+        "Authorization": f"Bearer {service_role_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        timeout = settings.SUPABASE_STORAGE_TIMEOUT_SECONDS
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(
+                sign_endpoint,
+                json={"upsert": False},
+                headers=headers,
+            )
+            response.raise_for_status()
+            payload = response.json()
+    except httpx.HTTPError as exc:
+        raise StorageError(f"failed to create signed upload url: {exc}") from exc
+
+    signed_url = payload.get("signedURL") or payload.get("signedUrl")
+    token = payload.get("token")
+
+    if signed_url:
+        upload_url = (
+            signed_url if signed_url.startswith("http") else f"{base}{signed_url}"
+        )
+        return upload_url, storage_path
+
+    if token:
+        upload_url = (
+            f"{base}/storage/v1/object/upload/sign/"
+            f"{bucket}/{storage_path}?token={token}"
+        )
+        return upload_url, storage_path
+
+    raise StorageError("signed upload url response missing signed URL")

@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from app.core.config import settings
 from app.dependencies import auth
 from app.domain.clothes import crud
+from app.services import storage_client
 
 
 def _sample_item(clothing_id: uuid.UUID | None = None) -> dict:
@@ -270,3 +271,49 @@ def test_clothes_returns_401_when_supabase_rejects_token(
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid authentication credentials"
+
+
+def test_create_clothing_upload_url_returns_signed_url(client, monkeypatch) -> None:
+    expected_user_id = _mock_supabase_user(monkeypatch)
+
+    async def fake_create_signed_upload_url(*, user_id, filename, content_type):
+        assert user_id == expected_user_id
+        assert filename == "shirt.jpg"
+        assert content_type == "image/jpeg"
+        return (
+            "https://proj.supabase.co/storage/v1/object/upload/sign/clothes-images/..."
+            "?token=test-token",
+            f"clothes/{user_id}/abc123.jpg",
+        )
+
+    monkeypatch.setattr(
+        storage_client,
+        "create_signed_upload_url",
+        fake_create_signed_upload_url,
+    )
+
+    response = client.post(
+        "/api/v1/clothes/upload-url",
+        json={"filename": "shirt.jpg", "content_type": "image/jpeg"},
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "token=test-token" in body["upload_url"]
+    assert body["storage_path"].startswith(f"clothes/{expected_user_id}/")
+
+
+def test_create_clothing_upload_url_rejects_invalid_content_type(
+    client,
+    monkeypatch,
+) -> None:
+    _mock_supabase_user(monkeypatch)
+
+    response = client.post(
+        "/api/v1/clothes/upload-url",
+        json={"filename": "shirt.gif", "content_type": "image/gif"},
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 422

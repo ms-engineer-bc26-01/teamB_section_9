@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -59,3 +60,13 @@ class ClothingItem(BaseModel):
 class ClothesListResponse(BaseModel):
     items: list[ClothingItem]
     total: int
+
+
+class ClothingUploadUrlRequest(BaseModel):
+    filename: str = Field(min_length=1, max_length=255)
+    content_type: Literal["image/jpeg", "image/png", "image/webp"]
+
+
+class UploadUrlResponse(BaseModel):
+    upload_url: str = Field(min_length=1, max_length=2048)
+    storage_path: str = Field(min_length=1, max_length=512)
