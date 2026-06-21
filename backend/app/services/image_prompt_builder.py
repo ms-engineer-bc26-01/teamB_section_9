@@ -15,6 +15,8 @@ try:
 except OSError as exc:  # pragma: no cover - 起動時に存在を担保するための保険
     raise RuntimeError(f"outfit_image.md が見つかりません: {_PROMPT_PATH}") from exc
 
+_DEFAULT_GENDER_INPUT = "女性"
+_DEFAULT_GENDER_FOR_PROMPT = "women"
 # comment が無いコーデでもプロンプトが破綻しないためのフォールバック。
 _DEFAULT_COMMENT = "a well-coordinated everyday outfit"
 # items が空のときの items セクション（防御的フォールバック。通常は1点以上）。
@@ -39,13 +41,31 @@ class OutfitItemLike(Protocol):
 def build_image_prompt(
     comment: str | None,
     items: Sequence[OutfitItemLike],
+    gender: str = _DEFAULT_GENDER_INPUT,
 ) -> str:
     """コーデ内容から画像生成プロンプト文字列を組み立てる。"""
     items_block = _format_items(items)
     comment_text = (comment or "").strip() or _DEFAULT_COMMENT
-    return _PROMPT_TEMPLATE.replace("{{ items }}", items_block).replace(
-        "{{ comment }}", comment_text
+    gender_text = _normalize_gender_for_prompt(gender)
+    return (
+        _PROMPT_TEMPLATE.replace("{{ items }}", items_block)
+        .replace("{{ comment }}", comment_text)
+        .replace("{{ gender }}", gender_text)
     )
+
+
+def _normalize_gender_for_prompt(gender: str | None) -> str:
+    """呼び出し側の gender 値をプロンプトで扱いやすい women / men に正規化する。"""
+    raw = (gender or "").strip()
+    if not raw:
+        return _DEFAULT_GENDER_FOR_PROMPT
+
+    lowered = raw.casefold()
+    if raw == "女性" or lowered in {"woman", "women", "female", "women's"}:
+        return "women"
+    if raw == "男性" or lowered in {"man", "men", "male", "men's"}:
+        return "men"
+    return raw
 
 
 def _format_items(items: Sequence[OutfitItemLike]) -> str:

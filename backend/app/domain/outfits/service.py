@@ -16,6 +16,8 @@ try:
 except OSError as exc:
     raise RuntimeError(f"outfit_suggest.md が見つかりません: {_PROMPT_PATH}") from exc
 
+_DEFAULT_GENDER = "女性"
+
 
 class OutfitSuggestionError(Exception):
     pass
@@ -53,6 +55,7 @@ class OutfitService:
         tpo: str,
         clothes: list[ClothingItem],
         weather: OutfitPromptWeather,
+        gender: str = _DEFAULT_GENDER,
         clothing_ids: list[uuid.UUID] | None = None,
         exclude_clothing_ids: list[uuid.UUID] | None = None,
     ) -> "OutfitSuggestion":
@@ -72,12 +75,14 @@ class OutfitService:
         clothes_summary = self._format_clothes(pool)
         weather_summary = self._format_weather(weather)
         must_include = self._format_must_include(pool, clothing_ids)
+        gender_text = gender.strip() or _DEFAULT_GENDER
 
         prompt = (
             _PROMPT_TEMPLATE.replace("{{ clothes }}", clothes_summary)
             .replace("{{ weather }}", weather_summary)
             .replace("{{ tpo }}", tpo)
             .replace("{{ must_include }}", must_include)
+            .replace("{{ gender }}", gender_text)
         )
 
         try:
