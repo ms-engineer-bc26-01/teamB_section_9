@@ -95,10 +95,12 @@ async def test_openai_client_generates_structured_output(monkeypatch) -> None:
     monkeypatch.setattr("app.services.openai_client.AsyncOpenAI", FakeAsyncOpenAI)
 
     client = OpenAIClient()
-    payload = await client.generate_structured("prompt", response_format=Payload)
+    payload, usage = await client.generate_structured("prompt", response_format=Payload)
 
     assert payload.comment == "ポイント"
     assert payload.items[0].name == "白いリネンシャツ"
+    # レスポンスに usage が無い場合は None（best-effort）
+    assert usage is None
 
 
 @pytest.mark.asyncio
@@ -130,7 +132,14 @@ async def test_openai_client_raises_on_structured_output_refusal(monkeypatch) ->
             return type(
                 "FakeResponse",
                 (),
-                {"output_parsed": None, "output": [message_output]},
+                {
+                    "output_parsed": None,
+                    "output": [message_output],
+                    # refusal でも token は消費済み。usage が載っていることを模す。
+                    "usage": SimpleNamespace(
+                        input_tokens=7, output_tokens=0, total_tokens=7
+                    ),
+                },
             )()
 
     class FakeAsyncOpenAI:
@@ -144,8 +153,13 @@ async def test_openai_client_raises_on_structured_output_refusal(monkeypatch) ->
 
     client = OpenAIClient()
 
-    with pytest.raises(LLMStructuredResponseError, match="cannot comply"):
+    with pytest.raises(LLMStructuredResponseError, match="cannot comply") as exc_info:
         await client.generate_structured("prompt", response_format=Payload)
+
+    # 失敗時も消費 token を取りこぼさないよう、例外に usage を載せて伝える
+    assert exc_info.value.usage is not None
+    assert exc_info.value.usage.op == "generate_structured"
+    assert exc_info.value.usage.total_tokens == 7
 
 
 @pytest.mark.asyncio
@@ -192,9 +206,16 @@ async def test_generate_structured_logs_token_usage(monkeypatch, caplog) -> None
     client = OpenAIClient()
 
     with caplog.at_level(logging.INFO, logger="climo"):
-        await client.generate_structured("prompt", response_format=Payload)
+        _, usage = await client.generate_structured("prompt", response_format=Payload)
 
     assert "llm_usage" in caplog.text
     assert "op=generate_structured" in caplog.text
     assert "model=gpt-test" in caplog.text
     assert "total_tokens=33" in caplog.text
+    # 永続化のため呼び出し側へ usage を返すこと（戻り値配管の回帰）
+    assert usage is not None
+    assert usage.op == "generate_structured"
+    assert usage.model == "gpt-test"
+    assert usage.input_tokens == 11
+    assert usage.output_tokens == 22
+    assert usage.total_tokens == 33

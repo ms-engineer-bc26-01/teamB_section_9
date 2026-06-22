@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict
 from app.api.v1.schemas.clothes import ClothingItem
 from app.services.base_llm import LLMStructuredResponseError
 from app.services.llm_client import get_llm_client
+from app.services.usage import LlmUsage
 from app.services.weather_client import OutfitPromptWeather
 
 _PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "outfit_suggest.md"
@@ -20,7 +21,15 @@ _DEFAULT_GENDER = "女性"
 
 
 class OutfitSuggestionError(Exception):
-    pass
+    """コーデ提案の失敗。
+
+    LLM が refusal / parse 失敗を返した場合でも token は消費済みのため、取得できて
+    いれば `usage` を載せて router 側で best-effort 永続化できるようにする。
+    """
+
+    def __init__(self, message: str, *, usage: "LlmUsage | None" = None) -> None:
+        super().__init__(message)
+        self.usage = usage
 
 
 class LLMOutfitSuggestionItem(BaseModel):
@@ -86,11 +95,16 @@ class OutfitService:
         )
 
         try:
-            payload = await self.llm.generate_structured(
+            payload, usage = await self.llm.generate_structured(
                 prompt,
                 response_format=LLMOutfitSuggestionPayload,
             )
-        except (APIError, LLMStructuredResponseError) as exc:
+        except LLMStructuredResponseError as exc:
+            # refusal/parse 失敗。消費 token を取りこぼさないよう usage を引き継ぐ
+            raise OutfitSuggestionError(
+                "failed to generate outfit suggestion", usage=exc.usage
+            ) from exc
+        except APIError as exc:
             raise OutfitSuggestionError("failed to generate outfit suggestion") from exc
 
         clothes_by_id = {str(item.id): item for item in pool}
@@ -125,6 +139,7 @@ class OutfitService:
         return OutfitSuggestion(
             comment=payload.comment.strip(),
             items=items,
+            usage=usage,
         )
 
     @staticmethod
@@ -400,3 +415,5 @@ class SuggestedOutfitItemResult:
 class OutfitSuggestion:
     comment: str
     items: list[SuggestedOutfitItemResult]
+    # LLM 呼び出しの token 使用量（取得不可なら None）。上位層で永続化に使う。
+    usage: LlmUsage | None = None

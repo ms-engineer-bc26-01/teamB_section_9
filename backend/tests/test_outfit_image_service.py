@@ -7,6 +7,7 @@ import pytest
 from app.domain.outfits import image_service
 from app.services.image_client import ImageGenerationError
 from app.services.storage_client import StorageError
+from app.services.usage import LlmUsage
 
 OUTFIT_ID = uuid.UUID("00000000-0000-0000-0000-000000000777")
 
@@ -31,7 +32,7 @@ async def test_generate_coordinate_image_url_success(monkeypatch):
     class FakeClient:
         async def generate_image(self, prompt):
             captured["prompt"] = prompt
-            return b"png-bytes"
+            return b"png-bytes", None
 
     async def fake_upload(*, path, data, content_type="image/png", upsert=True):
         captured["path"] = path
@@ -44,12 +45,14 @@ async def test_generate_coordinate_image_url_success(monkeypatch):
     monkeypatch.setattr(image_service, "upload_image", fake_upload)
 
     # Act
-    url = await image_service.generate_coordinate_image_url(
+    url, usage = await image_service.generate_coordinate_image_url(
         outfit_id=OUTFIT_ID, comment="カジュアル", items=_items()
     )
 
     # Assert
     assert url.endswith(f"outfits/{OUTFIT_ID}.png")
+    # FakeClient は usage を返さないため None（best-effort）
+    assert usage is None
     assert captured["path"] == f"outfits/{OUTFIT_ID}.png"
     assert captured["data"] == b"png-bytes"
     assert "tops" in captured["prompt"]  # PromptBuilder の出力が渡っている
@@ -65,12 +68,13 @@ async def test_generate_coordinate_image_url_returns_none_on_image_error(monkeyp
     monkeypatch.setattr(image_service, "OpenAIImageClient", lambda: FakeClient())
 
     # Act
-    url = await image_service.generate_coordinate_image_url(
+    url, usage = await image_service.generate_coordinate_image_url(
         outfit_id=OUTFIT_ID, comment="c", items=_items()
     )
 
-    # Assert: best-effort で None
+    # Assert: best-effort で None。生成前の失敗なので usage も None
     assert url is None
+    assert usage is None
 
 
 @pytest.mark.asyncio
@@ -80,7 +84,7 @@ async def test_generate_coordinate_image_url_returns_none_on_storage_error(
     # Arrange
     class FakeClient:
         async def generate_image(self, prompt):
-            return b"png-bytes"
+            return b"png-bytes", None
 
     async def fake_upload(**kwargs):
         raise StorageError("upload failed")
@@ -90,7 +94,7 @@ async def test_generate_coordinate_image_url_returns_none_on_storage_error(
 
     # Act
     with caplog.at_level(logging.WARNING, logger="climo"):
-        url = await image_service.generate_coordinate_image_url(
+        url, _usage = await image_service.generate_coordinate_image_url(
             outfit_id=OUTFIT_ID, comment="c", items=_items()
         )
 
@@ -111,12 +115,13 @@ async def test_generate_coordinate_image_url_returns_none_when_api_key_missing(
     monkeypatch.setattr(image_service, "OpenAIImageClient", _raise)
 
     # Act
-    url = await image_service.generate_coordinate_image_url(
+    url, usage = await image_service.generate_coordinate_image_url(
         outfit_id=OUTFIT_ID, comment="c", items=_items()
     )
 
     # Assert
     assert url is None
+    assert usage is None
 
 
 USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -144,7 +149,7 @@ async def test_generate_and_store_saves_url_on_success(monkeypatch):
     image_url = "https://proj.supabase.co/storage/v1/object/public/x/outfits/x.png"
 
     async def fake_generate(*, outfit_id, comment, items):
-        return image_url
+        return image_url, None
 
     async def fake_set_url(db, user_id, outfit_id, *, coordinate_image_url):
         captured["db"] = db
@@ -178,7 +183,7 @@ async def test_generate_and_store_logs_when_outfit_missing_on_update(
     store: dict = {}
 
     async def fake_generate(*, outfit_id, comment, items):
-        return "https://proj.supabase.co/storage/v1/object/public/x/outfits/x.png"
+        return "https://proj.supabase.co/storage/v1/object/public/x/outfits/x.png", None
 
     async def fake_set_url(db, user_id, outfit_id, *, coordinate_image_url):
         return None  # 対象が見つからず更新できなかった
@@ -204,7 +209,7 @@ async def test_generate_and_store_skips_save_when_no_image(monkeypatch):
     called = {"set_url": False}
 
     async def fake_generate(*, outfit_id, comment, items):
-        return None
+        return None, None
 
     async def fake_set_url(*args, **kwargs):
         called["set_url"] = True
@@ -219,6 +224,46 @@ async def test_generate_and_store_skips_save_when_no_image(monkeypatch):
 
     # Assert
     assert called["set_url"] is False
+
+
+@pytest.mark.asyncio
+async def test_generate_and_store_persists_llm_usage(monkeypatch):
+    """画像生成成功時、token 使用量が record_llm_usage で永続化される。"""
+    # Arrange
+    captured: dict = {}
+    usage = LlmUsage(
+        op="generate_image",
+        model="gpt-image-test",
+        input_tokens=5,
+        output_tokens=0,
+        total_tokens=5,
+    )
+
+    image_url = "https://proj.supabase.co/storage/v1/object/public/x/outfits/x.png"
+
+    async def fake_generate(*, outfit_id, comment, items):
+        return image_url, usage
+
+    async def fake_set_url(db, user_id, outfit_id, *, coordinate_image_url):
+        return object()
+
+    async def fake_record(db, *, user_id, usage):
+        captured["user_id"] = user_id
+        captured["usage"] = usage
+
+    monkeypatch.setattr(image_service, "generate_coordinate_image_url", fake_generate)
+    monkeypatch.setattr(image_service, "SessionLocal", lambda: _FakeSession({}))
+    monkeypatch.setattr(image_service, "set_coordinate_image_url", fake_set_url)
+    monkeypatch.setattr(image_service, "record_llm_usage", fake_record)
+
+    # Act
+    await image_service.generate_and_store_coordinate_image(
+        outfit_id=OUTFIT_ID, user_id=USER_ID, comment="c", items=_items()
+    )
+
+    # Assert
+    assert captured["user_id"] == USER_ID
+    assert captured["usage"] is usage
 
 
 @pytest.mark.asyncio

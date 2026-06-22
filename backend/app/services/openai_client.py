@@ -6,7 +6,7 @@ from app.services.base_llm import (
     LLMStructuredResponseError,
     StructuredResponseT,
 )
-from app.services.usage import log_llm_usage
+from app.services.usage import LlmUsage, extract_llm_usage, log_llm_usage
 
 
 class OpenAIClient(BaseLLMClient):
@@ -34,21 +34,27 @@ class OpenAIClient(BaseLLMClient):
         prompt: str,
         *,
         response_format: type[StructuredResponseT],
-    ) -> StructuredResponseT:
+    ) -> tuple[StructuredResponseT, LlmUsage | None]:
         response = await self.client.responses.parse(
             model=settings.OPENAI_MODEL,
             input=prompt,
             text_format=response_format,
         )
 
+        usage = getattr(response, "usage", None)
         log_llm_usage(
             op="generate_structured",
             model=settings.OPENAI_MODEL,
-            usage=getattr(response, "usage", None),
+            usage=usage,
+        )
+        llm_usage = extract_llm_usage(
+            op="generate_structured",
+            model=settings.OPENAI_MODEL,
+            usage=usage,
         )
 
         if response.output_parsed is not None:
-            return response.output_parsed
+            return response.output_parsed, llm_usage
 
         refusal_message = None
         for output in response.output:
@@ -61,9 +67,11 @@ class OpenAIClient(BaseLLMClient):
             if refusal_message:
                 break
 
+        # refusal / parse 失敗でも token は消費済み。usage を載せて上位で永続化する。
         if refusal_message:
-            raise LLMStructuredResponseError(refusal_message)
+            raise LLMStructuredResponseError(refusal_message, usage=llm_usage)
 
         raise LLMStructuredResponseError(
-            f"failed to parse structured response as {response_format.__name__}"
+            f"failed to parse structured response as {response_format.__name__}",
+            usage=llm_usage,
         )
