@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -38,6 +38,11 @@ type HistoryState = {
   errorMessage: string | null;
   isLoading: boolean;
   isLoadingMore: boolean;
+};
+
+type LoadOutfitsOptions = {
+  append?: boolean;
+  offset?: number;
 };
 
 function formatCreatedAt(value: string) {
@@ -117,6 +122,7 @@ export default function OutfitsHistoryPage() {
   const [savingFavoriteIds, setSavingFavoriteIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const requestIdRef = useRef(0);
 
   const token = session?.access_token;
   const hasMore = items.length < total;
@@ -124,10 +130,14 @@ export default function OutfitsHistoryPage() {
     filterMode === "favorite" ? "お気に入り" : "すべて";
 
   const loadOutfits = useCallback(
-    async ({ append = false }: { append?: boolean } = {}) => {
+    async ({ append = false, offset = 0 }: LoadOutfitsOptions = {}) => {
       if (!isInitialized) {
         return;
       }
+
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+      const isLatestRequest = () => requestId === requestIdRef.current;
 
       if (!token) {
         setState({
@@ -152,10 +162,14 @@ export default function OutfitsHistoryPage() {
           {
             isFavorite: filterMode === "favorite" ? true : undefined,
             limit: PAGE_SIZE,
-            offset: append ? items.length : 0,
+            offset,
           },
           token,
         );
+
+        if (!isLatestRequest()) {
+          return;
+        }
 
         setState((current) => ({
           items: append ? [...current.items, ...response.items] : response.items,
@@ -165,6 +179,10 @@ export default function OutfitsHistoryPage() {
           isLoadingMore: false,
         }));
       } catch (error) {
+        if (!isLatestRequest()) {
+          return;
+        }
+
         setState((current) => ({
           ...current,
           errorMessage:
@@ -176,7 +194,7 @@ export default function OutfitsHistoryPage() {
         }));
       }
     },
-    [filterMode, isInitialized, items.length, token],
+    [filterMode, isInitialized, token],
   );
 
   useEffect(() => {
@@ -436,7 +454,7 @@ export default function OutfitsHistoryPage() {
           variant="outline"
           className="h-12 w-full rounded-lg border-[#D8C9BB] bg-white text-[#6B4F3A]"
           disabled={isLoadingMore}
-          onClick={() => void loadOutfits({ append: true })}
+          onClick={() => void loadOutfits({ append: true, offset: items.length })}
         >
           {isLoadingMore ? (
             <>
