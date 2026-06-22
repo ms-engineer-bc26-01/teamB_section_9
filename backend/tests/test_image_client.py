@@ -51,10 +51,14 @@ async def test_generate_image_returns_decoded_bytes(monkeypatch):
     )
 
     # Act
-    result = await OpenAIImageClient().generate_image("white shirt and black pants")
+    result, usage = await OpenAIImageClient().generate_image(
+        "white shirt and black pants"
+    )
 
     # Assert
     assert result == _PNG_BYTES
+    # レスポンスに usage が無い場合は None（best-effort）
+    assert usage is None
     assert captured["model"] == "gpt-image-test"
     assert captured["size"] == "512x512"
     assert captured["prompt"] == "white shirt and black pants"

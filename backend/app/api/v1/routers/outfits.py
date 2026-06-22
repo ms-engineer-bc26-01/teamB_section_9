@@ -25,6 +25,7 @@ from app.domain.outfits import crud as outfits_crud
 from app.domain.outfits.crud import OutfitItemNotOwnedError
 from app.domain.outfits.image_service import generate_and_store_coordinate_image
 from app.domain.outfits.service import OutfitService, OutfitSuggestionError
+from app.domain.usage.crud import record_llm_usage
 from app.services.weather_client import (
     WeatherForecastResponseError,
     extract_outfit_prompt_weather,
@@ -229,6 +230,14 @@ async def suggest_outfit(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="failed to generate outfit suggestion",
         ) from exc
+
+    # token 使用量を best-effort で永続化（コスト観測用）。失敗しても提案は返す。
+    try:
+        await record_llm_usage(db, user_id=current_user.id, usage=result.usage)
+    except Exception as exc:  # noqa: BLE001 - 永続化失敗をリクエストに波及させない
+        logger.warning(
+            "failed to persist llm usage (user=%s): %s", current_user.id, exc
+        )
 
     # suggest は非保存（テキスト提案）。履歴化は別途 POST /outfits（オンデマンド）。
     # id / created_at はレスポンス用に一時生成する。

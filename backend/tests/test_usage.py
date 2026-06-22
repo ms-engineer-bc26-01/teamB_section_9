@@ -1,7 +1,7 @@
 import logging
 from types import SimpleNamespace
 
-from app.services.usage import log_llm_usage
+from app.services.usage import extract_llm_usage, log_llm_usage
 
 
 def test_log_llm_usage_emits_tokens(caplog):
@@ -63,3 +63,37 @@ def test_log_llm_usage_does_not_leak_prompt_or_response(caplog):
     # Assert
     assert "SECRET_PROMPT_BODY" not in caplog.text
     assert "SECRET_RESPONSE_BODY" not in caplog.text
+
+
+def test_extract_llm_usage_returns_normalized_dataclass():
+    # Arrange
+    usage = SimpleNamespace(input_tokens=11, output_tokens=22, total_tokens=33)
+
+    # Act
+    result = extract_llm_usage(op="generate_structured", model="gpt-5", usage=usage)
+
+    # Assert
+    assert result is not None
+    assert result.op == "generate_structured"
+    assert result.model == "gpt-5"
+    assert result.input_tokens == 11
+    assert result.output_tokens == 22
+    assert result.total_tokens == 33
+
+
+def test_extract_llm_usage_returns_none_when_usage_none():
+    assert extract_llm_usage(op="generate", model="gpt-5", usage=None) is None
+
+
+def test_extract_llm_usage_keeps_missing_fields_as_none():
+    # Arrange: 一部フィールドが欠ける usage は None のまま保持（計算で埋めない）
+    usage = SimpleNamespace(total_tokens=10)
+
+    # Act
+    result = extract_llm_usage(op="generate_image", model="gpt-image-1", usage=usage)
+
+    # Assert
+    assert result is not None
+    assert result.total_tokens == 10
+    assert result.input_tokens is None
+    assert result.output_tokens is None

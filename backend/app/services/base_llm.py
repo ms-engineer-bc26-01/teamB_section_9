@@ -3,6 +3,8 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
+from app.services.usage import LlmUsage
+
 StructuredResponseT = TypeVar("StructuredResponseT", bound=BaseModel)
 
 
@@ -21,5 +23,6 @@ class BaseLLMClient(ABC):
         prompt: str,
         *,
         response_format: type[StructuredResponseT],
-    ) -> StructuredResponseT:
+    ) -> tuple[StructuredResponseT, LlmUsage | None]:
+        """構造化レスポンスと token 使用量（取得不可なら None）を返す。"""
         pass

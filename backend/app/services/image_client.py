@@ -10,7 +10,7 @@ import base64
 from openai import APIError, AsyncOpenAI
 
 from app.core.config import settings
-from app.services.usage import log_llm_usage
+from app.services.usage import LlmUsage, extract_llm_usage, log_llm_usage
 
 
 class ImageGenerationError(Exception):
@@ -27,8 +27,11 @@ class OpenAIImageClient:
             timeout=settings.OPENAI_IMAGE_TIMEOUT_SECONDS,
         )
 
-    async def generate_image(self, prompt: str) -> bytes:
-        """プロンプトから画像を生成し、PNG バイト列を返す。"""
+    async def generate_image(self, prompt: str) -> tuple[bytes, LlmUsage | None]:
+        """プロンプトから画像を生成し、PNG バイト列と token 使用量を返す。
+
+        使用量は取得不可なら None（best-effort）。
+        """
         try:
             response = await self.client.images.generate(
                 model=settings.OPENAI_IMAGE_MODEL,
@@ -39,10 +42,16 @@ class OpenAIImageClient:
         except APIError as exc:
             raise ImageGenerationError("failed to generate outfit image") from exc
 
+        usage = getattr(response, "usage", None)
         log_llm_usage(
             op="generate_image",
             model=settings.OPENAI_IMAGE_MODEL,
-            usage=getattr(response, "usage", None),
+            usage=usage,
+        )
+        llm_usage = extract_llm_usage(
+            op="generate_image",
+            model=settings.OPENAI_IMAGE_MODEL,
+            usage=usage,
         )
 
         data = getattr(response, "data", None)
@@ -54,6 +63,6 @@ class OpenAIImageClient:
             raise ImageGenerationError("image generation returned no image content")
 
         try:
-            return base64.b64decode(b64)
+            return base64.b64decode(b64), llm_usage
         except (ValueError, TypeError) as exc:
             raise ImageGenerationError("failed to decode generated image") from exc

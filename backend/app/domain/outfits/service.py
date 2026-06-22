@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict
 from app.api.v1.schemas.clothes import ClothingItem
 from app.services.base_llm import LLMStructuredResponseError
 from app.services.llm_client import get_llm_client
+from app.services.usage import LlmUsage
 from app.services.weather_client import OutfitPromptWeather
 
 _PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "outfit_suggest.md"
@@ -81,7 +82,7 @@ class OutfitService:
         )
 
         try:
-            payload = await self.llm.generate_structured(
+            payload, usage = await self.llm.generate_structured(
                 prompt,
                 response_format=LLMOutfitSuggestionPayload,
             )
@@ -120,6 +121,7 @@ class OutfitService:
         return OutfitSuggestion(
             comment=payload.comment.strip(),
             items=items,
+            usage=usage,
         )
 
     @staticmethod
@@ -395,3 +397,5 @@ class SuggestedOutfitItemResult:
 class OutfitSuggestion:
     comment: str
     items: list[SuggestedOutfitItemResult]
+    # LLM 呼び出しの token 使用量（取得不可なら None）。上位層で永続化に使う。
+    usage: LlmUsage | None = None

@@ -11,9 +11,11 @@ from collections.abc import Sequence
 from app.core.logging import logger
 from app.db.session import SessionLocal
 from app.domain.outfits.crud import set_coordinate_image_url
+from app.domain.usage.crud import record_llm_usage
 from app.services.image_client import ImageGenerationError, OpenAIImageClient
 from app.services.image_prompt_builder import OutfitItemLike, build_image_prompt
 from app.services.storage_client import StorageError, upload_image
+from app.services.usage import LlmUsage
 
 
 async def generate_coordinate_image_url(
@@ -21,20 +23,24 @@ async def generate_coordinate_image_url(
     outfit_id: uuid.UUID,
     comment: str | None,
     items: Sequence[OutfitItemLike],
-) -> str | None:
-    """コーデ内容からコラージュ画像を生成・保存し、公開 URL を返す。
+) -> tuple[str | None, LlmUsage | None]:
+    """コーデ内容からコラージュ画像を生成・保存し、公開 URL と token 使用量を返す。
 
     失敗時（API キー未設定・生成エラー・アップロード失敗など）は警告ログを残して
-    None を返す。呼び出し側はこの None を coordinate_image_url 未設定として扱う。
+    URL に None を返す。呼び出し側はこの None を coordinate_image_url 未設定として扱う。
+    画像生成自体が成功していれば、アップロード失敗時でも usage は返す
+    （生成で token を消費しているため）。生成前の失敗では usage は None。
     """
     phase = "prompt_build"
+    usage: LlmUsage | None = None
     try:
         prompt = build_image_prompt(comment, items)
         phase = "image_generate"
         client = OpenAIImageClient()
-        data = await client.generate_image(prompt)
+        data, usage = await client.generate_image(prompt)
         phase = "storage_upload"
-        return await upload_image(path=f"outfits/{outfit_id}.png", data=data)
+        url = await upload_image(path=f"outfits/{outfit_id}.png", data=data)
+        return url, usage
     except (ImageGenerationError, StorageError, ValueError) as exc:
         # best-effort: 失敗フェーズと例外種別を残し、後から観測できるようにする。
         logger.warning(
@@ -44,7 +50,7 @@ async def generate_coordinate_image_url(
             type(exc).__name__,
             exc,
         )
-        return None
+        return None, usage
 
 
 async def generate_and_store_coordinate_image(
@@ -67,14 +73,27 @@ async def generate_and_store_coordinate_image(
     ジョブキュー（Celery / arq + Redis 等）への移行を検討する。
     """
     try:
-        url = await generate_coordinate_image_url(
+        url, usage = await generate_coordinate_image_url(
             outfit_id=outfit_id,
             comment=comment,
             items=items,
         )
-        if url is None:
+        if url is None and usage is None:
             return
         async with SessionLocal() as db:
+            # token 使用量を best-effort で永続化（生成成功なら url が None でも残す）。
+            # ここでの失敗は URL 保存をブロックしないよう独立して握りつぶす。
+            try:
+                await record_llm_usage(db, user_id=user_id, usage=usage)
+            except Exception as exc:  # noqa: BLE001
+                await db.rollback()
+                logger.warning(
+                    "failed to persist image llm usage (outfit=%s): %s",
+                    outfit_id,
+                    exc,
+                )
+            if url is None:
+                return
             updated = await set_coordinate_image_url(
                 db,
                 user_id,

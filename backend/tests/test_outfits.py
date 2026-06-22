@@ -95,7 +95,7 @@ async def test_outfit_service_uses_prompt_template_independent_of_cwd(
                         clothes_id="00000000-0000-0000-0000-000000000010",
                     )
                 ],
-            )
+            ), None
 
     monkeypatch.setattr(
         "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
@@ -189,7 +189,7 @@ async def test_suggest_resolves_id_prefixed_clothes_id_and_prefers_db_values(
                         clothes_id="id=00000000-0000-0000-0000-0000000000aa ",
                     )
                 ],
-            )
+            ), None
 
     monkeypatch.setattr(
         "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
@@ -233,7 +233,7 @@ async def test_suggest_returns_null_clothing_item_for_unowned(monkeypatch) -> No
                         clothes_id="99999999-9999-9999-9999-999999999999",
                     ),
                 ],
-            )
+            ), None
 
     monkeypatch.setattr(
         "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
@@ -342,7 +342,7 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
                         clothes_id="00000000-0000-0000-0000-000000000010",
                     )
                 ],
-            )
+            ), None
 
     monkeypatch.setattr(
         "app.dependencies.auth.verify_supabase_jwt", fake_verify_supabase_jwt
@@ -478,7 +478,7 @@ def test_suggest_outfit_response_mixes_owned_and_suggested_items(
                         clothes_id=None,
                     ),
                 ],
-            )
+            ), None
 
     monkeypatch.setattr(
         outfits_router, "fetch_weather_forecast_cached", fake_fetch_weather_forecast
@@ -552,7 +552,10 @@ def test_suggest_outfit_uses_fallback_region_when_user_default_missing(
         async def generate_structured(self, prompt: str, *, response_format):
             assert "服の登録はありません。" in prompt
             assert response_format is LLMOutfitSuggestionPayload
-            return LLMOutfitSuggestionPayload(comment="generated-coordinate", items=[])
+            payload = LLMOutfitSuggestionPayload(
+                comment="generated-coordinate", items=[]
+            )
+            return payload, None
 
     monkeypatch.setattr(
         "app.dependencies.auth.verify_supabase_jwt", fake_verify_supabase_jwt
@@ -625,7 +628,10 @@ async def test_suggest_outfit_passes_must_include_ids_to_prompt(monkeypatch) -> 
         async def generate_structured(self, prompt: str, *, response_format):
             captured["prompt"] = prompt
             assert response_format is LLMOutfitSuggestionPayload
-            return LLMOutfitSuggestionPayload(comment="generated-coordinate", items=[])
+            payload = LLMOutfitSuggestionPayload(
+                comment="generated-coordinate", items=[]
+            )
+            return payload, None
 
     monkeypatch.setattr(
         "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
@@ -661,7 +667,10 @@ async def test_suggest_outfit_excludes_specified_clothing_ids_from_prompt(
         async def generate_structured(self, prompt: str, *, response_format):
             captured["prompt"] = prompt
             assert response_format is LLMOutfitSuggestionPayload
-            return LLMOutfitSuggestionPayload(comment="generated-coordinate", items=[])
+            payload = LLMOutfitSuggestionPayload(
+                comment="generated-coordinate", items=[]
+            )
+            return payload, None
 
     monkeypatch.setattr(
         "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
