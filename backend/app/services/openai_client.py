@@ -67,9 +67,11 @@ class OpenAIClient(BaseLLMClient):
             if refusal_message:
                 break
 
+        # refusal / parse 失敗でも token は消費済み。usage を載せて上位で永続化する。
         if refusal_message:
-            raise LLMStructuredResponseError(refusal_message)
+            raise LLMStructuredResponseError(refusal_message, usage=llm_usage)
 
         raise LLMStructuredResponseError(
-            f"failed to parse structured response as {response_format.__name__}"
+            f"failed to parse structured response as {response_format.__name__}",
+            usage=llm_usage,
         )

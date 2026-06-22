@@ -815,11 +815,21 @@ async def test_outfit_service_wraps_llm_api_errors(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_outfit_service_wraps_structured_output_errors(monkeypatch) -> None:
+    from app.services.usage import LlmUsage
+
+    refusal_usage = LlmUsage(
+        op="generate_structured",
+        model="gpt-test",
+        input_tokens=7,
+        output_tokens=0,
+        total_tokens=7,
+    )
+
     class FakeLLMClient:
         async def generate_structured(self, prompt: str, *, response_format):
             del prompt
             del response_format
-            raise LLMStructuredResponseError("cannot comply")
+            raise LLMStructuredResponseError("cannot comply", usage=refusal_usage)
 
     monkeypatch.setattr(
         "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
@@ -836,6 +846,8 @@ async def test_outfit_service_wraps_structured_output_errors(monkeypatch) -> Non
 
     assert str(exc_info.value) == "failed to generate outfit suggestion"
     assert isinstance(exc_info.value.__cause__, LLMStructuredResponseError)
+    # 失敗時も消費 token を取りこぼさないよう usage が引き継がれる
+    assert exc_info.value.usage is refusal_usage
 
 
 def test_suggest_outfit_requires_authentication(

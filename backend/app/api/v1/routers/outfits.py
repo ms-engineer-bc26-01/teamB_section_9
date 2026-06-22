@@ -26,6 +26,7 @@ from app.domain.outfits.crud import OutfitItemNotOwnedError
 from app.domain.outfits.image_service import generate_and_store_coordinate_image
 from app.domain.outfits.service import OutfitService, OutfitSuggestionError
 from app.domain.usage.crud import record_llm_usage
+from app.services.usage import LlmUsage
 from app.services.weather_client import (
     WeatherForecastResponseError,
     extract_outfit_prompt_weather,
@@ -39,6 +40,22 @@ AuthenticatedUser = Annotated[CurrentUser, Depends(get_current_user)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 DEFAULT_REGION_CODE = "13_01"
 CLOTHES_FETCH_LIMIT = 1000
+
+
+async def _persist_llm_usage_best_effort(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    usage: LlmUsage | None,
+) -> None:
+    """token 使用量をコスト観測用に best-effort で永続化する。
+
+    失敗してもリクエストへ波及させない。usage=None なら no-op。
+    """
+    try:
+        await record_llm_usage(db, user_id=user_id, usage=usage)
+    except Exception as exc:  # noqa: BLE001 - 永続化失敗をリクエストに波及させない
+        logger.warning("failed to persist llm usage (user=%s): %s", user_id, exc)
 
 
 @router.get("", response_model=OutfitsListResponse)
@@ -226,18 +243,19 @@ async def suggest_outfit(
             request.tpo,
             exc,
         )
+        # 失敗（refusal/parse失敗）でも消費した token は記録する（best-effort）。
+        await _persist_llm_usage_best_effort(
+            db, user_id=current_user.id, usage=exc.usage
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="failed to generate outfit suggestion",
         ) from exc
 
     # token 使用量を best-effort で永続化（コスト観測用）。失敗しても提案は返す。
-    try:
-        await record_llm_usage(db, user_id=current_user.id, usage=result.usage)
-    except Exception as exc:  # noqa: BLE001 - 永続化失敗をリクエストに波及させない
-        logger.warning(
-            "failed to persist llm usage (user=%s): %s", current_user.id, exc
-        )
+    await _persist_llm_usage_best_effort(
+        db, user_id=current_user.id, usage=result.usage
+    )
 
     # suggest は非保存（テキスト提案）。履歴化は別途 POST /outfits（オンデマンド）。
     # id / created_at はレスポンス用に一時生成する。

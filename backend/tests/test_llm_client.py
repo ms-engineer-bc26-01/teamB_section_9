@@ -132,7 +132,14 @@ async def test_openai_client_raises_on_structured_output_refusal(monkeypatch) ->
             return type(
                 "FakeResponse",
                 (),
-                {"output_parsed": None, "output": [message_output]},
+                {
+                    "output_parsed": None,
+                    "output": [message_output],
+                    # refusal でも token は消費済み。usage が載っていることを模す。
+                    "usage": SimpleNamespace(
+                        input_tokens=7, output_tokens=0, total_tokens=7
+                    ),
+                },
             )()
 
     class FakeAsyncOpenAI:
@@ -146,8 +153,13 @@ async def test_openai_client_raises_on_structured_output_refusal(monkeypatch) ->
 
     client = OpenAIClient()
 
-    with pytest.raises(LLMStructuredResponseError, match="cannot comply"):
+    with pytest.raises(LLMStructuredResponseError, match="cannot comply") as exc_info:
         await client.generate_structured("prompt", response_format=Payload)
+
+    # 失敗時も消費 token を取りこぼさないよう、例外に usage を載せて伝える
+    assert exc_info.value.usage is not None
+    assert exc_info.value.usage.op == "generate_structured"
+    assert exc_info.value.usage.total_tokens == 7
 
 
 @pytest.mark.asyncio
