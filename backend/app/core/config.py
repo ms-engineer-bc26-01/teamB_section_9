@@ -33,7 +33,11 @@ class Settings(BaseSettings):
     REDIS_WEATHER_TTL_SECONDS: int = Field(default=1800)  # 天気キャッシュ 30分
     REDIS_OUTFIT_TTL_SECONDS: int = Field(default=86400)  # コーデキャッシュ 24時間
 
-    model_config = SettingsConfigDict(env_file=".env", populate_by_name=True)
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        populate_by_name=True,
+        extra="ignore",
+    )
 
 
 settings = Settings()
