@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.schemas.clothes import (
@@ -9,10 +9,13 @@ from app.api.v1.schemas.clothes import (
     ClothingCreateRequest,
     ClothingItem,
     ClothingUpdateRequest,
+    ClothingUploadUrlRequest,
+    UploadUrlResponse,
 )
 from app.core.deps import get_db
 from app.dependencies.auth import CurrentUser, get_current_user
 from app.domain.clothes import crud
+from app.services import storage_client
 
 router = APIRouter(prefix="/clothes", tags=["Clothes"])
 
@@ -90,3 +93,26 @@ async def delete_clothing(
 ) -> Response:
     await crud.delete_clothing(db, current_user.id, clothes_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/upload-url", response_model=UploadUrlResponse)
+async def create_clothing_upload_url(
+    payload: ClothingUploadUrlRequest,
+    current_user: AuthenticatedUser,
+) -> UploadUrlResponse:
+    try:
+        upload_url, storage_path = await storage_client.create_signed_upload_url(
+            user_id=current_user.id,
+            filename=payload.filename,
+            content_type=payload.content_type,
+        )
+    except storage_client.StorageError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="failed to create upload url",
+        ) from exc
+
+    return UploadUrlResponse(
+        upload_url=upload_url,
+        storage_path=storage_path,
+    )

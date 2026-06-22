@@ -10,6 +10,9 @@ storage_path 通知」の別フロー（requirements.md:147、BE をプロキシ
 本関数は服画像には流用しない。共有するのはバケット規約のみ。
 """
 
+import uuid
+from collections.abc import Mapping
+
 import httpx
 
 from app.core.config import settings
@@ -17,6 +20,21 @@ from app.core.config import settings
 
 class StorageError(Exception):
     """Storage への保存失敗（未設定・HTTP エラー等）を表す。"""
+
+
+def _resolve_signed_upload_url(base: str, payload: Mapping[str, object]) -> str:
+    signed = payload.get("url") or payload.get("signedURL") or payload.get("signedUrl")
+
+    if not isinstance(signed, str) or not signed:
+        raise StorageError("signed upload url response missing signed URL")
+
+    if signed.startswith("http"):
+        return signed
+
+    if signed.startswith("/storage/v1"):
+        return f"{base}{signed}"
+
+    return f"{base}/storage/v1{signed}"
 
 
 async def upload_image(
@@ -58,3 +76,80 @@ async def upload_image(
         raise StorageError(f"failed to upload image to storage: {exc}") from exc
 
     return f"{base}/storage/v1/object/public/{bucket}/{object_path}"
+
+
+_ALLOWED_EXTENSIONS = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+
+
+def _ensure_storage_config() -> tuple[str, str, str]:
+    base = settings.SUPABASE_URL
+    service_role_key = settings.SUPABASE_SERVICE_ROLE_KEY
+    bucket = settings.SUPABASE_STORAGE_BUCKET
+
+    if not base or not service_role_key or not bucket:
+        raise StorageError(
+            "Supabase storage is not configured "
+            "(SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / SUPABASE_STORAGE_BUCKET)"
+        )
+
+    return (
+        base.rstrip("/"),
+        service_role_key,
+        bucket,
+    )
+
+
+def _resolve_extension(filename: str, content_type: str) -> str:
+    return _ALLOWED_EXTENSIONS[content_type]
+
+
+def _build_clothing_storage_path(
+    user_id: uuid.UUID, filename: str, content_type: str
+) -> str:
+    ext = _resolve_extension(filename, content_type)
+    return f"clothes/{user_id}/{uuid.uuid4().hex}{ext}"
+
+
+async def create_signed_upload_url(
+    *,
+    user_id: uuid.UUID,
+    filename: str,
+    content_type: str,
+) -> tuple[str, str]:
+    base, service_role_key, bucket = _ensure_storage_config()
+    storage_path = _build_clothing_storage_path(user_id, filename, content_type)
+    sign_endpoint = f"{base}/storage/v1/object/upload/sign/{bucket}/{storage_path}"
+    headers = {
+        "Authorization": f"Bearer {service_role_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        timeout = settings.SUPABASE_STORAGE_TIMEOUT_SECONDS
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(
+                sign_endpoint,
+                json={"upsert": False},
+                headers=headers,
+            )
+            response.raise_for_status()
+            try:
+                payload = response.json()
+            except ValueError as exc:
+                raise StorageError(
+                    "failed to create signed upload url: invalid JSON response"
+                ) from exc
+
+            if not isinstance(payload, dict):
+                raise StorageError(
+                    "failed to create signed upload url: unexpected response payload"
+                )
+    except httpx.HTTPError as exc:
+        raise StorageError(f"failed to create signed upload url: {exc}") from exc
+
+    upload_url = _resolve_signed_upload_url(base, payload)
+    return upload_url, storage_path
