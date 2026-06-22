@@ -11,6 +11,7 @@ storage_path 通知」の別フロー（requirements.md:147、BE をプロキシ
 """
 
 import uuid
+from collections.abc import Mapping
 
 import httpx
 
@@ -21,7 +22,7 @@ class StorageError(Exception):
     """Storage への保存失敗（未設定・HTTP エラー等）を表す。"""
 
 
-def _resolve_signed_upload_url(base: str, payload: dict[str, object]) -> str:
+def _resolve_signed_upload_url(base: str, payload: Mapping[str, object]) -> str:
     signed = payload.get("url") or payload.get("signedURL") or payload.get("signedUrl")
 
     if not isinstance(signed, str) or not signed:

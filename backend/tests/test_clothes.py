@@ -1,12 +1,14 @@
 import uuid
 from datetime import UTC, datetime
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
 from app.dependencies import auth
 from app.domain.clothes import crud
 from app.services import storage_client
+from app.services.storage_client import StorageError
 
 
 def _sample_item(clothing_id: uuid.UUID | None = None) -> dict:
@@ -317,3 +319,18 @@ def test_create_clothing_upload_url_rejects_invalid_content_type(
     )
 
     assert response.status_code == 422
+
+
+def test_resolve_signed_upload_url_builds_absolute_url_from_relative():
+    base = "https://proj.supabase.co"
+    payload = {"url": "/object/upload/sign/clothes-images/clothes/u/abc.jpg?token=xyz"}
+    result = storage_client._resolve_signed_upload_url(base, payload)
+    assert result == (
+        "https://proj.supabase.co/storage/v1/object/upload/sign/"
+        "clothes-images/clothes/u/abc.jpg?token=xyz"
+    )
+
+
+def test_resolve_signed_upload_url_missing_url_raises():
+    with pytest.raises(StorageError):
+        storage_client._resolve_signed_upload_url("https://proj.supabase.co", {})
