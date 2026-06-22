@@ -9,6 +9,7 @@ from app.db.base import Base
 
 for module_name in (
     "app.db.models.clothes",
+    "app.db.models.llm_usage_log",
     "app.db.models.outfit",
     "app.db.models.subscription",
     "app.db.models.usage_log",
