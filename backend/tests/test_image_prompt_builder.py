@@ -50,6 +50,7 @@ def test_build_image_prompt_includes_all_item_names_and_roles():
         assert item.name in prompt
         assert item.role in prompt
     assert "カジュアルな白基調コーデ" in prompt
+    assert "Target gender for styling: women" in prompt
 
 
 def test_build_image_prompt_orders_items_by_display_order():
@@ -124,3 +125,13 @@ def test_build_image_prompt_handles_empty_items():
     # Assert: 空 items でも例外を出さず文字列を返す
     assert isinstance(prompt, str)
     assert "comment" in prompt
+
+
+def test_build_image_prompt_allows_gender_override():
+    # Arrange / Act
+    prompt_male = build_image_prompt("comment", _items(), gender="男性")
+    prompt_female = build_image_prompt("comment", _items(), gender="female")
+
+    # Assert
+    assert "Target gender for styling: men" in prompt_male
+    assert "Target gender for styling: women" in prompt_female

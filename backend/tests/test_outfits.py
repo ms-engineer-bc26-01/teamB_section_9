@@ -143,6 +143,7 @@ async def test_outfit_service_uses_prompt_template_independent_of_cwd(
     assert "現在の気温: 25.0C" in captured["prompt"]
     assert "現在の天気: 晴れ" in captured["prompt"]
     assert "今日の降水確率: 10%" in captured["prompt"]
+    assert "ユーザーの性別:\n女性" in captured["prompt"]
     assert [item.role for item in result.items] == ["tops"]
     # clothes_id が手持ちに一致するので clothing_item が解決される
     assert result.items[0].clothing_item is not None
