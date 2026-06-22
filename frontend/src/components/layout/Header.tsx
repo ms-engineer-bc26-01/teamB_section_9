@@ -7,9 +7,11 @@ import { usePathname } from "next/navigation";
 
 const pageTitles: Record<string, string> = {
   "/mypage": "マイページ",
+  "/favorites": "お気に入り",
   "/settings": "設定",
   "/clothes": "服一覧",
   "/clothes/register": "服登録",
+  "/outfits/closet": "クローゼット提案",
   "/outfits/scenes": "シーン選択",
   "/outfits/loading": "提案生成中",
   "/outfits/detail": "コーデ詳細",

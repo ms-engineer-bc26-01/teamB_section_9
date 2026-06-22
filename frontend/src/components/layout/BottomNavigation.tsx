@@ -1,14 +1,19 @@
+"use client";
+
 import Link from "next/link";
 import { Heart, Home, PencilLine, User } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 const navItems = [
-  { href: "/", label: "ホーム", icon: Home, active: true },
-  { href: "/clothes/register", label: "登録", icon: PencilLine, active: false },
-  { href: "/favorites", label: "お気に入り", icon: Heart, active: false },
-  { href: "/mypage", label: "マイページ", icon: User, active: false },
+  { href: "/", label: "ホーム", icon: Home },
+  { href: "/clothes/register", label: "登録", icon: PencilLine },
+  { href: "/favorites", label: "お気に入り", icon: Heart },
+  { href: "/mypage", label: "マイページ", icon: User },
 ];
 
 export function BottomNavigation() {
+  const pathname = usePathname();
+
   return (
     <nav
       className="
@@ -25,6 +30,8 @@ export function BottomNavigation() {
       >
         {navItems.map((item) => {
           const Icon = item.icon;
+          const isActive =
+            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
 
           return (
             <Link
@@ -36,12 +43,13 @@ export function BottomNavigation() {
               "
             >
               <Icon
+                aria-hidden="true"
                 size={21}
-                className={item.active ? "text-[#5A4333]" : "text-[#9A8D80]"}
+                className={isActive ? "text-[#5A4333]" : "text-[#9A8D80]"}
               />
               <span
                 className={
-                  item.active ? "font-medium text-[#5A4333]" : "text-[#9A8D80]"
+                  isActive ? "font-medium text-[#5A4333]" : "text-[#9A8D80]"
                 }
               >
                 {item.label}
