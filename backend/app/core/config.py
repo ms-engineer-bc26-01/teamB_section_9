@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -28,7 +30,7 @@ class Settings(BaseSettings):
     # 画像生成の品質（low / medium / high / auto）。低いほど高速・低コスト。
     # コラージュは小さく表示するサムネイル用途なので medium を既定とし、
     # 生成時間を抑える（未指定だと auto＝高品質寄りで最も遅くなるため明示する）。
-    OPENAI_IMAGE_QUALITY: str = "medium"
+    OPENAI_IMAGE_QUALITY: Literal["low", "medium", "high", "auto"] = "medium"
     # 画像生成 API 呼び出しのタイムアウト（秒）。保存APIの長時間ブロックを防ぐ。
     OPENAI_IMAGE_TIMEOUT_SECONDS: float = 60.0
 

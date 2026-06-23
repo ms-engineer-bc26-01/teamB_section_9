@@ -2,8 +2,9 @@ import base64
 
 import pytest
 from openai import APIError
+from pydantic import ValidationError
 
-from app.core.config import settings
+from app.core.config import Settings, settings
 from app.services.image_client import ImageGenerationError, OpenAIImageClient
 
 _PNG_BYTES = b"\x89PNG\r\n\x1a\nfake-image-bytes"
@@ -36,6 +37,14 @@ def test_image_client_requires_api_key(monkeypatch):
 
     with pytest.raises(ValueError, match="OPENAI_API_KEY is required"):
         OpenAIImageClient()
+
+
+def test_settings_rejects_invalid_openai_image_quality():
+    with pytest.raises(ValidationError, match="OPENAI_IMAGE_QUALITY"):
+        Settings(
+            DATABASE_URL="postgresql+psycopg://user:pass@localhost:5432/test",
+            OPENAI_IMAGE_QUALITY="fast",
+        )
 
 
 @pytest.mark.asyncio
