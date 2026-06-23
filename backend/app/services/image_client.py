@@ -38,6 +38,7 @@ class OpenAIImageClient:
                 prompt=prompt,
                 n=1,
                 size=settings.OPENAI_IMAGE_SIZE,
+                quality=settings.OPENAI_IMAGE_QUALITY,
             )
         except APIError as exc:
             raise ImageGenerationError("failed to generate outfit image") from exc

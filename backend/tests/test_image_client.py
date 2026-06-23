@@ -11,11 +11,12 @@ _PNG_BYTES = b"\x89PNG\r\n\x1a\nfake-image-bytes"
 
 def _fake_openai_factory(*, captured: dict, b64: str | None, data_present: bool = True):
     class FakeImages:
-        async def generate(self, *, model, prompt, n, size):
+        async def generate(self, *, model, prompt, n, size, quality):
             captured["model"] = model
             captured["prompt"] = prompt
             captured["n"] = n
             captured["size"] = size
+            captured["quality"] = quality
             if not data_present:
                 return type("Resp", (), {"data": []})()
             item = type("ImgData", (), {"b64_json": b64})()
@@ -45,6 +46,7 @@ async def test_generate_image_returns_decoded_bytes(monkeypatch):
     monkeypatch.setattr(settings, "OPENAI_API_KEY", "test-key")
     monkeypatch.setattr(settings, "OPENAI_IMAGE_MODEL", "gpt-image-test")
     monkeypatch.setattr(settings, "OPENAI_IMAGE_SIZE", "512x512")
+    monkeypatch.setattr(settings, "OPENAI_IMAGE_QUALITY", "low")
     monkeypatch.setattr(
         "app.services.image_client.AsyncOpenAI",
         _fake_openai_factory(captured=captured, b64=b64),
@@ -61,6 +63,8 @@ async def test_generate_image_returns_decoded_bytes(monkeypatch):
     assert usage is None
     assert captured["model"] == "gpt-image-test"
     assert captured["size"] == "512x512"
+    # 生成時間短縮のため quality 設定が SDK に渡ること
+    assert captured["quality"] == "low"
     assert captured["prompt"] == "white shirt and black pants"
 
 

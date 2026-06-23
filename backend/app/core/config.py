@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-5-nano"
     OPENAI_IMAGE_MODEL: str = "gpt-image-1-mini"
     OPENAI_IMAGE_SIZE: str = "1024x1024"
+    # 画像生成の品質（low / medium / high / auto）。低いほど高速・低コスト。
+    # コラージュは小さく表示するサムネイル用途なので medium を既定とし、
+    # 生成時間を抑える（未指定だと auto＝高品質寄りで最も遅くなるため明示する）。
+    OPENAI_IMAGE_QUALITY: str = "medium"
     # 画像生成 API 呼び出しのタイムアウト（秒）。保存APIの長時間ブロックを防ぐ。
     OPENAI_IMAGE_TIMEOUT_SECONDS: float = 60.0
 
