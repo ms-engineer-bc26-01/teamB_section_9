@@ -2,8 +2,9 @@ import base64
 
 import pytest
 from openai import APIError
+from pydantic import ValidationError
 
-from app.core.config import settings
+from app.core.config import Settings, settings
 from app.services.image_client import ImageGenerationError, OpenAIImageClient
 
 _PNG_BYTES = b"\x89PNG\r\n\x1a\nfake-image-bytes"
@@ -11,11 +12,12 @@ _PNG_BYTES = b"\x89PNG\r\n\x1a\nfake-image-bytes"
 
 def _fake_openai_factory(*, captured: dict, b64: str | None, data_present: bool = True):
     class FakeImages:
-        async def generate(self, *, model, prompt, n, size):
+        async def generate(self, *, model, prompt, n, size, quality):
             captured["model"] = model
             captured["prompt"] = prompt
             captured["n"] = n
             captured["size"] = size
+            captured["quality"] = quality
             if not data_present:
                 return type("Resp", (), {"data": []})()
             item = type("ImgData", (), {"b64_json": b64})()
@@ -37,6 +39,14 @@ def test_image_client_requires_api_key(monkeypatch):
         OpenAIImageClient()
 
 
+def test_settings_rejects_invalid_openai_image_quality():
+    with pytest.raises(ValidationError, match="OPENAI_IMAGE_QUALITY"):
+        Settings(
+            DATABASE_URL="postgresql+psycopg://user:pass@localhost:5432/test",
+            OPENAI_IMAGE_QUALITY="fast",
+        )
+
+
 @pytest.mark.asyncio
 async def test_generate_image_returns_decoded_bytes(monkeypatch):
     # Arrange
@@ -45,6 +55,7 @@ async def test_generate_image_returns_decoded_bytes(monkeypatch):
     monkeypatch.setattr(settings, "OPENAI_API_KEY", "test-key")
     monkeypatch.setattr(settings, "OPENAI_IMAGE_MODEL", "gpt-image-test")
     monkeypatch.setattr(settings, "OPENAI_IMAGE_SIZE", "512x512")
+    monkeypatch.setattr(settings, "OPENAI_IMAGE_QUALITY", "low")
     monkeypatch.setattr(
         "app.services.image_client.AsyncOpenAI",
         _fake_openai_factory(captured=captured, b64=b64),
@@ -61,6 +72,8 @@ async def test_generate_image_returns_decoded_bytes(monkeypatch):
     assert usage is None
     assert captured["model"] == "gpt-image-test"
     assert captured["size"] == "512x512"
+    # 生成時間短縮のため quality 設定が SDK に渡ること
+    assert captured["quality"] == "low"
     assert captured["prompt"] == "white shirt and black pants"
 
 
