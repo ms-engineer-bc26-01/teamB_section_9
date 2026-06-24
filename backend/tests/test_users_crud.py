@@ -40,3 +40,20 @@ async def test_get_or_create_user_recovers_from_integrity_error(monkeypatch) -> 
     db.commit.assert_awaited_once()
     db.rollback.assert_awaited_once()
     db.refresh.assert_not_awaited()
+
+
+async def test_list_users_paginates() -> None:
+    db = AsyncMock()
+    expected_users = [
+        User(id=uuid.uuid4(), email="a@example.com"),
+        User(id=uuid.uuid4(), email="b@example.com"),
+    ]
+
+    scalar_result = Mock()
+    scalar_result.all.return_value = expected_users
+    db.scalars.return_value = scalar_result
+
+    users = await crud.list_users(db, limit=2, offset=3)
+
+    assert users == expected_users
+    db.scalars.assert_awaited_once()
