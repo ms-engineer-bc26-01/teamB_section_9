@@ -56,8 +56,8 @@ async def persist_llm_usage_best_effort(
     try:
         await record_llm_usage(db, user_id=user_id, usage=usage)
     except Exception as exc:  # noqa: BLE001 - 永続化失敗を呼び出し元へ波及させない
+        await db.rollback()
         logger.warning("failed to persist llm usage (user=%s): %s", user_id, exc)
-
 
 def resolve_region_code(
     *,

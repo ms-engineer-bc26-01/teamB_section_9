@@ -42,7 +42,7 @@ async def test_get_or_create_user_recovers_from_integrity_error(monkeypatch) -> 
     db.refresh.assert_not_awaited()
 
 
-async def test_list_users_orders_and_paginates(monkeypatch) -> None:
+async def test_list_users_paginates() -> None:
     db = AsyncMock()
     expected_users = [
         User(id=uuid.uuid4(), email="a@example.com"),
