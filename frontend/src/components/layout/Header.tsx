@@ -10,7 +10,7 @@ const pageTitles: Record<string, string> = {
   "/favorites": "お気に入り",
   "/settings": "設定",
   "/clothes": "服一覧",
-  "/clothes/register": "服登録",
+  "/clothes/register": "アイテム登録",
   "/outfits/closet": "クローゼット提案",
   "/outfits/scenes": "シーン選択",
   "/outfits/loading": "提案生成中",
