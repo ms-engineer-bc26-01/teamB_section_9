@@ -352,15 +352,6 @@ export default function SettingsPage() {
                 </div>
             ) : null}
 
-            {successMessage ? (
-                <div
-                    role="status"
-                    className="rounded-lg border border-[#D6E7DD] bg-[#F6FAF8] px-4 py-3 text-sm text-[#2F6F63]"
-                >
-                    {successMessage}
-                </div>
-            ) : null}
-
             <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -619,6 +610,15 @@ export default function SettingsPage() {
                 >
                     {isSaving ? "保存中..." : "設定を保存する"}
                 </Button>
+
+                {successMessage ? (
+                    <div
+                        role="status"
+                        className="rounded-lg border border-[#D6E7DD] bg-[#F6FAF8] px-4 py-3 text-sm text-[#2F6F63]"
+                    >
+                        {successMessage}
+                    </div>
+                ) : null}
 
                 <Button
                     type="button"
