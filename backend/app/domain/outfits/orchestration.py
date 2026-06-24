@@ -59,6 +59,7 @@ async def persist_llm_usage_best_effort(
         await db.rollback()
         logger.warning("failed to persist llm usage (user=%s): %s", user_id, exc)
 
+
 def resolve_region_code(
     *,
     region_code: str | None,
