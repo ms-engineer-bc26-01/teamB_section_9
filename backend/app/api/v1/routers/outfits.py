@@ -18,13 +18,11 @@ from app.api.v1.schemas.outfits import (
 from app.constants.regions import get_region
 from app.core.deps import get_db
 from app.dependencies.auth import CurrentUser, get_current_user
-from app.domain.clothes import crud as clothes_crud
 from app.domain.outfits import crud as outfits_crud
 from app.domain.outfits import orchestration as outfits_orchestration
 from app.domain.outfits.crud import OutfitItemNotOwnedError
 from app.domain.outfits.image_service import generate_and_store_coordinate_image
-from app.domain.outfits.service import OutfitService, OutfitSuggestionError
-from app.services.weather_client import fetch_weather_forecast_cached
+from app.domain.outfits.service import OutfitSuggestionError
 
 router = APIRouter(prefix="/outfits", tags=["Outfits"])
 
@@ -146,12 +144,6 @@ async def suggest_outfit(
     current_user: AuthenticatedUser,
     db: DbSession,
 ):
-    # 既存テストは router モジュールの依存を monkeypatch しているため、
-    # オーケストレーション層へ呼ぶ直前に参照を同期して互換性を保つ。
-    outfits_orchestration.fetch_weather_forecast_cached = fetch_weather_forecast_cached
-    outfits_orchestration.OutfitService = OutfitService
-    outfits_orchestration.clothes_crud = clothes_crud
-
     try:
         plan = await outfits_orchestration.build_outfit_suggestion_plan(
             db,
