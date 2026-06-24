@@ -11,6 +11,22 @@ from app.db.models.user import User
 _UNSET: Any = object()
 
 
+async def list_users(
+    db: AsyncSession,
+    *,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[User]:
+    return (
+        await db.scalars(
+            select(User)
+            .order_by(User.created_at.asc(), User.id.asc())
+            .limit(limit)
+            .offset(offset)
+        )
+    ).all()
+
+
 async def get_user(db: AsyncSession, user_id: uuid.UUID) -> User | None:
     return await db.scalar(select(User).where(User.id == user_id))
 

@@ -2,7 +2,6 @@ import uuid
 from datetime import UTC, datetime
 from typing import Annotated
 
-import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,44 +17,20 @@ from app.api.v1.schemas.outfits import (
 )
 from app.constants.regions import get_region
 from app.core.deps import get_db
-from app.core.logging import logger
 from app.dependencies.auth import CurrentUser, get_current_user
 from app.domain.clothes import crud as clothes_crud
 from app.domain.outfits import crud as outfits_crud
+from app.domain.outfits import orchestration as outfits_orchestration
 from app.domain.outfits.crud import OutfitItemNotOwnedError
 from app.domain.outfits.image_service import generate_and_store_coordinate_image
 from app.domain.outfits.service import OutfitService, OutfitSuggestionError
-from app.domain.usage.crud import record_llm_usage
-from app.services.usage import LlmUsage
-from app.services.weather_client import (
-    WeatherForecastResponseError,
-    extract_outfit_prompt_weather,
-    fetch_weather_forecast_cached,
-)
+from app.services.weather_client import fetch_weather_forecast_cached
 
 router = APIRouter(prefix="/outfits", tags=["Outfits"])
 
 
 AuthenticatedUser = Annotated[CurrentUser, Depends(get_current_user)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
-DEFAULT_REGION_CODE = "13_01"
-CLOTHES_FETCH_LIMIT = 1000
-
-
-async def _persist_llm_usage_best_effort(
-    db: AsyncSession,
-    *,
-    user_id: uuid.UUID,
-    usage: LlmUsage | None,
-) -> None:
-    """token 使用量をコスト観測用に best-effort で永続化する。
-
-    失敗してもリクエストへ波及させない。usage=None なら no-op。
-    """
-    try:
-        await record_llm_usage(db, user_id=user_id, usage=usage)
-    except Exception as exc:  # noqa: BLE001 - 永続化失敗をリクエストに波及させない
-        logger.warning("failed to persist llm usage (user=%s): %s", user_id, exc)
 
 
 @router.get("", response_model=OutfitsListResponse)
@@ -171,112 +146,49 @@ async def suggest_outfit(
     current_user: AuthenticatedUser,
     db: DbSession,
 ):
-    region_code = (
-        request.region_code or current_user.default_region_code or DEFAULT_REGION_CODE
-    )
+    # 既存テストは router モジュールの依存を monkeypatch しているため、
+    # オーケストレーション層へ呼ぶ直前に参照を同期して互換性を保つ。
+    outfits_orchestration.fetch_weather_forecast_cached = fetch_weather_forecast_cached
+    outfits_orchestration.OutfitService = OutfitService
+    outfits_orchestration.clothes_crud = clothes_crud
 
-    region = get_region(region_code)
-    if region is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="invalid region_code",
-        )
-
-    latitude, longitude = region["lat"], region["lng"]
-
-    # NOTE: request.date は現状未使用（予報は常に現在＋当日。指定日提案は将来対応）
     try:
-        weather = await fetch_weather_forecast_cached(
-            region_code=region_code,
-            latitude=latitude,
-            longitude=longitude,
-            days=3,
-        )
-    except httpx.HTTPError as exc:
-        logger.error("weather fetch failed (region=%s): %s", region_code, exc)
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="failed to fetch weather forecast",
-        ) from exc
-    except WeatherForecastResponseError as exc:
-        logger.error("weather forecast invalid (region=%s): %s", region_code, exc)
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="failed to fetch weather forecast",
-        ) from exc
-
-    clothes = (
-        await clothes_crud.list_clothes(
+        plan = await outfits_orchestration.build_outfit_suggestion_plan(
             db,
-            current_user.id,
-            limit=CLOTHES_FETCH_LIMIT,
-            offset=0,
-        )
-    ).items
-
-    try:
-        prompt_weather = extract_outfit_prompt_weather(weather)
-    except WeatherForecastResponseError as exc:
-        logger.error(
-            "weather forecast invalid for outfit prompt (region=%s): %s",
-            region_code,
-            exc,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="failed to fetch weather forecast",
-        ) from exc
-
-    try:
-        service = OutfitService()
-        result = await service.suggest(
+            user_id=current_user.id,
+            default_region_code=current_user.default_region_code,
             tpo=request.tpo,
-            clothes=clothes,
-            weather=prompt_weather,
+            region_code=request.region_code,
             clothing_ids=request.clothing_ids,
             exclude_clothing_ids=request.exclude_clothing_ids,
         )
+    except outfits_orchestration.InvalidRegionCodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invalid region_code",
+        ) from exc
+    except outfits_orchestration.OutfitWeatherError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="failed to fetch weather forecast",
+        ) from exc
     except OutfitSuggestionError as exc:
-        logger.error(
-            "outfit suggestion failed (user=%s, tpo=%s): %s",
-            current_user.id,
-            request.tpo,
-            exc,
-        )
-        # 失敗（refusal/parse失敗）でも消費した token は記録する（best-effort）。
-        await _persist_llm_usage_best_effort(
-            db, user_id=current_user.id, usage=exc.usage
-        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="failed to generate outfit suggestion",
         ) from exc
 
-    # token 使用量を best-effort で永続化（コスト観測用）。失敗しても提案は返す。
-    await _persist_llm_usage_best_effort(
-        db, user_id=current_user.id, usage=result.usage
-    )
-
-    # suggest は非保存（テキスト提案）。履歴化は別途 POST /outfits（オンデマンド）。
-    # id / created_at はレスポンス用に一時生成する。
     outfit_id = uuid.uuid4()
     created_at = datetime.now(UTC)
-
-    logger.info(
-        "outfit suggested (user=%s, region=%s, items=%d)",
-        current_user.id,
-        region_code,
-        len(result.items),
-    )
 
     return OutfitSuggestResponse(
         outfits=[
             SuggestOutfit(
                 id=outfit_id,
                 user_id=current_user.id,
-                tpo=request.tpo,
-                region_code=region_code,
-                comment=result.comment,
+                tpo=plan.tpo,
+                region_code=plan.region_code,
+                comment=plan.comment,
                 is_favorite=False,
                 items=[
                     SuggestOutfitItem(
@@ -287,7 +199,7 @@ async def suggest_outfit(
                         display_order=item.display_order,
                         clothing_item=item.clothing_item,
                     )
-                    for item in result.items
+                    for item in plan.items
                 ],
                 created_at=created_at,
             )

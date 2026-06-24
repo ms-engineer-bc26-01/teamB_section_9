@@ -1,0 +1,50 @@
+name: Daily Coordinate Images
+
+on:
+  schedule:
+    - cron: "0 17 * * *"
+  workflow_dispatch:
+    inputs:
+      tpo:
+        description: "コーデ生成に使うシーン。未指定時は office"
+        required: false
+        default: "office"
+
+concurrency:
+  group: daily-coordinate-images
+  cancel-in-progress: false
+
+jobs:
+  generate-coordinate-images:
+    name: Generate Coordinate Images
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: production
+      AUTH_BYPASS_ENABLED: "false"
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_STORAGE_BUCKET: ${{ secrets.SUPABASE_STORAGE_BUCKET }}
+      REDIS_URL: redis://127.0.0.1:6379/0
+      BATCH_TPO: ${{ github.event.inputs.tpo }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.2.0
+      - name: Install dependencies
+        run: |
+          cd backend
+          uv sync
+      - name: Run daily coordinate image job
+        run: |
+          cd backend
+          if [[ -n "${BATCH_TPO}" ]]; then
+            uv run python jobs/generate_outfits_for_all_users.py --tpo "${BATCH_TPO}"
+          else
+            uv run python jobs/generate_outfits_for_all_users.py
+          fi
