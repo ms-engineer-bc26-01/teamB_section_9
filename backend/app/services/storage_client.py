@@ -7,7 +7,8 @@
 
 NOTE: 服画像は設計どおり「BE が署名付き upload URL を発行 → FE が直接 PUT →
 storage_path 通知」の別フロー（requirements.md:147、BE をプロキシにしない）。
-本関数は服画像には流用しない。共有するのはバケット規約のみ。
+`upload_image`（BE 経由アップロード）は服画像には流用しない。ただし公開 URL 組み立て
+（`build_public_url`）は服画像 `/upload-url` の image_url にも共用する（#133）。
 """
 
 import uuid
@@ -75,7 +76,7 @@ async def upload_image(
     except httpx.HTTPError as exc:
         raise StorageError(f"failed to upload image to storage: {exc}") from exc
 
-    return f"{base}/storage/v1/object/public/{bucket}/{object_path}"
+    return build_public_url(object_path)
 
 
 _ALLOWED_EXTENSIONS = {
@@ -101,6 +102,25 @@ def _ensure_storage_config() -> tuple[str, str, str]:
         service_role_key,
         bucket,
     )
+
+
+def build_public_url(storage_path: str) -> str:
+    """storage_path から公開オブジェクト URL を組み立てる。
+
+    バケットが public 前提（署名 URL 化は follow-up）。`upload_image` の戻り値と
+    `/upload-url` レスポンスの image_url を同一ロジックに揃えるための共通関数。
+    公開 URL は base + bucket のみで構成でき service role key に依存しない（署名や
+    アップロードと違い、read 経路など key を持たない文脈からも安全に呼べる）。
+    """
+    base = settings.SUPABASE_URL
+    bucket = settings.SUPABASE_STORAGE_BUCKET
+    if not base or not bucket:
+        raise StorageError(
+            "Supabase storage is not configured "
+            "(SUPABASE_URL / SUPABASE_STORAGE_BUCKET)"
+        )
+    object_path = storage_path.lstrip("/")
+    return f"{base.rstrip('/')}/storage/v1/object/public/{bucket}/{object_path}"
 
 
 def _resolve_extension(filename: str, content_type: str) -> str:

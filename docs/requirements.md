@@ -52,7 +52,7 @@
 | 決済              | Stripe Checkout + Customer Portal + Webhook | —           | **MUST 充足**。Subscription モード、月額 1 プランのみ                                            |
 | LLM               | Google Gemini 2.5 Flash                     | —           | `responseSchema` で構造化出力を強制。将来的に OpenAI / Claude に切り替えられる抽象化レイヤを置く |
 | 天気 API          | Open-Meteo                                  | —           | 登録不要・無料・商用 OK。API キー管理不要                                                        |
-| 画像ストレージ    | Supabase Storage                            | —           | 署名付き URL 配信。DB には参照 URL のみ保存                                                      |
+| 画像ストレージ    | Supabase Storage                            | —           | アップロードのみ署名付き URL。DB には公開オブジェクト URL を保存し表示にも利用（公開バケット前提・署名DLは将来）                                                      |
 | コンテナ          | Docker + Docker Compose v2                  | —           | **MUST 充足**                                                                                    |
 | CI/CD             | GitHub Actions                              | —           | lint + test + 型チェック                                                                         |
 | E2E               | Playwright                                  | —           | **ADVANCE**。主要フロー 1〜2 本のみ                                                              |
@@ -144,7 +144,7 @@
 
 - FE → BE は必ず JSON の REST API 経由。Server Actions で直接 DB を叩く構成は禁止
 - 天気 API・LLM・Stripe キーはすべて BE 側に閉じる。FE から外部 API を直接叩かない
-- 画像アップロード：BE が署名付き URL を発行 → FE が直接 Supabase Storage へ PUT → BE に `storage_path` を通知。BE を画像転送プロキシにしない
+- 画像アップロード：BE が署名付き URL を発行（`/upload-url` は `storage_path` と公開 `image_url` を返す）→ FE が直接 Supabase Storage へ PUT → 保存・表示には公開 `image_url` を使う。BE を画像転送プロキシにしない
 - LLM 呼び出しは `backend/app/services/llm_client.py` に集約し、プロバイダ抽象化レイヤを置く
 
 ### 3.4 LLM コーデ提案フロー（シーケンス概要）
@@ -177,11 +177,11 @@ POST /api/v1/outfits/suggest  { tpo, date, region_code? }
 ```
 [1] FE → BE:  POST /api/v1/clothes/upload-url  { filename, content_type }
               BE → Supabase Storage: 署名付きアップロード URL を発行
-              BE → FE: { upload_url, storage_path }
+              BE → FE: { upload_url, storage_path, image_url }   # image_url = 公開URL（#133）
 
 [2] FE → Supabase Storage:  PUT {upload_url} + 画像バイナリ（BE を経由しない）
 
-[3] FE → BE:  POST /api/v1/clothes/analyze-image  { image_url: storage_path }
+[3] FE → BE:  POST /api/v1/clothes/analyze-image  { image_url }   # [1] の image_url（公開URL）
               BE → Gemini: 画像 URL + プロンプト送信（responseSchema で構造化出力）
               BE → FE: AnalyzeImageResponse（推定属性 + confidence）
 
@@ -189,7 +189,7 @@ POST /api/v1/outfits/suggest  { tpo, date, region_code? }
 
 [5] ユーザーが確認・修正 → 「登録」ボタン押下
 
-[6] FE → BE:  POST /api/v1/clothes  { name, category, color, ..., image_url: storage_path }
+[6] FE → BE:  POST /api/v1/clothes  { name, category, color, ..., image_url }   # [1] の公開URLをそのまま保存
               BE → DB: clothes + clothes_tpo にレコード挿入
               BE → FE: 201 ClothingItem
 ```
@@ -233,7 +233,7 @@ clothes
   pattern         string  nullable  -- enum: solid / stripe / check / dot / floral / other
   size            string  nullable
   season          string[]  -- enum 配列: spring / summer / autumn / winter / all  ※複数選択可
-  image_url       string  nullable  -- Supabase Storage への参照 URL（署名付き URL で配信）
+  image_url       string  nullable  -- Supabase Storage の公開オブジェクト URL（BE が組み立て、FE はそのまま表示）
   thumbnail_url   string  nullable
   memo            string  nullable  (max 200)
   is_favorite     boolean  default false
@@ -366,7 +366,7 @@ REGIONS: dict[str, dict] = {
 | -------- | ------------------------ | ---- | -------------------------------------------------------------------------------------------------------------- |
 | GET      | `/clothes`               | 必須 | 服一覧。フィルタ: `category` / `season` / `tpo` / `is_favorite`。ページネーション: `limit`(max 100) / `offset` |
 | POST     | `/clothes`               | 必須 | 服登録 → 201 + ClothingItem                                                                                    |
-| POST     | `/clothes/upload-url`    | 必須 | 画像アップロード用署名付き URL 発行 → `{ upload_url, storage_path }`                                           |
+| POST     | `/clothes/upload-url`    | 必須 | 画像アップロード用署名付き URL 発行 → `{ upload_url, storage_path, image_url }`（image_url=公開URL）           |
 | POST     | `/clothes/analyze-image` | 必須 | 画像から Gemini で属性推定 → AnalyzeImageResponse（`confidence` 付き）                                         |
 | GET      | `/clothes/{id}`          | 必須 | 服の詳細取得                                                                                                   |
 | PUT      | `/clothes/{id}`          | 必須 | 服情報の全フィールド置換                                                                                       |

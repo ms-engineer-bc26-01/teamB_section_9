@@ -25,7 +25,7 @@ erDiagram
     string pattern "nullable: solid / stripe / check / dot / floral / other"
     string size "nullable"
     string season "配列（複数選択可）: spring / summer / autumn / winter / all"
-    string image_url "storage_path で保存（配信時に署名付きURLへ変換）"
+    string image_url "Supabase Storage の公開オブジェクトURLを保存（BEが組み立て、FEはそのまま表示）"
     string thumbnail_url "nullable"
     string memo "nullable, max 200文字"
     boolean is_favorite "default: false"
@@ -100,7 +100,7 @@ erDiagram
 | 項目                 | 内容                                                                                            |
 | -------------------- | ----------------------------------------------------------------------------------------------- |
 | **認証**             | `users.id` は Supabase Auth の UUID と一致。`password_hash` はアプリDBに持たない                |
-| **画像**             | DBには URL のみ保存。実体は Supabase Storage に署名付き URL で配信                              |
+| **画像**             | DBには公開オブジェクトURLを保存（アップロードのみ署名付きURL／公開バケット前提）                              |
 | **地域マスタ**       | DBテーブルなし。`backend/app/constants/regions.py` に Python 定数として管理（約60〜80件、固定） |
 | **TPO**              | `clothes_tpo` で多対多を表現（1着の服に複数のTPOタグを付与可能）                                |
 | **コーデ保存**       | 提案のたびに `outfits` にレコードを保存。LLM呼び出し結果のログとして遡れる                      |

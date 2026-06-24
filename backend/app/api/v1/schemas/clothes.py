@@ -70,3 +70,8 @@ class ClothingUploadUrlRequest(BaseModel):
 class UploadUrlResponse(BaseModel):
     upload_url: str = Field(min_length=1, max_length=2048)
     storage_path: str = Field(min_length=1, max_length=512)
+    # FE が PUT 後に POST /clothes の image_url としてそのまま保存・表示できる公開 URL。
+    # BE 側で組み立てるため FE はバケット名・パス構造を持たなくてよい（#133）。
+    # max_length は保存側（ClothingCreateRequest）・DB（String(512)）と揃える。
+    # storage_path・公開URL とも BE 生成の uuid パス（実値 ~160字）で 512 に達しない。
+    image_url: str = Field(min_length=1, max_length=512)

@@ -293,6 +293,10 @@ def test_create_clothing_upload_url_returns_signed_url(client, monkeypatch) -> N
         "create_signed_upload_url",
         fake_create_signed_upload_url,
     )
+    # image_url 組み立て（build_public_url）用に Storage 設定を与える。
+    monkeypatch.setattr(settings, "SUPABASE_URL", "https://proj.supabase.co")
+    monkeypatch.setattr(settings, "SUPABASE_SERVICE_ROLE_KEY", "service-role-key")
+    monkeypatch.setattr(settings, "SUPABASE_STORAGE_BUCKET", "clothes-images")
 
     response = client.post(
         "/api/v1/clothes/upload-url",
@@ -304,6 +308,11 @@ def test_create_clothing_upload_url_returns_signed_url(client, monkeypatch) -> N
     body = response.json()
     assert "token=test-token" in body["upload_url"]
     assert body["storage_path"].startswith(f"clothes/{expected_user_id}/")
+    # FE がそのまま保存・表示できる公開 URL を返す（#133）。
+    assert body["image_url"] == (
+        "https://proj.supabase.co/storage/v1/object/public/clothes-images/"
+        f"{body['storage_path']}"
+    )
 
 
 def test_create_clothing_upload_url_rejects_invalid_content_type(

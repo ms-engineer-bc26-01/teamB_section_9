@@ -106,6 +106,9 @@ async def create_clothing_upload_url(
             filename=payload.filename,
             content_type=payload.content_type,
         )
+        # 公開 URL の組み立ても Storage 設定に依存するため、同じ try 内で評価して
+        # StorageError を 503 に一貫変換する。
+        image_url = storage_client.build_public_url(storage_path)
     except storage_client.StorageError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -115,4 +118,5 @@ async def create_clothing_upload_url(
     return UploadUrlResponse(
         upload_url=upload_url,
         storage_path=storage_path,
+        image_url=image_url,
     )
