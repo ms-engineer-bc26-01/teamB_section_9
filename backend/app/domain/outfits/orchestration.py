@@ -200,7 +200,8 @@ async def generate_coordinate_image_for_outfit(
     )
     if updated is None:
         logger.warning(
-            "coordinate image generated but outfit not found for update (outfit=%s, user=%s)",
+            "coordinate image generated but outfit not found for update "
+            "(outfit=%s, user=%s)",
             outfit.id,
             outfit.user_id,
         )
