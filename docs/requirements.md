@@ -52,7 +52,7 @@
 | 決済              | Stripe Checkout + Customer Portal + Webhook | —           | **MUST 充足**。Subscription モード、月額 1 プランのみ                                            |
 | LLM               | Google Gemini 2.5 Flash                     | —           | `responseSchema` で構造化出力を強制。将来的に OpenAI / Claude に切り替えられる抽象化レイヤを置く |
 | 天気 API          | Open-Meteo                                  | —           | 登録不要・無料・商用 OK。API キー管理不要                                                        |
-| 画像ストレージ    | Supabase Storage                            | —           | 署名付き URL 配信。DB には参照 URL のみ保存                                                      |
+| 画像ストレージ    | Supabase Storage                            | —           | アップロードのみ署名付き URL。DB には公開オブジェクト URL を保存し表示にも利用（公開バケット前提・署名DLは将来）                                                      |
 | コンテナ          | Docker + Docker Compose v2                  | —           | **MUST 充足**                                                                                    |
 | CI/CD             | GitHub Actions                              | —           | lint + test + 型チェック                                                                         |
 | E2E               | Playwright                                  | —           | **ADVANCE**。主要フロー 1〜2 本のみ                                                              |
