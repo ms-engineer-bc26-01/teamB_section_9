@@ -199,7 +199,12 @@ async def generate_coordinate_image_for_outfit(
         coordinate_image_url=url,
     )
     if updated is None:
-        raise RuntimeError("failed to update generated outfit image url")
+        logger.warning(
+            "coordinate image generated but outfit not found for update (outfit=%s, user=%s)",
+            outfit.id,
+            outfit.user_id,
+        )
+        return outfit
     return updated
 
 
