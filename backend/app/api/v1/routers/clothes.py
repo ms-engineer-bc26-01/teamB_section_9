@@ -115,4 +115,5 @@ async def create_clothing_upload_url(
     return UploadUrlResponse(
         upload_url=upload_url,
         storage_path=storage_path,
+        image_url=storage_client.build_public_url(storage_path),
     )

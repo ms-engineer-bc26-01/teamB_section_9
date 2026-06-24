@@ -75,7 +75,7 @@ async def upload_image(
     except httpx.HTTPError as exc:
         raise StorageError(f"failed to upload image to storage: {exc}") from exc
 
-    return f"{base}/storage/v1/object/public/{bucket}/{object_path}"
+    return build_public_url(object_path)
 
 
 _ALLOWED_EXTENSIONS = {
@@ -101,6 +101,17 @@ def _ensure_storage_config() -> tuple[str, str, str]:
         service_role_key,
         bucket,
     )
+
+
+def build_public_url(storage_path: str) -> str:
+    """storage_path から公開オブジェクト URL を組み立てる。
+
+    バケットが public 前提（署名 URL 化は follow-up）。`upload_image` の戻り値と
+    `/upload-url` レスポンスの image_url を同一ロジックに揃えるための共通関数。
+    """
+    base, _service_role_key, bucket = _ensure_storage_config()
+    object_path = storage_path.lstrip("/")
+    return f"{base}/storage/v1/object/public/{bucket}/{object_path}"
 
 
 def _resolve_extension(filename: str, content_type: str) -> str:

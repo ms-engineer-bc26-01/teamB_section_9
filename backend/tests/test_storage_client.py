@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.services import storage_client
 from app.services.storage_client import (
     StorageError,
+    build_public_url,
     create_signed_upload_url,
     upload_image,
 )
@@ -59,6 +60,32 @@ def _configure(monkeypatch):
     monkeypatch.setattr(settings, "SUPABASE_URL", "https://proj.supabase.co")
     monkeypatch.setattr(settings, "SUPABASE_SERVICE_ROLE_KEY", "service-role-key")
     monkeypatch.setattr(settings, "SUPABASE_STORAGE_BUCKET", "clothes-images")
+
+
+def test_build_public_url_builds_public_object_url(monkeypatch):
+    _configure(monkeypatch)
+
+    url = build_public_url("clothes/u1/abc.jpg")
+
+    assert url == (
+        "https://proj.supabase.co/storage/v1/object/public/clothes-images/"
+        "clothes/u1/abc.jpg"
+    )
+
+
+def test_build_public_url_strips_leading_slash(monkeypatch):
+    _configure(monkeypatch)
+
+    url = build_public_url("/clothes/u1/abc.jpg")
+
+    assert url.endswith("public/clothes-images/clothes/u1/abc.jpg")
+
+
+def test_build_public_url_raises_when_not_configured(monkeypatch):
+    monkeypatch.setattr(settings, "SUPABASE_URL", None)
+
+    with pytest.raises(StorageError):
+        build_public_url("clothes/u1/abc.jpg")
 
 
 @pytest.mark.asyncio

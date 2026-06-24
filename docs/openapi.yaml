@@ -443,6 +443,7 @@ components:
 
     UploadUrlResponse:
       type: object
+      required: [upload_url, storage_path, image_url]
       properties:
         upload_url:
           type: string
@@ -450,7 +451,13 @@ components:
           description: Supabase Storage の署名付きアップロードURL（フロントがこのURLに直接PUTする）
         storage_path:
           type: string
-          description: アップロード後の画像パス（ClothingCreateRequest.image_url に使う値）
+          description: アップロード後の画像パス（バケット内パス）
+        image_url:
+          type: string
+          format: uri
+          description: >-
+            公開オブジェクトURL（BE が組み立て）。FE は PUT 後、この値をそのまま
+            ClothingCreateRequest.image_url として保存・表示する（#133）。
 
     # ===== 画像解析（LLM） =====
     AnalyzeImageRequest:
@@ -989,8 +996,8 @@ paths:
       description: |
         服のメタ情報を登録する。
         画像は事前に /api/v1/clothes/upload-url で発行した署名付きURLで
-        Supabase Storage に直接アップロードし、返却された storage_path を
-        image_url として渡す。
+        Supabase Storage に直接アップロードし、同レスポンスの image_url（公開URL）を
+        そのまま image_url として渡す（#133）。
       requestBody:
         required: true
         content:
@@ -1016,7 +1023,8 @@ paths:
       summary: 画像アップロード用署名付きURL発行
       description: |
         フロントエンドはこのURLに直接PUTリクエストで画像をアップロードする。
-        アップロード後、返却された storage_path を ClothingCreateRequest.image_url として渡す。
+        アップロード後、同レスポンスの image_url（BE が組み立てた公開URL）を
+        そのまま ClothingCreateRequest.image_url として渡す（#133）。
         バックエンドを画像転送のプロキシにしない設計。
       requestBody:
         required: true
