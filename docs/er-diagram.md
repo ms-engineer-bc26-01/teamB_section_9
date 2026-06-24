@@ -25,7 +25,7 @@ erDiagram
     string pattern "nullable: solid / stripe / check / dot / floral / other"
     string size "nullable"
     string season "配列（複数選択可）: spring / summer / autumn / winter / all"
-    string image_url "storage_path で保存（配信時に署名付きURLへ変換）"
+    string image_url "Supabase Storage の公開オブジェクトURLを保存（BEが組み立て、FEはそのまま表示）"
     string thumbnail_url "nullable"
     string memo "nullable, max 200文字"
     boolean is_favorite "default: false"

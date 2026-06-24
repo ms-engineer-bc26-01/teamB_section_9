@@ -331,7 +331,7 @@ components:
         image_url:
           type: string
           format: uri
-          description: Supabase Storage の署名付きURL
+          description: Supabase Storage の公開オブジェクトURL（/upload-url が返す値をそのまま保存・表示）
           nullable: true
         thumbnail_url:
           type: string
@@ -395,7 +395,7 @@ components:
           type: string
           format: uri
           nullable: true
-          description: 署名付きURLでアップロード後の Storage パス
+          description: /upload-url が返した公開オブジェクトURL（そのまま保存する）
         memo:
           type: string
           maxLength: 200
@@ -467,7 +467,7 @@ components:
         image_url:
           type: string
           format: uri
-          description: 解析対象の画像URL（Supabase Storageにアップロード済みのパス）
+          description: 解析対象の画像の公開オブジェクトURL（/upload-url が返す image_url）
 
     AnalyzeImageResponse:
       type: object
@@ -1043,7 +1043,7 @@ paths:
                   example: image/jpeg
       responses:
         "200":
-          description: 署名付きURL
+          description: 署名付きアップロードURL・storage_path・公開image_url
           content:
             application/json:
               schema:

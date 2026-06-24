@@ -144,7 +144,7 @@
 
 - FE → BE は必ず JSON の REST API 経由。Server Actions で直接 DB を叩く構成は禁止
 - 天気 API・LLM・Stripe キーはすべて BE 側に閉じる。FE から外部 API を直接叩かない
-- 画像アップロード：BE が署名付き URL を発行 → FE が直接 Supabase Storage へ PUT → BE に `storage_path` を通知。BE を画像転送プロキシにしない
+- 画像アップロード：BE が署名付き URL を発行（`/upload-url` は `storage_path` と公開 `image_url` を返す）→ FE が直接 Supabase Storage へ PUT → 保存・表示には公開 `image_url` を使う。BE を画像転送プロキシにしない
 - LLM 呼び出しは `backend/app/services/llm_client.py` に集約し、プロバイダ抽象化レイヤを置く
 
 ### 3.4 LLM コーデ提案フロー（シーケンス概要）

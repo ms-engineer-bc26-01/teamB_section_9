@@ -72,4 +72,5 @@ class UploadUrlResponse(BaseModel):
     storage_path: str = Field(min_length=1, max_length=512)
     # FE が PUT 後に POST /clothes の image_url としてそのまま保存・表示できる公開 URL。
     # BE 側で組み立てるため FE はバケット名・パス構造を持たなくてよい（#133）。
-    image_url: str = Field(min_length=1, max_length=2048)
+    # max_length は保存側（ClothingCreateRequest）・DB（String(512)）と揃える。
+    image_url: str = Field(min_length=1, max_length=512)
