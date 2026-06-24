@@ -22,6 +22,15 @@ class BatchJobStats:
     processed: int
     succeeded: int
     failed: int
+    image_skipped: int
+
+    @property
+    def image_generated(self) -> int:
+        return self.succeeded - self.image_skipped
+
+
+def should_fail_job(stats: BatchJobStats) -> bool:
+    return stats.processed > 0 and stats.image_generated == 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -31,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--tpo",
         default=DEFAULT_BATCH_TPO,
-        help="Scene prompt passed to outfit generation. Defaults to office.",
+        help="Scene prompt passed to outfit generation. Defaults to business.",
     )
     parser.add_argument(
         "--page-size",
@@ -54,7 +63,7 @@ async def fetch_user_batch(*, limit: int, offset: int) -> list[UserBatchTarget]:
     ]
 
 
-async def process_user(*, user: UserBatchTarget, tpo: str) -> None:
+async def process_user(*, user: UserBatchTarget, tpo: str):
     async with SessionLocal() as db:
         outfit = await generate_outfit_for_user(
             db,
@@ -68,6 +77,7 @@ async def process_user(*, user: UserBatchTarget, tpo: str) -> None:
         outfit.id,
         outfit.coordinate_image_url,
     )
+    return outfit
 
 
 async def run_job(
@@ -78,6 +88,7 @@ async def run_job(
     processed = 0
     succeeded = 0
     failed = 0
+    image_skipped = 0
     offset = 0
 
     while True:
@@ -88,8 +99,10 @@ async def run_job(
         for user in users:
             processed += 1
             try:
-                await process_user(user=user, tpo=tpo)
+                outfit = await process_user(user=user, tpo=tpo)
                 succeeded += 1
+                if outfit.coordinate_image_url is None:
+                    image_skipped += 1
             except Exception as exc:  # noqa: BLE001 - ユーザー単位で継続する
                 failed += 1
                 logger.exception(
@@ -105,6 +118,7 @@ async def run_job(
         processed=processed,
         succeeded=succeeded,
         failed=failed,
+        image_skipped=image_skipped,
     )
 
 
@@ -112,12 +126,15 @@ async def main() -> int:
     args = build_parser().parse_args()
     stats = await run_job(tpo=args.tpo, page_size=args.page_size)
     logger.info(
-        "batch outfit generation finished (processed=%d, succeeded=%d, failed=%d)",
+        "batch outfit generation finished "
+        "(processed=%d, succeeded=%d, failed=%d, image_generated=%d, image_skipped=%d)",
         stats.processed,
         stats.succeeded,
         stats.failed,
+        stats.image_generated,
+        stats.image_skipped,
     )
-    return 1 if stats.failed else 0
+    return 1 if should_fail_job(stats) else 0
 
 
 if __name__ == "__main__":

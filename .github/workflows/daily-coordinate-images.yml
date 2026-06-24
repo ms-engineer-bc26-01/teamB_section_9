@@ -6,9 +6,16 @@ on:
   workflow_dispatch:
     inputs:
       tpo:
-        description: "コーデ生成に使うシーン。未指定時は office"
+        description: "コーデ生成に使うシーン。未指定時は business"
+        type: choice
+        options:
+          - business
+          - casual
+          - formal
+          - ceremony
+          - leisure
         required: false
-        default: "office"
+        default: "business"
 
 concurrency:
   group: daily-coordinate-images
@@ -54,7 +61,7 @@ jobs:
         run: |
           cd backend
           if [[ -n "${BATCH_TPO}" ]]; then
-            uv run python jobs/generate_outfits_for_all_users.py --tpo "${BATCH_TPO}"
+            uv run python -m jobs.generate_outfits_for_all_users --tpo "${BATCH_TPO}"
           else
-            uv run python jobs/generate_outfits_for_all_users.py
+            uv run python -m jobs.generate_outfits_for_all_users
           fi

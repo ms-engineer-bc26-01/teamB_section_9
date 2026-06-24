@@ -25,7 +25,7 @@ from app.services.weather_client import (
 
 DEFAULT_REGION_CODE = "13_01"
 CLOTHES_FETCH_LIMIT = 1000
-DEFAULT_BATCH_TPO = "office"
+DEFAULT_BATCH_TPO = "business"
 
 
 class InvalidRegionCodeError(Exception):
@@ -212,6 +212,11 @@ async def generate_outfit_for_user(
     region_code: str | None = None,
     is_favorite: bool = False,
 ) -> SuggestedOutfit:
+    """コーデ提案を保存し、画像生成は best-effort で後続適用した結果を返す。
+
+    画像生成や Storage 保存に失敗した場合でもコーデ本体は保存され、
+    返却値の coordinate_image_url は None のままになり得る。
+    """
     plan = await build_outfit_suggestion_plan(
         db,
         user_id=user_id,
