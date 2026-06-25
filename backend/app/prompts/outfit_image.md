@@ -1,8 +1,8 @@
-Create a premium fashion editorial image showing a single coordinated outfit.
+Create a premium fashion magazine style flat-lay outfit composition.
 
 Target gender for styling: {{ gender }}
 
-The outfit must be composed only from the following clothing categories:
+Use ONLY the clothing items listed below.
 
 {{ items }}
 
@@ -11,46 +11,48 @@ Styling note:
 
 Requirements:
 
-- Use all listed clothing categories in the outfit.
-- Do not replace the listed categories with different items.
-- Do not add unnecessary clothing items.
-- Optional accessories may be included only if they naturally complement the outfit.
-- The styling should be practical, comfortable, realistic, and easy to wear in everyday life.
-- Avoid luxury fashion, runway fashion, avant-garde styling, influencer-style outfits, or unrealistic combinations.
-- Use neutral and versatile colors unless specific colors are provided in the clothing categories.
+- Preserve the exact appearance of every item
+- Do not invent new garments
+- Do not change colors, materials, patterns, or silhouettes
+- Do not omit any item
+- Every item must be fully visible
+- No overlapping clothing items
+- Clean cut-out product photography appearance
 
-Image composition:
+Layout:
 
-- No human model.
-- No mannequin.
-- No hanger.
-- No clothing rack.
-- No text.
-- No logo.
-- No watermark.
+- Tops above bottoms
+- Dresses or jumpsuits centered
+- Shoes placed below clothing
+- Bags and accessories arranged around the outfit
+- Balanced and symmetrical composition
+- Consistent spacing between all items
 
-Visual style:
+Photography style:
 
-- Premium fashion magazine editorial photography.
-- High-end commercial fashion photography.
-- Clothing items arranged as a sophisticated fashion composition.
-- Realistic depth and natural shadows.
-- Soft natural lighting.
-- Clean light-gray background.
-- Elegant spacing between items.
-- Realistic fabric textures.
-- Highly detailed.
-- Cohesive and visually balanced layout.
-- Arrange the clothing items as a beautifully styled fashion editorial layout.
-- Items should appear naturally positioned with realistic depth and soft shadows.
-- Maintain a luxurious magazine-quality presentation while keeping the outfit itself practical and attainable.
-- Clean background with subtle texture.
-- Soft natural lighting.
-- Realistic fabric textures.
-- Elegant negative space.
-- Professional commercial fashion photography.
-- Include only one pair of shoes (left and right).
+- Luxury fashion editorial
+- High-end e-commerce catalog quality
+- Professional studio photography
+- Soft natural shadows
+- Top-down view
+- Minimalist aesthetic
 
-The image should look like a luxury fashion magazine feature while representing a practical outfit that an ordinary working mother could realistically wear today.
+Background:
 
-Generate a single image containing one complete outfit.
+- Solid light-gray studio background
+- No floor
+- No table
+- No decorative props
+- No texture
+
+Restrictions:
+
+- No human
+- No mannequin
+- No body parts
+- No hanger
+- No text
+- No logo
+- No watermark
+
+The result should resemble a premium fashion magazine flat-lay or luxury online boutique product presentation.

@@ -4,6 +4,8 @@ import { supabase } from "@/lib/auth";
 import type {
   ClothingCreateRequest,
   ClothingItem,
+  ClothingUploadUrlRequest,
+  ClothingUploadUrlResponse,
   ClothesListResponse,
 } from "./types";
 
@@ -72,5 +74,23 @@ export async function createClothing(
         token,
       }),
     "服の登録に失敗しました",
+  );
+}
+
+export async function createClothingUploadUrl(
+  payload: ClothingUploadUrlRequest,
+): Promise<ClothingUploadUrlResponse> {
+  const token = await getAccessToken();
+
+  return handleClothesApiError(
+    () =>
+      apiClient.post<ClothingUploadUrlResponse>(
+        "/clothes/upload-url",
+        payload,
+        {
+          token,
+        },
+      ),
+    "画像アップロードURLの取得に失敗しました",
   );
 }
