@@ -3,7 +3,6 @@ from typing import Annotated
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.api.v1.schemas.regions import to_region_schema
 from app.api.v1.schemas.weather import WeatherForecast
 from app.constants.regions import get_region_coordinates
 from app.core.logging import logger
@@ -60,8 +59,4 @@ async def get_weather_forecast(
             detail="failed to fetch weather forecast",
         ) from exc
 
-    return WeatherForecast(
-        region_code=region_code,
-        region=to_region_schema(region_code),
-        **forecast,
-    )
+    return WeatherForecast(region_code=region_code, **forecast)
