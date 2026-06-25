@@ -1,6 +1,6 @@
 Create a premium fashion magazine style flat-lay outfit composition.
 
-Target gender: {{ gender }}
+Target gender for styling: {{ gender }}
 
 Use ONLY the clothing items listed below.
 
