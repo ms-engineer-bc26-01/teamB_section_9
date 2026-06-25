@@ -113,6 +113,26 @@ def test_precipitation_by_part_buckets_today_hours_by_max() -> None:
     assert result == {"morning": 70, "afternoon": 30, "evening": 10}
 
 
+def test_precipitation_by_part_window_boundaries_are_half_open() -> None:
+    # 窓境界の取り違え検出: 11時=朝 / 12時=昼、17時=昼 / 18時=夜、
+    # 21時=夜 / 22時=対象外 を固定する。
+    hourly = {
+        "time": [
+            "2026-06-01T11:00",  # 朝（上端は含む）
+            "2026-06-01T12:00",  # 昼（朝には入らない）
+            "2026-06-01T17:00",  # 昼（上端は含む）
+            "2026-06-01T18:00",  # 夜（昼には入らない）
+            "2026-06-01T21:00",  # 夜（上端は含む）
+            "2026-06-01T22:00",  # どの窓にも入らない→無視
+        ],
+        "precipitation_probability": [11, 12, 17, 18, 21, 22],
+    }
+
+    result = _precipitation_by_part(hourly, "2026-06-01")
+
+    assert result == {"morning": 11, "afternoon": 17, "evening": 21}
+
+
 def test_precipitation_by_part_returns_empty_when_no_hourly() -> None:
     assert _precipitation_by_part({}, "2026-06-01") == {}
 

@@ -17,6 +17,7 @@ HOURLY_FIELDS = "precipitation_probability"
 
 # 当日の降水確率を「朝/昼/夜」に分けて評価するためのローカル時刻の窓（時）。
 # 「忙しい朝」に傘要否を判断できるよう、各窓は最大値（安全側）で代表させる。
+# 当日コーデ提案が目的のため 22-23 時・深夜帯は意図的に対象外（どの窓にも入れない）。
 _PART_WINDOWS: dict[str, range] = {
     "morning": range(6, 12),
     "afternoon": range(12, 18),

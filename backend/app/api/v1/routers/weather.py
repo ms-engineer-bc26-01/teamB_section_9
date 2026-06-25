@@ -59,4 +59,7 @@ async def get_weather_forecast(
             detail="failed to fetch weather forecast",
         ) from exc
 
+    # forecast には extract 用の内部キー today_precipitation_by_part が含まれるが、
+    # WeatherForecast スキーマ（extra="ignore"）では無視され response 形状は不変。
+    # 将来 extra="forbid" を入れる場合はここで明示的に除外すること。
     return WeatherForecast(region_code=region_code, **forecast)
