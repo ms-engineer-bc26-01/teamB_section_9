@@ -136,9 +136,22 @@ export default function ClothesRegisterPage() {
     fileInputRef.current?.click();
   };
 
+  const clearSelectedImage = () => {
+    setSelectedFileName(null);
+    setUploadedImageUrl(null);
+    setPreviewUrl((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
+
+      return null;
+    });
+  };
+
   const handlePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
+    clearSelectedImage();
     if (!file) {
       return;
     }
