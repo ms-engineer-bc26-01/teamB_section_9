@@ -66,6 +66,45 @@ Slack の `#env-updates` チャンネルを確認し、最新の値を自分の 
 
 ---
 
+## LAN 上の別端末からアクセスする場合
+
+スマートフォンや別の PC など、ホストマシンと同じ LAN にいる端末からフロントエンドにアクセスする場合は、追加の設定が必要です。
+
+**なぜ設定が必要か**
+
+- `NEXT_PUBLIC_API_BASE_URL` の `localhost` はブラウザ側の端末で解決されるため、ホストマシンの backend に届きません。
+- `BACKEND_CORS_ORIGINS` に LAN IP のオリジンが含まれていないと CORS でブロックされます。
+
+**手順**
+
+1. ホストマシンの LAN IP を確認します（例: `192.168.11.37`）。
+
+   ```bash
+   # macOS / Linux
+   ip a | grep 'inet ' | grep -v 127
+   # または
+   ifconfig | grep 'inet ' | grep -v 127
+   ```
+
+2. `.env` の以下の 2 項目をホストマシンの LAN IP で書き換えます。
+
+   ```env
+   NEXT_PUBLIC_API_BASE_URL=http://192.168.11.37:8000/api/v1
+   BACKEND_CORS_ORIGINS=["http://localhost:3000","http://192.168.11.37:3000"]
+   ```
+
+3. コンテナを再起動します。
+
+   ```bash
+   docker compose up --build
+   ```
+
+4. LAN 上の端末から `http://192.168.11.37:3000` にアクセスしてください。
+
+> **注意**: LAN IP はルーター・DHCP 設定によって変わることがあります。IP が変わった場合は同じ手順で `.env` を更新してください。
+
+---
+
 ## よくあるトラブル
 
 ### `docker compose up` でエラーが出る
