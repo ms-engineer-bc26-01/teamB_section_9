@@ -70,6 +70,51 @@ async def test_run_job_processes_all_users_and_continues_on_failure(
     assert stats.image_generated == 1
 
 
+@pytest.mark.asyncio
+async def test_process_user_uses_free_mode(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+    user = job.UserBatchTarget(
+        id=uuid.UUID("00000000-0000-0000-0000-000000000010"),
+        default_region_code="13_01",
+    )
+
+    class FakeSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            del exc_type, exc, tb
+            return False
+
+    async def fake_generate_outfit_for_user(
+        db,
+        *,
+        user_id,
+        default_region_code,
+        tpo,
+        closet_mode,
+    ):
+        captured["db"] = db
+        captured["user_id"] = user_id
+        captured["default_region_code"] = default_region_code
+        captured["tpo"] = tpo
+        captured["closet_mode"] = closet_mode
+        return SimpleNamespace(
+            id=uuid.UUID("00000000-0000-0000-0000-000000000099"),
+            coordinate_image_url=None,
+        )
+
+    monkeypatch.setattr(job, "SessionLocal", FakeSession)
+    monkeypatch.setattr(job, "generate_outfit_for_user", fake_generate_outfit_for_user)
+
+    await job.process_user(user=user, tpo="business")
+
+    assert captured["user_id"] == user.id
+    assert captured["default_region_code"] == "13_01"
+    assert captured["tpo"] == "business"
+    assert captured["closet_mode"] == "free"
+
+
 def test_should_fail_job_only_when_no_images_were_generated() -> None:
     assert not job.should_fail_job(
         job.BatchJobStats(

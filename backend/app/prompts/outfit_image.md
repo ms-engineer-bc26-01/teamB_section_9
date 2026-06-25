@@ -1,4 +1,4 @@
-Create a premium fashion magazine style flat-lay outfit composition.
+Create a premium Japanese fashion magazine outfit page.
 
 Target gender for styling: {{ gender }}
 
@@ -9,41 +9,60 @@ Use ONLY the clothing items listed below.
 Styling note:
 {{ comment }}
 
-Requirements:
+Create an editorial outfit composition that looks like a page from a luxury fashion magazine.
 
-- Preserve the exact appearance of every item
-- Do not invent new garments
-- Do not change colors, materials, patterns, or silhouettes
-- Do not omit any item
-- Every item must be fully visible
-- No overlapping clothing items
-- Clean cut-out product photography appearance
+The clothing should be arranged to resemble a realistic dressed silhouette without showing any person.
 
-Layout:
+Styling layout:
 
-- Tops above bottoms
-- Dresses or jumpsuits centered
-- Shoes placed below clothing
-- Bags and accessories arranged around the outfit
-- Balanced and symmetrical composition
-- Consistent spacing between all items
+- Layer garments naturally as a stylist would prepare an outfit
+- Outerwear may overlap tops
+- Bags and shoes may partially overlap garments
+- Create the impression of a complete worn outfit
+- Preserve visibility of important garment details
+- Maintain realistic proportions
+- Create elegant visual flow from top to bottom
+- The complete outfit silhouette must fit entirely within the image frame.
+- No item may touch the image edges.
+- The topmost garment, bottom hems, shoes, bags, and accessories must all remain fully visible.
+- Never crop any part of any item.
+- Maintain safe margins on all sides.
+- The outfit should occupy roughly 80% of the canvas height.
+- Display footwear as a complete wearable pair.
+- Never display extra shoes, missing shoes, or duplicated shoes.
 
-Photography style:
+Editorial design:
 
-- Luxury fashion editorial
-- High-end e-commerce catalog quality
-- Professional studio photography
-- Soft natural shadows
-- Top-down view
-- Minimalist aesthetic
+- Magazine layout rather than product catalog
+- Generous white space
+- Sophisticated page composition
+- Fashion magazine styling board aesthetic
+- Japanese women's fashion magazine atmosphere
+- Refined and modern presentation
+
+Photography:
+
+- High-end fashion editorial
+- Luxury department store styling
+- Soft natural studio lighting
+- Delicate shadows
+- Premium fabric texture rendering
+- Ultra-clean cutout quality
+- Top-down styling shot
 
 Background:
 
-- Solid light-gray studio background
-- No floor
-- No table
-- No decorative props
-- No texture
+- Clean white magazine page
+- Minimalist editorial layout
+- Magazine article appearance
+
+Framing:
+
+- The entire outfit must be contained within a central safe area.
+- Keep all clothing items inside a centered area occupying approximately 70% of the canvas height and 80% of the canvas width.
+- Leave generous background margins on all four sides.
+- The top collar, bottom hems, shoes, and accessories must never touch or approach the image edges.
+- Scale down the outfit composition if necessary.
 
 Restrictions:
 
@@ -51,8 +70,9 @@ Restrictions:
 - No mannequin
 - No body parts
 - No hanger
-- No text
-- No logo
+- No clothing rack
 - No watermark
+- No logo
+- No text
 
-The result should resemble a premium fashion magazine flat-lay or luxury online boutique product presentation.
+The final image should feel like a professionally styled page from a premium Japanese fashion magazine rather than an e-commerce product listing.

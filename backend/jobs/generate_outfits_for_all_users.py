@@ -70,6 +70,7 @@ async def process_user(*, user: UserBatchTarget, tpo: str):
             user_id=user.id,
             default_region_code=user.default_region_code,
             tpo=tpo,
+            closet_mode="free",
         )
     logger.info(
         "batch outfit generated (user=%s, outfit=%s, image=%s)",
