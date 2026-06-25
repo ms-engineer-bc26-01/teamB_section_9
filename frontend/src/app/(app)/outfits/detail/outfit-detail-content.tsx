@@ -23,6 +23,7 @@ import {
 import { getOutfit, updateOutfit } from "@/features/outfits/api";
 import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
 import {
+  formatRegionLabel,
   getSuggestedOutfitItemColor,
   getSuggestedOutfitItemName,
 } from "@/features/outfits/types";
@@ -206,9 +207,7 @@ export function OutfitDetailContent() {
 
   const outfitTitle = outfit ? tpoLabels[outfit.tpo] ?? "おすすめコーデ" : "";
   const sceneLabel = outfit ? tpoSceneLabels[outfit.tpo] ?? outfit.tpo : "";
-  const regionLabel = outfit?.region
-    ? `${outfit.region.prefecture_name} ${outfit.region.name}`.trim()
-    : null;
+  const regionLabel = formatRegionLabel(outfit?.region);
   const maxTemperature = formatTemperature(outfit?.weather_temp_max);
   const minTemperature = formatTemperature(outfit?.weather_temp_min);
   const temperatureText =

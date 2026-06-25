@@ -26,6 +26,7 @@ import {
 } from "@/features/weather/api";
 import { getOutfits } from "@/features/outfits/api";
 import {
+  formatRegionLabel,
   getSuggestedOutfitItemName,
 } from "@/features/outfits/types";
 import type { SuggestedOutfit } from "@/features/outfits/types";
@@ -374,9 +375,7 @@ export default function HomeDashboard() {
       : "-";
   const precipitationText =
     precipitationProbability !== null ? `${precipitationProbability}%` : "-";
-  const regionLabel = weather?.region
-    ? `${weather.region.prefecture_name} ${weather.region.name}`.trim()
-    : null;
+  const regionLabel = formatRegionLabel(weather?.region);
   const latestOutfit = outfitState.outfit;
   const outfitErrorMessage = token
     ? outfitState.errorMessage

@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getOutfits, updateOutfit } from "@/features/outfits/api";
 import {
+  formatRegionLabel,
   getSuggestedOutfitItemName,
   type SuggestedOutfit,
 } from "@/features/outfits/types";
@@ -354,9 +355,7 @@ export default function OutfitsHistoryPage() {
           {items.map((outfit) => {
             const sceneLabel = tpoLabels[outfit.tpo] ?? outfit.tpo;
             const createdAt = formatCreatedAt(outfit.created_at);
-            const regionLabel = outfit.region
-              ? `${outfit.region.prefecture_name} ${outfit.region.name}`.trim()
-              : null;
+            const regionLabel = formatRegionLabel(outfit.region);
             const imageUrl = getOutfitImageUrl(outfit);
             const previewItems = [...outfit.items]
               .sort((a, b) => a.display_order - b.display_order)
