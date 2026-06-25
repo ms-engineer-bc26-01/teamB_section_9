@@ -47,7 +47,7 @@ sequenceDiagram
     Note over BE: 解決処理<br/>・clothes_id が所有服に一致 → clothing_item に解決<br/>・不一致 / null → clothing_item=null（補完提案）
 
     Note over BE: 現状は DB 保存・提案結果キャッシュなし<br/>id / created_at は一時生成
-    BE-->>FE: 200 { outfits: [{ id, user_id, tpo, comment,<br/>is_favorite, items, created_at }] }
+    BE-->>FE: 200 { outfits: [{ id, user_id, tpo, region_code, comment,<br/>is_favorite, items, created_at }],<br/>region_used, weather_summary, weather_temp_max, weather_temp_min }
     FE-->>User: コーデを表示
 
     Note over BE,DB: ※ suggest は非保存。保存はユーザー操作で別途行う（下記）

@@ -74,11 +74,12 @@ export type Region = {
 
 export type OutfitSuggestResponse = {
   outfits: SuggestedOutfit[];
+  // 提案に用いた地域。BE は返すが現状 FE 未使用（プレビュー地域表示で消費予定）。
   region_used?: Region | null;
+  // 提案時の天気。保存（POST /outfits）時に引き継ぐ。
   weather_summary?: string | null;
   weather_temp_max?: number | null;
   weather_temp_min?: number | null;
-  cached?: boolean;
 };
 
 export type OutfitsListResponse = {
