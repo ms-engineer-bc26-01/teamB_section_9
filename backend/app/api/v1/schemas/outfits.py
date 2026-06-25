@@ -1,9 +1,13 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from app.api.v1.schemas.clothes import ClothingItem
+
+ClosetMode = Literal["owned", "free"]
+DEFAULT_CLOSET_MODE: ClosetMode = "owned"
 
 
 class OutfitSuggestRequest(BaseModel):

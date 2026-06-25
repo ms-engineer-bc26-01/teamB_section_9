@@ -4,7 +4,12 @@ from dataclasses import dataclass
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.schemas.outfits import OutfitCreateItem, SuggestedOutfit
+from app.api.v1.schemas.outfits import (
+    DEFAULT_CLOSET_MODE,
+    ClosetMode,
+    OutfitCreateItem,
+    SuggestedOutfit,
+)
 from app.constants.regions import get_region
 from app.core.logging import logger
 from app.domain.clothes import crud as clothes_crud
@@ -75,6 +80,7 @@ async def build_outfit_suggestion_plan(
     default_region_code: str | None,
     tpo: str,
     region_code: str | None = None,
+    closet_mode: ClosetMode = DEFAULT_CLOSET_MODE,
     clothing_ids: list[uuid.UUID] | None = None,
     exclude_clothing_ids: list[uuid.UUID] | None = None,
 ) -> OutfitSuggestionPlan:
@@ -105,20 +111,24 @@ async def build_outfit_suggestion_plan(
         )
         raise OutfitWeatherError("failed to fetch weather forecast") from exc
 
-    clothes = (
-        await clothes_crud.list_clothes(
-            db,
-            user_id,
-            limit=CLOTHES_FETCH_LIMIT,
-            offset=0,
-        )
-    ).items
+    if closet_mode == "owned":
+        clothes = (
+            await clothes_crud.list_clothes(
+                db,
+                user_id,
+                limit=CLOTHES_FETCH_LIMIT,
+                offset=0,
+            )
+        ).items
+    else:
+        clothes = []
 
     try:
         result = await OutfitService().suggest(
             tpo=tpo,
             clothes=clothes,
             weather=prompt_weather,
+            closet_mode=closet_mode,
             clothing_ids=clothing_ids,
             exclude_clothing_ids=exclude_clothing_ids,
         )
@@ -216,6 +226,7 @@ async def generate_outfit_for_user(
     default_region_code: str | None,
     tpo: str = DEFAULT_BATCH_TPO,
     region_code: str | None = None,
+    closet_mode: ClosetMode = DEFAULT_CLOSET_MODE,
     is_favorite: bool = False,
 ) -> SuggestedOutfit:
     """コーデ提案を保存し、画像生成は best-effort で後続適用した結果を返す。
@@ -229,6 +240,7 @@ async def generate_outfit_for_user(
         default_region_code=default_region_code,
         tpo=tpo,
         region_code=region_code,
+        closet_mode=closet_mode,
     )
     saved = await save_outfit_from_plan(db, plan=plan, is_favorite=is_favorite)
     return await generate_coordinate_image_for_outfit(db, outfit=saved)

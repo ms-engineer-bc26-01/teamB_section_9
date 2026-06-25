@@ -6,16 +6,31 @@ from openai import APIError
 from pydantic import BaseModel, ConfigDict
 
 from app.api.v1.schemas.clothes import ClothingItem
+from app.api.v1.schemas.outfits import DEFAULT_CLOSET_MODE, ClosetMode
 from app.services.base_llm import LLMStructuredResponseError
 from app.services.llm_client import get_llm_client
 from app.services.usage import LlmUsage
 from app.services.weather_client import OutfitPromptWeather
 
-_PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "outfit_suggest.md"
-try:
-    _PROMPT_TEMPLATE: str = _PROMPT_PATH.read_text(encoding="utf-8")
-except OSError as exc:
-    raise RuntimeError(f"outfit_suggest.md が見つかりません: {_PROMPT_PATH}") from exc
+_PROMPT_DIR = Path(__file__).resolve().parents[2] / "prompts"
+_PROMPT_PATHS = {
+    "owned": _PROMPT_DIR / "outfit_suggest.md",
+    "free": _PROMPT_DIR / "outfit_suggest_free.md",
+}
+
+
+def _read_prompt_template(mode: ClosetMode) -> str:
+    path = _PROMPT_PATHS[mode]
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise RuntimeError(f"{path.name} が見つかりません: {path}") from exc
+
+
+_PROMPT_TEMPLATES = {
+    "owned": _read_prompt_template("owned"),
+    "free": _read_prompt_template("free"),
+}
 
 _DEFAULT_GENDER = "女性"
 
@@ -65,6 +80,7 @@ class OutfitService:
         clothes: list[ClothingItem],
         weather: OutfitPromptWeather,
         gender: str = _DEFAULT_GENDER,
+        closet_mode: ClosetMode = DEFAULT_CLOSET_MODE,
         clothing_ids: list[uuid.UUID] | None = None,
         exclude_clothing_ids: list[uuid.UUID] | None = None,
     ) -> "OutfitSuggestion":
@@ -77,21 +93,21 @@ class OutfitService:
           指示する（LLM 選定のため含有はサーバ保証ではなく best-effort）。
         """
         pool = clothes
-        if exclude_clothing_ids:
+        if closet_mode == "free":
+            pool = []
+        elif exclude_clothing_ids:
             excluded = set(exclude_clothing_ids)
             pool = [c for c in pool if c.id not in excluded]
 
-        clothes_summary = self._format_clothes(pool)
         weather_summary = self._format_weather(weather)
-        must_include = self._format_must_include(pool, clothing_ids)
         gender_text = gender.strip() or _DEFAULT_GENDER
-
-        prompt = (
-            _PROMPT_TEMPLATE.replace("{{ clothes }}", clothes_summary)
-            .replace("{{ weather }}", weather_summary)
-            .replace("{{ tpo }}", tpo)
-            .replace("{{ must_include }}", must_include)
-            .replace("{{ gender }}", gender_text)
+        prompt = self._build_prompt(
+            closet_mode=closet_mode,
+            tpo=tpo,
+            pool=pool,
+            weather_summary=weather_summary,
+            gender_text=gender_text,
+            clothing_ids=clothing_ids,
         )
 
         try:
@@ -141,6 +157,32 @@ class OutfitService:
             items=items,
             usage=usage,
         )
+
+    @staticmethod
+    def _build_prompt(
+        *,
+        closet_mode: ClosetMode,
+        tpo: str,
+        pool: list[ClothingItem],
+        weather_summary: str,
+        gender_text: str,
+        clothing_ids: list[uuid.UUID] | None,
+    ) -> str:
+        prompt = (
+            _PROMPT_TEMPLATES[closet_mode]
+            .replace("{{ weather }}", weather_summary)
+            .replace("{{ tpo }}", tpo)
+            .replace("{{ gender }}", gender_text)
+        )
+        if closet_mode == "owned":
+            prompt = prompt.replace(
+                "{{ clothes }}", OutfitService._format_clothes(pool)
+            )
+            prompt = prompt.replace(
+                "{{ must_include }}",
+                OutfitService._format_must_include(pool, clothing_ids),
+            )
+        return prompt
 
     @staticmethod
     def _resolve_owned(

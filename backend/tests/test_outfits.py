@@ -152,6 +152,69 @@ async def test_outfit_service_uses_prompt_template_independent_of_cwd(
 
 
 @pytest.mark.asyncio
+async def test_suggest_uses_free_prompt_and_ignores_owned_clothes(monkeypatch) -> None:
+    captured: dict[str, str] = {}
+    owned_id = uuid.UUID("00000000-0000-0000-0000-0000000000f1")
+
+    class FakeLLMClient:
+        async def generate_structured(self, prompt: str, *, response_format):
+            captured["prompt"] = prompt
+            assert response_format is LLMOutfitSuggestionPayload
+            return LLMOutfitSuggestionPayload(
+                comment="free-mode",
+                items=[
+                    LLMOutfitSuggestionItem(
+                        name="黒ジャケット",
+                        role="outer",
+                        color="black",
+                        pattern=None,
+                        clothes_id=str(owned_id),
+                    )
+                ],
+            ), None
+
+    monkeypatch.setattr(
+        "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
+    )
+
+    service = OutfitService()
+    result = await service.suggest(
+        tpo="casual",
+        closet_mode="free",
+        clothes=[
+            ClothingItem(
+                id=owned_id,
+                user_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
+                name="owned jacket",
+                category="outer",
+                color="navy",
+                pattern=None,
+                size="M",
+                season=["all"],
+                tpo_tags=["casual"],
+                image_url="https://example.com/jacket.jpg",
+                thumbnail_url=None,
+                memo=None,
+                is_favorite=False,
+                wear_count=0,
+                last_worn_at=None,
+                created_at=TEST_TIMESTAMP,
+                updated_at=TEST_TIMESTAMP,
+            )
+        ],
+        weather=_make_prompt_weather(),
+    )
+
+    assert (
+        "ユーザーの手持ちの服（各行の id が服の識別子です）:" not in captured["prompt"]
+    )
+    assert "優先して含めたい服" not in captured["prompt"]
+    assert "手持ちの服は考慮しないでください。" in captured["prompt"]
+    assert result.items[0].clothing_item is None
+    assert result.items[0].name == "黒ジャケット"
+
+
+@pytest.mark.asyncio
 async def test_suggest_resolves_id_prefixed_clothes_id_and_prefers_db_values(
     monkeypatch,
 ) -> None:
@@ -415,6 +478,78 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
             },
         }
     ]
+
+
+@pytest.mark.asyncio
+async def test_free_modereturns_unowned_items(
+    monkeypatch,
+) -> None:
+    async def fake_fetch_weather_forecast(
+        *, region_code: str, latitude: float, longitude: float, days: int
+    ):
+        del region_code, latitude, longitude, days
+        return _make_forecast()
+
+    async def fake_list_clothes(db, user_id, **kwargs):
+        del db, user_id, kwargs
+        raise AssertionError("list_clothes should not be called in free mode")
+
+    async def fake_persist_llm_usage_best_effort(db, *, user_id, usage):
+        del db, user_id, usage
+
+    class FakeLLMClient:
+        async def generate_structured(self, prompt: str, *, response_format):
+            assert "ユーザーの手持ちの服（各行の id が服の識別子です）:" not in prompt
+            assert "優先して含めたい服" not in prompt
+            assert "手持ちの服は考慮しないでください。" in prompt
+            assert response_format is LLMOutfitSuggestionPayload
+            return LLMOutfitSuggestionPayload(
+                comment="free-mode",
+                items=[
+                    LLMOutfitSuggestionItem(
+                        name="黒ジャケット",
+                        role="outer",
+                        color="black",
+                        pattern=None,
+                        clothes_id=None,
+                    ),
+                    LLMOutfitSuggestionItem(
+                        name="白シャツ",
+                        role="tops",
+                        color="white",
+                        pattern=None,
+                        clothes_id=None,
+                    ),
+                ],
+            ), None
+
+    monkeypatch.setattr(
+        outfits_orchestration,
+        "fetch_weather_forecast_cached",
+        fake_fetch_weather_forecast,
+    )
+    monkeypatch.setattr(
+        outfits_orchestration.clothes_crud, "list_clothes", fake_list_clothes
+    )
+    monkeypatch.setattr(
+        outfits_orchestration,
+        "persist_llm_usage_best_effort",
+        fake_persist_llm_usage_best_effort,
+    )
+    monkeypatch.setattr(
+        "app.domain.outfits.service.get_llm_client", lambda: FakeLLMClient()
+    )
+
+    plan = await outfits_orchestration.build_outfit_suggestion_plan(
+        object(),
+        user_id=uuid.UUID("00000000-0000-0000-0000-000000000123"),
+        default_region_code="13_01",
+        tpo="casual",
+        closet_mode="free",
+    )
+
+    assert all(item.clothing_item is None for item in plan.items)
+    assert [item.name for item in plan.items] == ["黒ジャケット", "白シャツ"]
 
 
 def test_suggest_outfit_response_mixes_owned_and_suggested_items(
@@ -893,10 +1028,11 @@ def test_suggest_outfit_returns_bad_gateway_on_llm_failure(
             tpo: str,
             clothes: list[ClothingItem],
             weather: dict,
+            closet_mode="owned",
             clothing_ids=None,
             exclude_clothing_ids=None,
         ) -> str:
-            del tpo, clothes, weather, clothing_ids, exclude_clothing_ids
+            del tpo, clothes, weather, closet_mode, clothing_ids, exclude_clothing_ids
             raise OutfitSuggestionError("failed to generate outfit suggestion")
 
     async def fake_fetch_weather_forecast(
