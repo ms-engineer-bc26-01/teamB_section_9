@@ -283,14 +283,6 @@ export default function ClothesRegisterPage() {
                 選択中: {selectedFileName}
               </p>
             ) : null}
-
-            <p className="text-xs text-[#8C715C]">
-              {isUploadingImage
-                ? "画像をアップロードしています..."
-                : uploadedImageUrl
-                  ? "画像のアップロードが完了しました。このまま登録すると画像URLも保存されます。"
-                  : null}
-            </p>
           </CardContent>
         </Card>
 
