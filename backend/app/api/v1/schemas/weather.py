@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from app.api.v1.schemas.regions import Region
+
 
 class WeatherCurrent(BaseModel):
     temperature_2m: float
@@ -17,6 +19,7 @@ class WeatherDaily(BaseModel):
 
 class WeatherForecast(BaseModel):
     region_code: str
+    region: Region | None = None
     current: WeatherCurrent
     daily: list[WeatherDaily]
     cached: bool

@@ -798,6 +798,11 @@ components:
         region_code:
           type: string
           description: 取得した地域コード
+        region:
+          allOf:
+            - $ref: "#/components/schemas/Region"
+          nullable: true
+          description: region_code から解決した地域情報（名称表示用）。未定義コードは null
         current:
           type: object
           properties:

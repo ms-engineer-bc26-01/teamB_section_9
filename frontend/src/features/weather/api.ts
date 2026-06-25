@@ -1,7 +1,9 @@
+import type { Region } from "@/features/outfits/types";
 import { apiClient } from "@/lib/api/client";
 
 export type WeatherForecast = {
   region_code: string;
+  region?: Region | null;
   current: {
     temperature_2m: number;
     weather_code: number;

@@ -12,6 +12,7 @@ import {
   CloudRain,
   CloudSnow,
   CloudSun,
+  MapPin,
   Shirt,
   Sun,
   Sparkles,
@@ -373,6 +374,9 @@ export default function HomeDashboard() {
       : "-";
   const precipitationText =
     precipitationProbability !== null ? `${precipitationProbability}%` : "-";
+  const regionLabel = weather?.region
+    ? `${weather.region.prefecture_name} ${weather.region.name}`.trim()
+    : null;
   const latestOutfit = outfitState.outfit;
   const outfitErrorMessage = token
     ? outfitState.errorMessage
@@ -532,6 +536,12 @@ export default function HomeDashboard() {
           </div>
 
           <div className="space-y-1">
+            {regionLabel ? (
+              <p className="flex items-center gap-1 text-sm font-semibold text-[#6F6258]">
+                <MapPin aria-hidden="true" className="h-4 w-4" />
+                {regionLabel}
+              </p>
+            ) : null}
             <p className="text-lg font-bold text-[#2B2926]">{weatherLabel}</p>
             <p className="text-2xl font-bold text-[#2B2926]">
               {isWeatherLoading ? "-" : temperatureText}

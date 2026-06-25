@@ -155,6 +155,15 @@ def test_get_weather_forecast_returns_open_meteo_data(
     assert response.status_code == 200
     assert response.json() == {
         "region_code": "13_01",
+        "region": {
+            "code": "13_01",
+            "prefecture_code": "13",
+            "prefecture_name": "東京都",
+            "name": "23区",
+            "city": "新宿区",
+            "latitude": 35.6895,
+            "longitude": 139.6917,
+        },
         "current": {
             "temperature_2m": 25.4,
             "weather_code": 1,
