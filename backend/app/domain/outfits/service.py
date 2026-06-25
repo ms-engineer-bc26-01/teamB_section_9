@@ -426,6 +426,12 @@ class OutfitService:
                 f"今日の最高気温: {weather['today_temperature_max']}C",
                 f"今日の最低気温: {weather['today_temperature_min']}C",
                 f"今日の降水確率: {weather['today_precipitation_probability']}%",
+                (
+                    "今日の時間帯別降水確率（朝/昼/夜）: "
+                    f"{weather['today_precipitation_morning']}% / "
+                    f"{weather['today_precipitation_afternoon']}% / "
+                    f"{weather['today_precipitation_evening']}%"
+                ),
             ]
         )
 

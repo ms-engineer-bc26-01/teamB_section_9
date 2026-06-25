@@ -71,6 +71,9 @@ def _make_prompt_weather(
         "today_temperature_max": today_temperature_max,
         "today_temperature_min": today_temperature_min,
         "today_precipitation_probability": today_precipitation_probability,
+        "today_precipitation_morning": today_precipitation_probability,
+        "today_precipitation_afternoon": today_precipitation_probability,
+        "today_precipitation_evening": today_precipitation_probability,
     }
 
 
@@ -134,6 +137,9 @@ async def test_outfit_service_uses_prompt_template_independent_of_cwd(
             "today_temperature_max": 27.0,
             "today_temperature_min": 19.0,
             "today_precipitation_probability": 10,
+            "today_precipitation_morning": 10,
+            "today_precipitation_afternoon": 10,
+            "today_precipitation_evening": 10,
         },
     )
 

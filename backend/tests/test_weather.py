@@ -9,6 +9,7 @@ from app.dependencies import auth
 from app.services import weather_client
 from app.services.weather_client import (
     WeatherForecastResponseError,
+    _precipitation_by_part,
     extract_outfit_prompt_weather,
     fetch_weather_forecast_cached,
     get_weather_label,
@@ -55,7 +56,65 @@ def test_extract_outfit_prompt_weather_returns_reduced_fields() -> None:
         "today_temperature_max": 27.1,
         "today_temperature_min": 19.8,
         "today_precipitation_probability": 20,
+        # 時間別データが無いので朝/昼/夜は日最大で代替される。
+        "today_precipitation_morning": 20,
+        "today_precipitation_afternoon": 20,
+        "today_precipitation_evening": 20,
     }
+
+
+def test_extract_outfit_prompt_weather_uses_hourly_by_part() -> None:
+    result = extract_outfit_prompt_weather(
+        {
+            "current": {
+                "temperature_2m": 25.4,
+                "weather_code": 1,
+                "precipitation_probability": 10,
+            },
+            "today_precipitation_by_part": {
+                "morning": 80,
+                "afternoon": 30,
+                "evening": 0,
+            },
+            "daily": [
+                {
+                    "date": "2026-06-01",
+                    "temperature_max": 27.1,
+                    "temperature_min": 19.8,
+                    "weather_code": 2,
+                    "precipitation_probability_max": 80,
+                }
+            ],
+        }
+    )
+
+    assert result["today_precipitation_morning"] == 80
+    assert result["today_precipitation_afternoon"] == 30
+    assert result["today_precipitation_evening"] == 0
+    # 日最大は従来どおり保持される。
+    assert result["today_precipitation_probability"] == 80
+
+
+def test_precipitation_by_part_buckets_today_hours_by_max() -> None:
+    hourly = {
+        "time": [
+            "2026-06-01T05:00",  # 当日・窓外（朝6時前）→無視
+            "2026-06-01T07:00",  # 朝
+            "2026-06-01T10:00",  # 朝
+            "2026-06-01T15:00",  # 昼
+            "2026-06-01T20:00",  # 夜
+            "2026-06-02T08:00",  # 翌日→無視
+        ],
+        "precipitation_probability": [90, 40, 70, 30, 10, 99],
+    }
+
+    result = _precipitation_by_part(hourly, "2026-06-01")
+
+    assert result == {"morning": 70, "afternoon": 30, "evening": 10}
+
+
+def test_precipitation_by_part_returns_empty_when_no_hourly() -> None:
+    assert _precipitation_by_part({}, "2026-06-01") == {}
 
 
 def test_extract_outfit_prompt_weather_raises_for_missing_today_forecast() -> None:
