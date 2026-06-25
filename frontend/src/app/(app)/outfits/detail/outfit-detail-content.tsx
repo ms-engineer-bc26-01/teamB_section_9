@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, CloudSun, Heart, RefreshCw, Shirt } from "lucide-react";
+import {
+  CalendarDays,
+  CloudSun,
+  Heart,
+  MapPin,
+  RefreshCw,
+  Shirt,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -199,6 +206,9 @@ export function OutfitDetailContent() {
 
   const outfitTitle = outfit ? tpoLabels[outfit.tpo] ?? "おすすめコーデ" : "";
   const sceneLabel = outfit ? tpoSceneLabels[outfit.tpo] ?? outfit.tpo : "";
+  const regionLabel = outfit?.region
+    ? `${outfit.region.prefecture_name} ${outfit.region.name}`.trim()
+    : null;
   const maxTemperature = formatTemperature(outfit?.weather_temp_max);
   const minTemperature = formatTemperature(outfit?.weather_temp_min);
   const temperatureText =
@@ -300,6 +310,12 @@ export function OutfitDetailContent() {
 
             <Card className="border-[#E7DDD3] bg-white/90 shadow-sm">
               <CardHeader className="space-y-3">
+                {regionLabel ? (
+                  <div className="flex items-center gap-2 text-sm text-[#6F6259]">
+                    <MapPin aria-hidden="true" className="h-4 w-4" />
+                    <span>{regionLabel}</span>
+                  </div>
+                ) : null}
                 <div className="flex items-center gap-2 text-sm text-[#6F6259]">
                   <CloudSun aria-hidden="true" className="h-4 w-4" />
                   <span>{weatherText}</span>

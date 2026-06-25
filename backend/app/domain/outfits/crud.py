@@ -11,6 +11,7 @@ from app.api.v1.schemas.outfits import (
     SuggestedOutfit,
     SuggestedOutfitItem,
 )
+from app.api.v1.schemas.regions import to_region_schema
 from app.db.models.clothes import Clothes
 from app.db.models.outfit import Outfit, OutfitItem
 
@@ -75,6 +76,7 @@ def _to_outfit_schema(outfit: Outfit) -> SuggestedOutfit:
         user_id=outfit.user_id,
         tpo=outfit.tpo,
         region_code=outfit.region_code,
+        region=to_region_schema(outfit.region_code),
         weather_summary=outfit.weather_summary,
         weather_temp_max=outfit.weather_temp_max,
         weather_temp_min=outfit.weather_temp_min,
@@ -159,6 +161,9 @@ async def create_outfit(
     comment: str | None,
     is_favorite: bool,
     items: list[OutfitCreateItem],
+    weather_summary: str | None = None,
+    weather_temp_max: float | None = None,
+    weather_temp_min: float | None = None,
 ) -> SuggestedOutfit:
     """提案コーデ（手持ち＋補完）を永続化する。
 
@@ -185,7 +190,9 @@ async def create_outfit(
         user_id=user_id,
         tpo=tpo,
         region_code=region_code,
-        weather_summary=None,
+        weather_summary=weather_summary,
+        weather_temp_max=weather_temp_max,
+        weather_temp_min=weather_temp_min,
         comment=comment,
         is_favorite=is_favorite,
         source="llm",

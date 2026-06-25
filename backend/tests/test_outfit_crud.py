@@ -111,6 +111,9 @@ def _create_payload() -> dict:
     return {
         "tpo": "casual",
         "region_code": "13_01",
+        "weather_summary": "晴れ",
+        "weather_temp_max": 27.1,
+        "weather_temp_min": 19.8,
         "comment": "c",
         "items": [
             {
@@ -142,11 +145,24 @@ def test_create_outfit_persists_and_returns_201(
     captured: dict = {}
 
     async def fake_create_outfit(
-        db, *, user_id, tpo, region_code, comment, is_favorite, items
+        db,
+        *,
+        user_id,
+        tpo,
+        region_code,
+        comment,
+        is_favorite,
+        items,
+        weather_summary=None,
+        weather_temp_max=None,
+        weather_temp_min=None,
     ):
         captured["user_id"] = user_id
         captured["region_code"] = region_code
         captured["items"] = items
+        captured["weather_summary"] = weather_summary
+        captured["weather_temp_max"] = weather_temp_max
+        captured["weather_temp_min"] = weather_temp_min
         return _saved_outfit(
             [
                 SuggestedOutfitItem(
@@ -174,6 +190,10 @@ def test_create_outfit_persists_and_returns_201(
     assert captured["region_code"] == "13_01"
     assert captured["items"][0].clothes_id == OWNED_CLOTHES_ID
     assert captured["items"][1].clothes_id is None
+    # 提案時の天気が保存リクエストから crud へ転送される
+    assert captured["weather_summary"] == "晴れ"
+    assert captured["weather_temp_max"] == 27.1
+    assert captured["weather_temp_min"] == 19.8
 
 
 def test_create_outfit_returns_immediately_and_schedules_image_task(

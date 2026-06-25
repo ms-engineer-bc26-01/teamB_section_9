@@ -103,6 +103,10 @@ export function OutfitLoadingContent() {
         const savedOutfit = await createOutfit({
           tpo: suggestedOutfit.tpo,
           region_code: suggestedOutfit.region_code,
+          // 提案時の天気を保存時に引き継ぐ（suggest レスポンスから転送）。
+          weather_summary: result.weather_summary,
+          weather_temp_max: result.weather_temp_max,
+          weather_temp_min: result.weather_temp_min,
           comment: suggestedOutfit.comment,
           is_favorite: suggestedOutfit.is_favorite,
           items: suggestedOutfit.items.map((item) => ({

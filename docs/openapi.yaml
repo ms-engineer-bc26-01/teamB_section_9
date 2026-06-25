@@ -550,6 +550,11 @@ components:
           type: string
           example: "19_02"
           description: 提案時に使用した地域コード
+        region:
+          allOf:
+            - $ref: "#/components/schemas/Region"
+          nullable: true
+          description: region_code から解決した地域情報（名称表示用）。未定義コードは null
         weather_summary:
           type: string
           description: 提案時の天気スナップショット
@@ -641,6 +646,17 @@ components:
         region_code:
           type: string
           example: "13_01"
+        weather_summary:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: 提案時の天気スナップショット。FE が suggest レスポンスから転送する
+        weather_temp_max:
+          type: number
+          nullable: true
+        weather_temp_min:
+          type: number
+          nullable: true
         comment:
           type: string
           nullable: true
@@ -727,6 +743,10 @@ components:
           format: uuid
         tpo:
           $ref: "#/components/schemas/TpoTag"
+        region_code:
+          type: string
+          example: "13_01"
+          description: 提案に使用した地域コード
         comment:
           type: string
           description: LLMのおすすめポイント
@@ -747,14 +767,29 @@ components:
       type: object
       description: |
         コーデ提案レスポンス。クローゼットを参照し LLM がコーデを生成する。
-        現状はテキスト表示を優先し DB 保存しないため、outfits のみを返す
-        （旧 weather_summary / region_used / cached は廃止）。
+        outfits に加え、提案に使用した地域情報（region_used）と当日の天気要約を返し、
+        画面での地域名・天気表示に用いる。FE は保存時に weather を OutfitCreateRequest へ転送する。
       properties:
         outfits:
           type: array
           items:
             $ref: "#/components/schemas/SuggestOutfit"
           description: 提案されたコーデ
+        region_used:
+          allOf:
+            - $ref: "#/components/schemas/Region"
+          nullable: true
+          description: 提案に使用した地域情報（名称表示用）。未定義コードは null
+        weather_summary:
+          type: string
+          nullable: true
+          description: 提案時の当日天気要約（例「晴れ」）
+        weather_temp_max:
+          type: number
+          nullable: true
+        weather_temp_min:
+          type: number
+          nullable: true
 
     # ===== 天気 =====
     WeatherForecast:

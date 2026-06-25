@@ -20,6 +20,10 @@ export type OutfitCreateItem = {
 export type OutfitCreateRequest = {
   tpo: string;
   region_code: string;
+  // 提案時の天気を保存時に引き継ぐ（suggest レスポンスから転送）。
+  weather_summary?: string | null;
+  weather_temp_max?: number | null;
+  weather_temp_min?: number | null;
   comment?: string | null;
   is_favorite?: boolean;
   items: OutfitCreateItem[];
@@ -44,6 +48,8 @@ export type SuggestedOutfit = {
   user_id: string;
   tpo: string;
   region_code: string;
+  // region_code から解決した地域情報（名称表示用）。未定義コードは null。
+  region?: Region | null;
   // 保存済みコーデ（オンデマンド保存）では null。
   weather_summary: string | null;
   weather_temp_max: number | null;
@@ -68,8 +74,10 @@ export type Region = {
 
 export type OutfitSuggestResponse = {
   outfits: SuggestedOutfit[];
-  weather_summary?: string;
-  region_used?: Region;
+  region_used?: Region | null;
+  weather_summary?: string | null;
+  weather_temp_max?: number | null;
+  weather_temp_min?: number | null;
   cached?: boolean;
 };
 

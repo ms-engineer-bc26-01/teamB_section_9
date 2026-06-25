@@ -44,6 +44,10 @@ type TpoValue = (typeof tpoOptions)[number]["value"];
 type SuggestState = {
   outfit: SuggestedOutfit | null;
   savedOutfit: SuggestedOutfit | null;
+  // 提案時の天気（suggest レスポンス wrapper 由来）。保存時に引き継ぐ。
+  weatherSummary: string | null;
+  weatherTempMax: number | null;
+  weatherTempMin: number | null;
   errorMessage: string | null;
   isSuggesting: boolean;
   isSaving: boolean;
@@ -85,11 +89,24 @@ export function OutfitClosetContent() {
     isLoading: true,
   });
   const [
-    { outfit, savedOutfit, errorMessage, isSuggesting, isSaving, saveMessage },
+    {
+      outfit,
+      savedOutfit,
+      weatherSummary,
+      weatherTempMax,
+      weatherTempMin,
+      errorMessage,
+      isSuggesting,
+      isSaving,
+      saveMessage,
+    },
     setSuggestState,
   ] = useState<SuggestState>({
     outfit: null,
     savedOutfit: null,
+    weatherSummary: null,
+    weatherTempMax: null,
+    weatherTempMin: null,
     errorMessage: null,
     isSuggesting: false,
     isSaving: false,
@@ -164,6 +181,9 @@ export function OutfitClosetContent() {
     setSuggestState({
       outfit: null,
       savedOutfit: null,
+      weatherSummary: null,
+      weatherTempMax: null,
+      weatherTempMin: null,
       errorMessage: null,
       isSuggesting: true,
       isSaving: false,
@@ -183,6 +203,9 @@ export function OutfitClosetContent() {
       setSuggestState({
         outfit: suggestedOutfit,
         savedOutfit: null,
+        weatherSummary: response.weather_summary ?? null,
+        weatherTempMax: response.weather_temp_max ?? null,
+        weatherTempMin: response.weather_temp_min ?? null,
         errorMessage: null,
         isSuggesting: false,
         isSaving: false,
@@ -192,6 +215,9 @@ export function OutfitClosetContent() {
       setSuggestState({
         outfit: null,
         savedOutfit: null,
+        weatherSummary: null,
+        weatherTempMax: null,
+        weatherTempMin: null,
         errorMessage:
           error instanceof Error
             ? error.message
@@ -219,6 +245,10 @@ export function OutfitClosetContent() {
       const createdOutfit = await createOutfit({
         tpo: outfit.tpo,
         region_code: outfit.region_code,
+        // 提案時の天気を保存時に引き継ぐ（suggest レスポンスから転送）。
+        weather_summary: weatherSummary,
+        weather_temp_max: weatherTempMax,
+        weather_temp_min: weatherTempMin,
         comment: outfit.comment,
         is_favorite: false,
         items: outfit.items.map((item) => ({
