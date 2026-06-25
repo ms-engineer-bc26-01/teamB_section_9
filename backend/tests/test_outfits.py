@@ -481,7 +481,7 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
 
 
 @pytest.mark.asyncio
-async def test_free_modereturns_unowned_items(
+async def test_free_mode_returns_unowned_items(
     monkeypatch,
 ) -> None:
     async def fake_fetch_weather_forecast(

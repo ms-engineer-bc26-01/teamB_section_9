@@ -4,7 +4,7 @@ Target gender for styling: {{ gender }}
 
 The outfit must be composed only from the following clothing categories:
 
-{{items}}
+{{ items }}
 
 Styling note:
 {{ comment }}
