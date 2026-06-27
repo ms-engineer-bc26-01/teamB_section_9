@@ -6,10 +6,11 @@ from fastapi.testclient import TestClient
 from app.core.config import settings
 from app.main import build_cors_kwargs
 
-# app の CORS 設定は import 時に `app.add_middleware(... build_cors_kwargs(settings))` で
-# 確定する（その時点の APP_ENV で dev/prod を分岐。LAN regex 文字列自体は定数）。
-# そのため client 経由の実リクエスト検証は development 時のみ有効化し、production では
-# スキップする（dev/prod の分岐ロジックは build_cors_kwargs の単体テストで担保）。
+# app の CORS 設定は import 時に
+# `app.add_middleware(... build_cors_kwargs(settings))` で確定する（その時点の
+# APP_ENV で dev/prod を分岐。LAN regex 文字列自体は定数）。そのため client 経由の
+# 実リクエスト検証は development 時のみ有効化し、production ではスキップする
+# （dev/prod の分岐ロジックは build_cors_kwargs の単体テストで担保）。
 _dev_only = pytest.mark.skipif(
     settings.APP_ENV.lower() != "development",
     reason="CORS LAN regex is only active in development",
