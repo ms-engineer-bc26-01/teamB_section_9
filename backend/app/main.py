@@ -20,6 +20,7 @@ class _CorsSettings(Protocol):
     APP_ENV: str
     BACKEND_CORS_ORIGINS: list[str]
 
+
 setup_logging(settings.LOG_LEVEL)
 
 # 開発時のみ、同一 LAN のスマホ実機（http://<private-IP>:3000）からのアクセスを
