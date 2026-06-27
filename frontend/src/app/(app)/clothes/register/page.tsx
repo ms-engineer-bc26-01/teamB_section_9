@@ -222,7 +222,7 @@ export default function ClothesRegisterPage() {
 
     try {
       await createClothing(buildPayload());
-      router.push("/clothes");
+      router.push("/clothes?created=1");
       router.refresh();
     } catch (error) {
       setErrorMessage(

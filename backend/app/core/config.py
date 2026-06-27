@@ -47,3 +47,14 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def auth_bypass_misconfigured(s: Settings) -> bool:
+    """認証バイパスが development 以外で有効になっている矛盾設定かを判定する。
+
+    `_is_auth_bypass_enabled`（dependencies/auth.py）が development 限定のため、
+    本番で AUTH_BYPASS_ENABLED=true でも実際の認証スキップは発動しない。
+    ただし「本番なのに true」という設定の取り違えは事故の温床なので、
+    起動時にこれを検知して fail-fast するための判定。
+    """
+    return s.AUTH_BYPASS_ENABLED and s.APP_ENV.lower() != "development"

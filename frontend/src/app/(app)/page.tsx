@@ -23,10 +23,9 @@ import {
   getWeatherForecast,
   type WeatherForecast,
 } from "@/features/weather/api";
+import { getRegionLabelByCode, getRegions } from "@/features/regions/api";
 import { getOutfits } from "@/features/outfits/api";
-import {
-  getSuggestedOutfitItemName,
-} from "@/features/outfits/types";
+import { getSuggestedOutfitItemName } from "@/features/outfits/types";
 import type { SuggestedOutfit } from "@/features/outfits/types";
 import { apiClient } from "@/lib/api/client";
 import { useAuthStore } from "@/stores/auth-store";
@@ -54,6 +53,7 @@ type UserProfile = {
 
 type HomeWeatherState = {
   weather: WeatherForecast | null;
+  regionLabel: string | null;
   errorMessage: string | null;
 };
 
@@ -155,7 +155,18 @@ async function fetchHomeWeather(token: string) {
   const profile = await apiClient.get<UserProfile>("/auth/me", { token });
   const regionCode = profile.default_region_code ?? DEFAULT_REGION_CODE;
 
-  return getWeatherForecast(token, regionCode);
+  const regionLabelPromise = getRegions()
+    .then((regionsResponse) =>
+      getRegionLabelByCode(regionsResponse.items, regionCode),
+    )
+    .catch(() => null);
+
+  const weather = await getWeatherForecast(token, regionCode);
+
+  return {
+    weather,
+    regionLabelPromise,
+  };
 }
 
 async function fetchHomeClothesCount(token: string) {
@@ -200,6 +211,7 @@ export default function HomeDashboard() {
   const isInitialized = useAuthStore((state) => state.isInitialized);
   const [weatherState, setWeatherState] = useState<HomeWeatherState>({
     weather: null,
+    regionLabel: null,
     errorMessage: null,
   });
   const [outfitState, setOutfitState] = useState<HomeOutfitState>({
@@ -225,14 +237,26 @@ export default function HomeDashboard() {
     let isMounted = true;
 
     fetchHomeWeather(token)
-      .then((weather) => {
+      .then(({ weather, regionLabelPromise }) => {
         if (!isMounted) {
           return;
         }
 
         setWeatherState({
           weather,
+          regionLabel: null,
           errorMessage: null,
+        });
+
+        void regionLabelPromise.then((regionLabel) => {
+          if (!isMounted) {
+            return;
+          }
+
+          setWeatherState((current) => ({
+            ...current,
+            regionLabel,
+          }));
         });
       })
       .catch(() => {
@@ -242,6 +266,7 @@ export default function HomeDashboard() {
 
         setWeatherState({
           weather: null,
+          regionLabel: null,
           errorMessage: "天気情報を取得できませんでした。",
         });
       });
@@ -339,6 +364,7 @@ export default function HomeDashboard() {
   const todayLabel = `${today.getMonth() + 1}月${today.getDate()}日(${weekdayLabels[today.getDay()]})`;
   const todayDateTime = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const weather = token ? weatherState.weather : null;
+  const regionLabel = token ? weatherState.regionLabel : null;
   const todayForecast = weather?.daily[0] ?? null;
   const hasWeather = weather !== null && todayForecast !== null;
   const errorMessage = token
@@ -533,6 +559,9 @@ export default function HomeDashboard() {
 
           <div className="space-y-1">
             <p className="text-lg font-bold text-[#2B2926]">{weatherLabel}</p>
+            <p className="text-sm font-semibold text-[#6F6258]">
+              地点：{isWeatherLoading ? "確認中" : regionLabel ?? "-"}
+            </p>
             <p className="text-2xl font-bold text-[#2B2926]">
               {isWeatherLoading ? "-" : temperatureText}
             </p>

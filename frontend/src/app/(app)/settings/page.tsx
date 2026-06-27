@@ -23,6 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { getRegionLabel, getRegions, type Region } from "@/features/regions/api";
 import { apiClient } from "@/lib/api/client";
 import { supabase } from "@/lib/auth";
 import { useAuthStore } from "@/stores/auth-store";
@@ -36,20 +37,6 @@ type UserProfile = {
     subscription_status: "free" | "active" | "canceled";
     stripe_customer_id: string | null;
     created_at: string;
-};
-
-type Region = {
-    code: string;
-    prefecture_code: string;
-    prefecture_name: string;
-    name: string;
-    city: string;
-    latitude: number;
-    longitude: number;
-};
-
-type RegionsResponse = {
-    items: Region[];
 };
 
 const HOME_SCENE_STORAGE_KEY = "climo.home_scene_tpo";
@@ -72,10 +59,6 @@ function getPlanLabel(status: UserProfile["subscription_status"] | undefined) {
         default:
             return "無料プラン";
     }
-}
-
-function getRegionLabel(region: Region) {
-    return `${region.prefecture_name} ${region.name}`;
 }
 
 function getPrefectureCodeByRegionCode(regions: Region[], regionCode: string | null) {
@@ -139,8 +122,7 @@ export default function SettingsPage() {
                 window.localStorage.getItem(HOME_SCENE_STORAGE_KEY) ?? "business";
             setHomeSceneTpo(savedHomeSceneTpo);
 
-            apiClient
-                .get<RegionsResponse>("/regions")
+            getRegions()
                 .then((regionResponse) => {
                     if (!isMounted) return;
                     fetchedRegions = regionResponse.items;

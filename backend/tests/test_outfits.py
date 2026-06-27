@@ -71,6 +71,9 @@ def _make_prompt_weather(
         "today_temperature_max": today_temperature_max,
         "today_temperature_min": today_temperature_min,
         "today_precipitation_probability": today_precipitation_probability,
+        "today_precipitation_morning": today_precipitation_probability,
+        "today_precipitation_afternoon": today_precipitation_probability,
+        "today_precipitation_evening": today_precipitation_probability,
     }
 
 
@@ -134,6 +137,9 @@ async def test_outfit_service_uses_prompt_template_independent_of_cwd(
             "today_temperature_max": 27.0,
             "today_temperature_min": 19.0,
             "today_precipitation_probability": 10,
+            "today_precipitation_morning": 10,
+            "today_precipitation_afternoon": 10,
+            "today_precipitation_evening": 10,
         },
     )
 
@@ -438,8 +444,19 @@ def test_suggest_outfit_builds_prompt_from_weather_and_user_clothes(
 
     assert response.status_code == 200
     body = response.json()
-    # 提案レスポンスは outfits のみ（weather_summary / region_used / cached は持たない）
-    assert set(body.keys()) == {"outfits"}
+    # 提案レスポンスは outfits に加えて、提案に使った地域名・天気要約を載せる。
+    assert set(body.keys()) == {
+        "outfits",
+        "region_used",
+        "weather_summary",
+        "weather_temp_max",
+        "weather_temp_min",
+    }
+    assert body["region_used"]["code"] == "13_01"
+    assert body["region_used"]["prefecture_name"] == "東京都"
+    assert body["weather_summary"] == "晴れ"
+    assert body["weather_temp_max"] == 27.1
+    assert body["weather_temp_min"] == 19.8
     assert len(body["outfits"]) == 1
 
     outfit = body["outfits"][0]
@@ -1370,6 +1387,7 @@ def test_list_outfits_returns_items_and_total(
                 "user_id": "00000000-0000-0000-0000-000000000001",
                 "tpo": "casual",
                 "region_code": "13_01",
+                "region": None,
                 "weather_summary": "晴れ",
                 "weather_temp_max": 27.1,
                 "weather_temp_min": 19.8,

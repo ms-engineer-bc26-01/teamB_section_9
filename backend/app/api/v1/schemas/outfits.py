@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.api.v1.schemas.clothes import ClothingItem
+from app.api.v1.schemas.regions import Region
 
 ClosetMode = Literal["owned", "free"]
 DEFAULT_CLOSET_MODE: ClosetMode = "owned"
@@ -36,6 +37,7 @@ class SuggestedOutfit(BaseModel):
     user_id: uuid.UUID
     tpo: str
     region_code: str
+    region: Region | None = None
     weather_summary: str | None = None
     weather_temp_max: float | None = None
     weather_temp_min: float | None = None
@@ -66,6 +68,10 @@ class OutfitCreateItem(BaseModel):
 class OutfitCreateRequest(BaseModel):
     tpo: str = Field(min_length=1, max_length=20)
     region_code: str = Field(min_length=1, max_length=5)
+    # 提案時に算出した天気を保存時に引き継ぐ（FE が suggest レスポンスから転送）。
+    weather_summary: str | None = Field(default=None, max_length=255)
+    weather_temp_max: float | None = None
+    weather_temp_min: float | None = None
     comment: str | None = None
     is_favorite: bool = False
     items: list[OutfitCreateItem] = Field(min_length=1, max_length=20)
@@ -101,3 +107,7 @@ class SuggestOutfit(BaseModel):
 
 class OutfitSuggestResponse(BaseModel):
     outfits: list[SuggestOutfit]
+    region_used: Region | None = None
+    weather_summary: str | None = None
+    weather_temp_max: float | None = None
+    weather_temp_min: float | None = None

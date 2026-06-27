@@ -1,24 +1,13 @@
 from fastapi import APIRouter, Query
 
-from app.api.v1.schemas.regions import Region, RegionsResponse
-from app.constants.regions import REGIONS, get_regions_by_prefecture
+from app.api.v1.schemas.regions import Region, RegionsResponse, build_region_schema
+from app.constants.regions import REGIONS, RegionInfo, get_regions_by_prefecture
 
 router = APIRouter(prefix="/regions", tags=["Region"])
 
 
-def _serialize_regions(regions: dict[str, dict[str, str | float]]) -> list[Region]:
-    return [
-        Region(
-            code=code,
-            prefecture_code=code.split("_")[0],
-            prefecture_name=info["prefecture"],
-            name=info["name"],
-            city=info["city"],
-            latitude=info["lat"],
-            longitude=info["lng"],
-        )
-        for code, info in regions.items()
-    ]
+def _serialize_regions(regions: dict[str, RegionInfo]) -> list[Region]:
+    return [build_region_schema(code, info) for code, info in regions.items()]
 
 
 @router.get("", response_model=RegionsResponse)

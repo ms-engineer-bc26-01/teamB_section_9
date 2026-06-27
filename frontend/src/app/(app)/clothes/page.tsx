@@ -43,6 +43,14 @@ export default function ClothesPage() {
   const [clothes, setClothes] = useState<ClothingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage] = useState(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    return params.get("created") === "1" ? "登録しました。" : "";
+  });
   const isMountedRef = useRef(true);
 
   const loadClothes = useCallback(async (
@@ -73,6 +81,14 @@ export default function ClothesPage() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!successMessage) {
+      return;
+    }
+
+    window.history.replaceState(null, "", "/clothes");
+  }, [successMessage]);
 
   useEffect(() => {
     let ignore = false;
@@ -123,6 +139,15 @@ export default function ClothesPage() {
           <Plus size={22} aria-hidden="true" />
         </Link>
       </div>
+
+      {successMessage ? (
+        <div
+          role="status"
+          className="mb-4 rounded-3xl border border-[#D6E7DD] bg-[#F6FAF8] px-4 py-3 text-sm font-bold text-[#2F6F63]"
+        >
+          {successMessage}
+        </div>
+      ) : null}
 
       {isLoading ? (
         <div className="rounded-3xl bg-white p-6 text-center shadow-sm">
