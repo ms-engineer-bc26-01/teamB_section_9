@@ -12,7 +12,10 @@ from app.core.redis import close_redis, ping_redis
 
 
 class _CorsSettings(Protocol):
-    """CORS 設定に必要な属性だけを表す Protocol。`Settings` と `SimpleNamespace` の両方に適合する。"""
+    """CORS 設定に必要な属性だけを表す Protocol。
+
+    `Settings` と `SimpleNamespace` の両方に適合する。
+    """
 
     APP_ENV: str
     BACKEND_CORS_ORIGINS: list[str]
