@@ -95,7 +95,7 @@ export function getSuggestedOutfitItemColor(item: SuggestedOutfitItem) {
   return item.color ?? item.clothing_item?.color ?? null;
 }
 
-// region_code から解決した地域の表示ラベル。home / 履歴 / 詳細で共通利用する。
+// region_code から解決した地域の表示ラベル。履歴一覧 / 詳細で共通利用する。
 // region が無い（未解決 / null）場合は null を返し、呼び出し側で非表示にする。
 export function formatRegionLabel(region: Region | null | undefined) {
   if (!region) {
