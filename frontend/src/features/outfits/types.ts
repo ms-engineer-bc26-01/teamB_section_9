@@ -100,11 +100,12 @@ export type OutfitSuggestResponse = {
 // SuggestedOutfit（region / weather_* を解決済み）。top-level の地域・天気は任意。
 export type SavedSuggestionResult = {
   outfits: SuggestedOutfit[];
+  // 提案に用いた地域。BE は返すが現状 FE 未使用（プレビュー地域表示で消費予定）。
   region_used?: Region | null;
+  // 提案時の天気。保存（POST /outfits）時に引き継ぐ。
   weather_summary?: string | null;
   weather_temp_max?: number | null;
   weather_temp_min?: number | null;
-  cached?: boolean;
 };
 
 export type OutfitsListResponse = {
@@ -118,4 +119,14 @@ export function getSuggestedOutfitItemName(item: SuggestedOutfitItem) {
 
 export function getSuggestedOutfitItemColor(item: SuggestedOutfitItem) {
   return item.color ?? item.clothing_item?.color ?? null;
+}
+
+// region_code から解決した地域の表示ラベル。履歴一覧 / 詳細で共通利用する。
+// region が無い（未解決 / null）場合は null を返し、呼び出し側で非表示にする。
+export function formatRegionLabel(region: Region | null | undefined) {
+  if (!region) {
+    return null;
+  }
+
+  return `${region.prefecture_name} ${region.name}`.trim() || null;
 }

@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChevronRight,
   Heart,
+  MapPin,
   RefreshCw,
   Shirt,
   Sparkles,
@@ -15,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getOutfits, updateOutfit } from "@/features/outfits/api";
 import {
+  formatRegionLabel,
   getSuggestedOutfitItemName,
   type SuggestedOutfit,
 } from "@/features/outfits/types";
@@ -353,6 +355,7 @@ export default function OutfitsHistoryPage() {
           {items.map((outfit) => {
             const sceneLabel = tpoLabels[outfit.tpo] ?? outfit.tpo;
             const createdAt = formatCreatedAt(outfit.created_at);
+            const regionLabel = formatRegionLabel(outfit.region);
             const imageUrl = getOutfitImageUrl(outfit);
             const previewItems = [...outfit.items]
               .sort((a, b) => a.display_order - b.display_order)
@@ -419,6 +422,15 @@ export default function OutfitsHistoryPage() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
+                  {regionLabel ? (
+                    <Badge
+                      variant="outline"
+                      className="flex items-center gap-1 border-[#E8DED4]"
+                    >
+                      <MapPin aria-hidden="true" className="h-3.5 w-3.5" />
+                      {regionLabel}
+                    </Badge>
+                  ) : null}
                   <Badge variant="outline" className="border-[#E8DED4]">
                     {getTemperatureText(outfit)}
                   </Badge>
