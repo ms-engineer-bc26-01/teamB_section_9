@@ -77,6 +77,18 @@ export async function createClothing(
   );
 }
 
+export async function deleteClothing(clothingId: string): Promise<void> {
+  const token = await getAccessToken();
+
+  return handleClothesApiError(
+    () =>
+      apiClient.delete<void>(`/clothes/${clothingId}`, {
+        token,
+      }),
+    "服の削除に失敗しました",
+  );
+}
+
 export async function createClothingUploadUrl(
   payload: ClothingUploadUrlRequest,
 ): Promise<ClothingUploadUrlResponse> {
