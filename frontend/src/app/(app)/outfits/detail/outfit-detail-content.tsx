@@ -72,17 +72,30 @@ function loadOutfitSuggestion(
 
   try {
     const suggestion = JSON.parse(rawSuggestion) as SavedSuggestionResult;
-    const outfit = suggestion.outfits[0];
-    const outfitUserId = outfit?.user_id;
-    const savedOutfitId = outfit?.id;
+    const rawOutfit = suggestion.outfits[0];
+    const outfitUserId = rawOutfit?.user_id;
+    const savedOutfitId = rawOutfit?.id;
 
-    if (outfitUserId !== userId || savedOutfitId !== outfitId) {
+    if (!rawOutfit || outfitUserId !== userId || savedOutfitId !== outfitId) {
       return {
         outfit: null,
         errorMessage: "ログイン中のユーザーまたはコーデ提案結果が一致しません。",
         isLoading: false,
       };
     }
+
+    // Normalize: fill region / weather_* from the wrapper when absent on the
+    // outfit (unsaved OutfitSuggestResponse stores these only at the top level).
+    const outfit: SuggestedOutfit = {
+      ...rawOutfit,
+      region: rawOutfit.region ?? suggestion.region_used ?? null,
+      weather_summary:
+        rawOutfit.weather_summary ?? suggestion.weather_summary ?? null,
+      weather_temp_max:
+        rawOutfit.weather_temp_max ?? suggestion.weather_temp_max ?? null,
+      weather_temp_min:
+        rawOutfit.weather_temp_min ?? suggestion.weather_temp_min ?? null,
+    };
 
     return {
       outfit,
