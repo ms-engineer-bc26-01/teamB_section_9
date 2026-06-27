@@ -72,7 +72,33 @@ export type Region = {
   longitude: number;
 };
 
+// POST /outfits/suggest の生レスポンス内の outfit（BE `SuggestOutfit` と一致）。
+// 保存前のため region / weather_* / source / coordinate_image_url は持たない。
+// 地域名・天気は提案時点の値としてレスポンス top-level（region_used / weather_*）に入る。
+export type SuggestOutfit = {
+  id: string;
+  user_id: string;
+  tpo: string;
+  region_code: string;
+  comment: string | null;
+  is_favorite: boolean;
+  items: SuggestedOutfitItem[];
+  created_at: string;
+};
+
 export type OutfitSuggestResponse = {
+  // 生提案結果は SuggestOutfit（保存後の SuggestedOutfit とは別物）。
+  outfits: SuggestOutfit[];
+  region_used?: Region | null;
+  weather_summary?: string | null;
+  weather_temp_max?: number | null;
+  weather_temp_min?: number | null;
+  cached?: boolean;
+};
+
+// 保存後に sessionStorage 経由で詳細画面へ受け渡す結果。outfits は保存済みの
+// SuggestedOutfit（region / weather_* を解決済み）。top-level の地域・天気は任意。
+export type SavedSuggestionResult = {
   outfits: SuggestedOutfit[];
   region_used?: Region | null;
   weather_summary?: string | null;

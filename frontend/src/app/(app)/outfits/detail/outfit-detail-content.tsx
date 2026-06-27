@@ -27,7 +27,7 @@ import {
   getSuggestedOutfitItemName,
 } from "@/features/outfits/types";
 import type {
-  OutfitSuggestResponse,
+  SavedSuggestionResult,
   SuggestedOutfit,
 } from "@/features/outfits/types";
 import { useAuthStore } from "@/stores/auth-store";
@@ -71,7 +71,7 @@ function loadOutfitSuggestion(
   }
 
   try {
-    const suggestion = JSON.parse(rawSuggestion) as OutfitSuggestResponse;
+    const suggestion = JSON.parse(rawSuggestion) as SavedSuggestionResult;
     const outfit = suggestion.outfits[0];
     const outfitUserId = outfit?.user_id;
     const savedOutfitId = outfit?.id;
@@ -249,7 +249,7 @@ export function OutfitDetailContent() {
         getOutfitSuggestionStorageKey(updatedOutfit.user_id, updatedOutfit.id),
         JSON.stringify({
           outfits: [updatedOutfit],
-        } satisfies OutfitSuggestResponse),
+        } satisfies SavedSuggestionResult),
       );
 
       setDetailState((current) => ({

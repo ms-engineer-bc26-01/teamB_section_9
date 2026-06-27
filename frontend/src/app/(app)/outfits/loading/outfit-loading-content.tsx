@@ -7,7 +7,10 @@ import { Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { createOutfit, suggestOutfit } from "@/features/outfits/api";
 import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
-import type { OutfitSuggestResponse } from "@/features/outfits/types";
+import type {
+  OutfitSuggestResponse,
+  SavedSuggestionResult,
+} from "@/features/outfits/types";
 import { useAuthStore } from "@/stores/auth-store";
 
 const allowedTpos = [
@@ -124,7 +127,7 @@ export function OutfitLoadingContent() {
 
         if (!isMounted) return;
 
-        const savedResult: OutfitSuggestResponse = {
+        const savedResult: SavedSuggestionResult = {
           ...result,
           outfits: [savedOutfit],
         };

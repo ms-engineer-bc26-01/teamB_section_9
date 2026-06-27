@@ -28,6 +28,7 @@ import {
 import type {
   OutfitSuggestResponse,
   SuggestedOutfit,
+  SuggestOutfit,
 } from "@/features/outfits/types";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -42,7 +43,9 @@ const tpoOptions = [
 type TpoValue = (typeof tpoOptions)[number]["value"];
 
 type SuggestState = {
-  outfit: SuggestedOutfit | null;
+  // 生提案結果（保存前）。region / weather は持たず top-level 値を別途保持する。
+  outfit: SuggestOutfit | null;
+  // 保存後のコーデ（region / weather を解決済み）。
   savedOutfit: SuggestedOutfit | null;
   // 提案時の天気（suggest レスポンス wrapper 由来）。保存時に引き継ぐ。
   weatherSummary: string | null;
