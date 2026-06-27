@@ -35,10 +35,6 @@ const DEFAULT_REGION_CODE = "13_01";
 const HOME_OUTFIT_EMPTY_MESSAGE =
   "まだ提案履歴がありません。シーンを選んでコーデを作成してください。";
 
-const mockHomeData = {
-  weeklyOutfitCount: 5,
-};
-
 const tpoSceneLabels: Record<string, string> = {
   business: "お仕事",
   casual: "カジュアル",
@@ -621,24 +617,28 @@ export default function HomeDashboard() {
           </Card>
         </Link>
 
-        <Card className="rounded-lg border border-[#E8DED4]">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <CalendarDays
-                aria-hidden="true"
-                size={16}
-                className="text-[#6B4F3A]"
-              />
-              今週
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-[#2B2926]">
-              {mockHomeData.weeklyOutfitCount}
-            </p>
-            <p className="mt-1 text-xs text-[#8C715C]">提案されたコーデ</p>
-          </CardContent>
-        </Card>
+        <Link
+          href="/outfits"
+          aria-label="提案履歴を見る"
+          className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F6F63] focus-visible:ring-offset-2"
+        >
+          <Card className="h-full rounded-lg border border-[#E8DED4] transition-colors hover:bg-[#FFFCF8]">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <CalendarDays
+                  aria-hidden="true"
+                  size={16}
+                  className="text-[#6B4F3A]"
+                />
+                提案履歴
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm font-semibold text-[#2B2926]">一覧を見る</p>
+              <p className="mt-1 text-xs text-[#8C715C]">保存済みのコーデ</p>
+            </CardContent>
+          </Card>
+        </Link>
       </section>
     </div>
   );
