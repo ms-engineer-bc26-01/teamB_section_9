@@ -11,6 +11,7 @@ const pageTitles: Record<string, string> = {
   "/settings": "設定",
   "/clothes": "服一覧",
   "/clothes/register": "アイテム登録",
+  "/outfits": "提案履歴",
   "/outfits/closet": "クローゼット提案",
   "/outfits/scenes": "シーン選択",
   "/outfits/loading": "提案生成中",
