@@ -9,7 +9,9 @@ from app.dependencies import auth
 from app.services import weather_client
 from app.services.weather_client import (
     WeatherForecastResponseError,
+    _precipitation_by_part,
     extract_outfit_prompt_weather,
+    fetch_weather_forecast,
     fetch_weather_forecast_cached,
     get_weather_label,
 )
@@ -55,7 +57,85 @@ def test_extract_outfit_prompt_weather_returns_reduced_fields() -> None:
         "today_temperature_max": 27.1,
         "today_temperature_min": 19.8,
         "today_precipitation_probability": 20,
+        # 時間別データが無いので朝/昼/夜は日最大で代替される。
+        "today_precipitation_morning": 20,
+        "today_precipitation_afternoon": 20,
+        "today_precipitation_evening": 20,
     }
+
+
+def test_extract_outfit_prompt_weather_uses_hourly_by_part() -> None:
+    result = extract_outfit_prompt_weather(
+        {
+            "current": {
+                "temperature_2m": 25.4,
+                "weather_code": 1,
+                "precipitation_probability": 10,
+            },
+            "today_precipitation_by_part": {
+                "morning": 80,
+                "afternoon": 30,
+                "evening": 0,
+            },
+            "daily": [
+                {
+                    "date": "2026-06-01",
+                    "temperature_max": 27.1,
+                    "temperature_min": 19.8,
+                    "weather_code": 2,
+                    "precipitation_probability_max": 80,
+                }
+            ],
+        }
+    )
+
+    assert result["today_precipitation_morning"] == 80
+    assert result["today_precipitation_afternoon"] == 30
+    assert result["today_precipitation_evening"] == 0
+    # 日最大は従来どおり保持される。
+    assert result["today_precipitation_probability"] == 80
+
+
+def test_precipitation_by_part_buckets_today_hours_by_max() -> None:
+    hourly = {
+        "time": [
+            "2026-06-01T05:00",  # 当日・窓外（朝6時前）→無視
+            "2026-06-01T07:00",  # 朝
+            "2026-06-01T10:00",  # 朝
+            "2026-06-01T15:00",  # 昼
+            "2026-06-01T20:00",  # 夜
+            "2026-06-02T08:00",  # 翌日→無視
+        ],
+        "precipitation_probability": [90, 40, 70, 30, 10, 99],
+    }
+
+    result = _precipitation_by_part(hourly, "2026-06-01")
+
+    assert result == {"morning": 70, "afternoon": 30, "evening": 10}
+
+
+def test_precipitation_by_part_window_boundaries_are_half_open() -> None:
+    # 窓境界の取り違え検出: 11時=朝 / 12時=昼、17時=昼 / 18時=夜、
+    # 21時=夜 / 22時=対象外 を固定する。
+    hourly = {
+        "time": [
+            "2026-06-01T11:00",  # 朝（上端は含む）
+            "2026-06-01T12:00",  # 昼（朝には入らない）
+            "2026-06-01T17:00",  # 昼（上端は含む）
+            "2026-06-01T18:00",  # 夜（昼には入らない）
+            "2026-06-01T21:00",  # 夜（上端は含む）
+            "2026-06-01T22:00",  # どの窓にも入らない→無視
+        ],
+        "precipitation_probability": [11, 12, 17, 18, 21, 22],
+    }
+
+    result = _precipitation_by_part(hourly, "2026-06-01")
+
+    assert result == {"morning": 11, "afternoon": 17, "evening": 21}
+
+
+def test_precipitation_by_part_returns_empty_when_no_hourly() -> None:
+    assert _precipitation_by_part({}, "2026-06-01") == {}
 
 
 def test_extract_outfit_prompt_weather_raises_for_missing_today_forecast() -> None:
@@ -289,6 +369,51 @@ async def test_fetch_weather_forecast_cached_miss_fetches_and_stores(
     assert stored[0][0].startswith("weather:13_01:")
     assert stored[0][0].endswith(":3")
     assert stored[0][2] == settings.REDIS_WEATHER_TTL_SECONDS
+
+
+@pytest.mark.asyncio
+async def test_fetch_weather_forecast_raises_when_daily_time_empty(monkeypatch) -> None:
+    """daily['time'] が空配列でも IndexError を漏らさず正規化する（回帰）。"""
+
+    class _FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {
+                "current": {
+                    "temperature_2m": 25.4,
+                    "weather_code": 1,
+                    "precipitation_probability": 10,
+                },
+                # time が空 → daily["time"][0] が IndexError を投げる。
+                "daily": {
+                    "time": [],
+                    "temperature_2m_max": [],
+                    "temperature_2m_min": [],
+                    "weather_code": [],
+                    "precipitation_probability_max": [],
+                },
+                "hourly": {},
+            }
+
+    class _FakeClient:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc) -> None:
+            return None
+
+        async def get(self, *args, **kwargs):
+            return _FakeResponse()
+
+    monkeypatch.setattr(weather_client.httpx, "AsyncClient", _FakeClient)
+
+    with pytest.raises(WeatherForecastResponseError):
+        await fetch_weather_forecast(latitude=1.0, longitude=2.0, days=3)
 
 
 @pytest.mark.asyncio
