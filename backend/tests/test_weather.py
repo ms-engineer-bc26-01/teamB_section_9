@@ -11,6 +11,7 @@ from app.services.weather_client import (
     WeatherForecastResponseError,
     _precipitation_by_part,
     extract_outfit_prompt_weather,
+    fetch_weather_forecast,
     fetch_weather_forecast_cached,
     get_weather_label,
 )
@@ -368,6 +369,51 @@ async def test_fetch_weather_forecast_cached_miss_fetches_and_stores(
     assert stored[0][0].startswith("weather:13_01:")
     assert stored[0][0].endswith(":3")
     assert stored[0][2] == settings.REDIS_WEATHER_TTL_SECONDS
+
+
+@pytest.mark.asyncio
+async def test_fetch_weather_forecast_raises_when_daily_time_empty(monkeypatch) -> None:
+    """daily['time'] が空配列でも IndexError を漏らさず 502 相当に正規化する（回帰）。"""
+
+    class _FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {
+                "current": {
+                    "temperature_2m": 25.4,
+                    "weather_code": 1,
+                    "precipitation_probability": 10,
+                },
+                # time が空 → daily["time"][0] が IndexError を投げる。
+                "daily": {
+                    "time": [],
+                    "temperature_2m_max": [],
+                    "temperature_2m_min": [],
+                    "weather_code": [],
+                    "precipitation_probability_max": [],
+                },
+                "hourly": {},
+            }
+
+    class _FakeClient:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc) -> None:
+            return None
+
+        async def get(self, *args, **kwargs):
+            return _FakeResponse()
+
+    monkeypatch.setattr(weather_client.httpx, "AsyncClient", _FakeClient)
+
+    with pytest.raises(WeatherForecastResponseError):
+        await fetch_weather_forecast(latitude=1.0, longitude=2.0, days=3)
 
 
 @pytest.mark.asyncio

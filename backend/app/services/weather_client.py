@@ -178,7 +178,9 @@ async def fetch_weather_forecast(
             ],
             "cached": False,
         }
-    except (KeyError, ValueError) as exc:
+    except (IndexError, KeyError, TypeError, ValueError) as exc:
+        # daily["time"] が空（IndexError）/想定外型（TypeError）でも、欠損レスポンス扱いで
+        # WeatherForecastResponseError に正規化する（上の解析関数と捕捉範囲を揃える）。
         raise WeatherForecastResponseError("invalid weather forecast response") from exc
 
 

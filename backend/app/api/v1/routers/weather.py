@@ -59,7 +59,8 @@ async def get_weather_forecast(
             detail="failed to fetch weather forecast",
         ) from exc
 
-    # forecast には extract 用の内部キー today_precipitation_by_part が含まれるが、
-    # WeatherForecast スキーマ（extra="ignore"）では無視され response 形状は不変。
-    # 将来 extra="forbid" を入れる場合はここで明示的に除外すること。
+    # forecast には提案サービス用の内部キー today_precipitation_by_part が含まれる。
+    # WeatherForecast の response 形状には不要なので、返却前に明示的に除外しておく
+    # （Pydantic の extra 設定に依存せず、内部キーのレスポンス漏洩を防ぐ）。
+    forecast.pop("today_precipitation_by_part", None)
     return WeatherForecast(region_code=region_code, **forecast)
