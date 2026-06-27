@@ -373,7 +373,7 @@ async def test_fetch_weather_forecast_cached_miss_fetches_and_stores(
 
 @pytest.mark.asyncio
 async def test_fetch_weather_forecast_raises_when_daily_time_empty(monkeypatch) -> None:
-    """daily['time'] が空配列でも IndexError を漏らさず 502 相当に正規化する（回帰）。"""
+    """daily['time'] が空配列でも IndexError を漏らさず正規化する（回帰）。"""
 
     class _FakeResponse:
         def raise_for_status(self) -> None:
