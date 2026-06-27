@@ -1,13 +1,21 @@
 import time
 from contextlib import asynccontextmanager
+from typing import Protocol
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import router as api_v1_router
-from app.core.config import Settings, settings
+from app.core.config import settings
 from app.core.logging import logger, setup_logging
 from app.core.redis import close_redis, ping_redis
+
+
+class _CorsSettings(Protocol):
+    """CORS 設定に必要な属性だけを表す Protocol。`Settings` と `SimpleNamespace` の両方に適合する。"""
+
+    APP_ENV: str
+    BACKEND_CORS_ORIGINS: list[str]
 
 setup_logging(settings.LOG_LEVEL)
 
@@ -23,7 +31,7 @@ _LAN_ORIGIN_REGEX = (
 )
 
 
-def build_cors_kwargs(s: Settings) -> dict[str, object]:
+def build_cors_kwargs(s: _CorsSettings) -> dict[str, object]:
     """CORS ミドルウェアの引数を組み立てる。
 
     本番は `BACKEND_CORS_ORIGINS` の明示許可のみ。開発時のみ LAN IP:3000 を
