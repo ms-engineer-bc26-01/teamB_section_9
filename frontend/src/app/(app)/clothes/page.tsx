@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, RefreshCw, Shirt } from "lucide-react";
+import { Plus, RefreshCw, Shirt, Trash2 } from "lucide-react";
 
-import { fetchClothes } from "@/features/clothes/api";
+import { deleteClothing, fetchClothes } from "@/features/clothes/api";
 import type { ClothingItem } from "@/features/clothes/types";
 
 const categoryLabels: Record<string, string> = {
@@ -43,6 +43,8 @@ export default function ClothesPage() {
   const [clothes, setClothes] = useState<ClothingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState("");
+  const [deletingClothesId, setDeletingClothesId] = useState<string | null>(null);
   const [successMessage] = useState(() => {
     if (typeof window === "undefined") {
       return "";
@@ -120,6 +122,46 @@ export default function ClothesPage() {
     };
   }, []);
 
+  async function handleDeleteClothing(clothingId: string) {
+    if (deletingClothesId) {
+      return;
+    }
+
+    const confirmed = window.confirm("この服を削除しますか？");
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingClothesId(clothingId);
+    setDeleteErrorMessage("");
+
+    try {
+      await deleteClothing(clothingId);
+
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setClothes((current) =>
+        current.filter((item) => item.id !== clothingId),
+      );
+    } catch (error) {
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setDeleteErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "服の削除に失敗しました。時間をおいて再度お試しください。",
+      );
+    } finally {
+      if (isMountedRef.current) {
+        setDeletingClothesId(null);
+      }
+    }
+  }
 
   return (
     <section className="mx-auto min-h-screen w-full max-w-md bg-[#FAF8F5] px-5 pb-24 pt-6 text-[#2B2926]">
@@ -146,6 +188,15 @@ export default function ClothesPage() {
           className="mb-4 rounded-3xl border border-[#D6E7DD] bg-[#F6FAF8] px-4 py-3 text-sm font-bold text-[#2F6F63]"
         >
           {successMessage}
+        </div>
+      ) : null}
+
+      {deleteErrorMessage ? (
+        <div
+          role="alert"
+          className="mb-4 rounded-3xl border border-[#F1D0C8] bg-[#FFF7F4] px-4 py-3 text-sm font-bold text-[#8C3D2F]"
+        >
+          {deleteErrorMessage}
         </div>
       ) : null}
 
@@ -187,6 +238,7 @@ export default function ClothesPage() {
             const imageSrc = item.thumbnail_url ?? item.image_url;
             const seasons = item.season ?? [];
             const tpoTags = item.tpo_tags ?? [];
+            const isDeleting = deletingClothesId === item.id;
 
             return (
               <article
@@ -245,6 +297,16 @@ export default function ClothesPage() {
                       ))}
                     </div>
                   ) : null}
+
+                  <button
+                    type="button"
+                    className="mt-4 inline-flex items-center justify-center rounded-full border border-[#E8DED4] px-3 py-2 text-xs font-bold text-[#8C3D2F] transition-colors hover:border-[#8C3D2F] hover:bg-[#FFF4F1] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-[#E8DED4] disabled:hover:bg-transparent"
+                    disabled={isDeleting}
+                    onClick={() => void handleDeleteClothing(item.id)}
+                  >
+                    <Trash2 className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                    {isDeleting ? "削除中..." : "削除"}
+                  </button>
                 </div>
               </article>
             );
