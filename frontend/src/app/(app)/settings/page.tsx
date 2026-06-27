@@ -583,6 +583,26 @@ export default function SettingsPage() {
                 </CardContent>
             </Card>
 
+            <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
+                <CardHeader>
+                    <CardTitle className="text-base">サポート</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                    <Link
+                        href="/contact"
+                        className="block font-medium text-[#6B4F3A] underline-offset-4 hover:underline"
+                    >
+                        お問い合わせ
+                    </Link>
+                    <Link
+                        href="/withdrawal"
+                        className="block font-medium text-[#8C3D2F] underline-offset-4 hover:underline"
+                    >
+                        退会について
+                    </Link>
+                </CardContent>
+            </Card>
+
             <div className="space-y-3">
                 <Button
                     type="button"
