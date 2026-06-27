@@ -166,7 +166,8 @@ POST /api/v1/outfits/suggest  { tpo, date, region_code? }
   7. LLM 応答を解決
        - clothes_id がユーザー所有の服に一致 → clothing_item に解決
        - 一致しない / null → clothing_item=null（補完提案）
-  8. レスポンス返却（outfits のみ。id / created_at は一時生成）
+  8. レスポンス返却（outfits + 提案地域 region_used + 天気 weather_summary/temp_max/temp_min。
+     id / created_at は一時生成。地域・天気は保存時に FE が引き継ぐ）
 
   ※ suggest 自体は非保存（テキスト提案）。履歴化はユーザーが選んだコーデのみ
     別途 POST /outfits（オンデマンド保存）で行う。提案結果キャッシュは後続対応。

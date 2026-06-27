@@ -48,6 +48,9 @@ class OutfitSuggestionPlan:
     region_code: str
     comment: str
     items: list[SuggestedOutfitItemResult]
+    weather_summary: str | None = None
+    weather_temp_max: float | None = None
+    weather_temp_min: float | None = None
     usage: LlmUsage | None = None
 
 
@@ -157,6 +160,9 @@ async def build_outfit_suggestion_plan(
         region_code=resolved_region_code,
         comment=result.comment,
         items=result.items,
+        weather_summary=prompt_weather["today_weather"],
+        weather_temp_max=prompt_weather["today_temperature_max"],
+        weather_temp_min=prompt_weather["today_temperature_min"],
         usage=result.usage,
     )
 
@@ -172,6 +178,9 @@ async def save_outfit_from_plan(
         user_id=plan.user_id,
         tpo=plan.tpo,
         region_code=plan.region_code,
+        weather_summary=plan.weather_summary,
+        weather_temp_max=plan.weather_temp_max,
+        weather_temp_min=plan.weather_temp_min,
         comment=plan.comment,
         is_favorite=is_favorite,
         items=[

@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, CloudSun, Heart, RefreshCw, Shirt } from "lucide-react";
+import {
+  CalendarDays,
+  CloudSun,
+  Heart,
+  MapPin,
+  RefreshCw,
+  Shirt,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,11 +23,12 @@ import {
 import { getOutfit, updateOutfit } from "@/features/outfits/api";
 import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
 import {
+  formatRegionLabel,
   getSuggestedOutfitItemColor,
   getSuggestedOutfitItemName,
 } from "@/features/outfits/types";
 import type {
-  OutfitSuggestResponse,
+  SavedSuggestionResult,
   SuggestedOutfit,
 } from "@/features/outfits/types";
 import { useAuthStore } from "@/stores/auth-store";
@@ -64,18 +72,31 @@ function loadOutfitSuggestion(
   }
 
   try {
-    const suggestion = JSON.parse(rawSuggestion) as OutfitSuggestResponse;
-    const outfit = suggestion.outfits[0];
-    const outfitUserId = outfit?.user_id;
-    const savedOutfitId = outfit?.id;
+    const suggestion = JSON.parse(rawSuggestion) as SavedSuggestionResult;
+    const rawOutfit = suggestion.outfits[0];
+    const outfitUserId = rawOutfit?.user_id;
+    const savedOutfitId = rawOutfit?.id;
 
-    if (outfitUserId !== userId || savedOutfitId !== outfitId) {
+    if (!rawOutfit || outfitUserId !== userId || savedOutfitId !== outfitId) {
       return {
         outfit: null,
         errorMessage: "ログイン中のユーザーまたはコーデ提案結果が一致しません。",
         isLoading: false,
       };
     }
+
+    // Normalize: fill region / weather_* from the wrapper when absent on the
+    // outfit (unsaved OutfitSuggestResponse stores these only at the top level).
+    const outfit: SuggestedOutfit = {
+      ...rawOutfit,
+      region: rawOutfit.region ?? suggestion.region_used ?? null,
+      weather_summary:
+        rawOutfit.weather_summary ?? suggestion.weather_summary ?? null,
+      weather_temp_max:
+        rawOutfit.weather_temp_max ?? suggestion.weather_temp_max ?? null,
+      weather_temp_min:
+        rawOutfit.weather_temp_min ?? suggestion.weather_temp_min ?? null,
+    };
 
     return {
       outfit,
@@ -199,6 +220,7 @@ export function OutfitDetailContent() {
 
   const outfitTitle = outfit ? tpoLabels[outfit.tpo] ?? "おすすめコーデ" : "";
   const sceneLabel = outfit ? tpoSceneLabels[outfit.tpo] ?? outfit.tpo : "";
+  const regionLabel = formatRegionLabel(outfit?.region);
   const maxTemperature = formatTemperature(outfit?.weather_temp_max);
   const minTemperature = formatTemperature(outfit?.weather_temp_min);
   const temperatureText =
@@ -239,7 +261,7 @@ export function OutfitDetailContent() {
         getOutfitSuggestionStorageKey(updatedOutfit.user_id, updatedOutfit.id),
         JSON.stringify({
           outfits: [updatedOutfit],
-        } satisfies OutfitSuggestResponse),
+        } satisfies SavedSuggestionResult),
       );
 
       setDetailState((current) => ({
@@ -300,6 +322,12 @@ export function OutfitDetailContent() {
 
             <Card className="border-[#E7DDD3] bg-white/90 shadow-sm">
               <CardHeader className="space-y-3">
+                {regionLabel ? (
+                  <div className="flex items-center gap-2 text-sm text-[#6F6259]">
+                    <MapPin aria-hidden="true" className="h-4 w-4" />
+                    <span>{regionLabel}</span>
+                  </div>
+                ) : null}
                 <div className="flex items-center gap-2 text-sm text-[#6F6259]">
                   <CloudSun aria-hidden="true" className="h-4 w-4" />
                   <span>{weatherText}</span>

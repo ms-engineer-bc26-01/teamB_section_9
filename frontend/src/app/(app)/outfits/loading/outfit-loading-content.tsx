@@ -7,7 +7,10 @@ import { Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { createOutfit, suggestOutfit } from "@/features/outfits/api";
 import { getOutfitSuggestionStorageKey } from "@/features/outfits/storage";
-import type { OutfitSuggestResponse } from "@/features/outfits/types";
+import type {
+  OutfitSuggestResponse,
+  SavedSuggestionResult,
+} from "@/features/outfits/types";
 import { useAuthStore } from "@/stores/auth-store";
 
 const allowedTpos = [
@@ -103,6 +106,10 @@ export function OutfitLoadingContent() {
         const savedOutfit = await createOutfit({
           tpo: suggestedOutfit.tpo,
           region_code: suggestedOutfit.region_code,
+          // 提案時の天気を保存時に引き継ぐ（suggest レスポンスから転送）。
+          weather_summary: result.weather_summary,
+          weather_temp_max: result.weather_temp_max,
+          weather_temp_min: result.weather_temp_min,
           comment: suggestedOutfit.comment,
           is_favorite: suggestedOutfit.is_favorite,
           items: suggestedOutfit.items.map((item) => ({
@@ -120,7 +127,7 @@ export function OutfitLoadingContent() {
 
         if (!isMounted) return;
 
-        const savedResult: OutfitSuggestResponse = {
+        const savedResult: SavedSuggestionResult = {
           ...result,
           outfits: [savedOutfit],
         };

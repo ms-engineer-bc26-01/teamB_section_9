@@ -25,9 +25,7 @@ import {
 } from "@/features/weather/api";
 import { getRegionLabelByCode, getRegions } from "@/features/regions/api";
 import { getOutfits } from "@/features/outfits/api";
-import {
-  getSuggestedOutfitItemName,
-} from "@/features/outfits/types";
+import { getSuggestedOutfitItemName } from "@/features/outfits/types";
 import type { SuggestedOutfit } from "@/features/outfits/types";
 import { apiClient } from "@/lib/api/client";
 import { useAuthStore } from "@/stores/auth-store";

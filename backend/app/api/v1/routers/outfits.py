@@ -15,6 +15,7 @@ from app.api.v1.schemas.outfits import (
     SuggestOutfit,
     SuggestOutfitItem,
 )
+from app.api.v1.schemas.regions import to_region_schema
 from app.constants.regions import get_region
 from app.core.deps import get_db
 from app.dependencies.auth import CurrentUser, get_current_user
@@ -75,6 +76,9 @@ async def create_outfit(
             user_id=current_user.id,
             tpo=request.tpo,
             region_code=request.region_code,
+            weather_summary=request.weather_summary,
+            weather_temp_max=request.weather_temp_max,
+            weather_temp_min=request.weather_temp_min,
             comment=request.comment,
             is_favorite=request.is_favorite,
             items=request.items,
@@ -196,4 +200,8 @@ async def suggest_outfit(
                 created_at=created_at,
             )
         ],
+        region_used=to_region_schema(plan.region_code),
+        weather_summary=plan.weather_summary,
+        weather_temp_max=plan.weather_temp_max,
+        weather_temp_min=plan.weather_temp_min,
     )
