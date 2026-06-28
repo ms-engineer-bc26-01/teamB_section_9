@@ -117,35 +117,45 @@ export default function MypagePage() {
       ) : null}
 
       <section aria-label="アカウント概要" className="grid grid-cols-2 gap-3">
-        <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Shirt aria-hidden="true" size={16} className="text-[#6B4F3A]" />
-              服登録件数
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-[#2B2926]">
-              {isLoading ? "-" : clothesCount}
-            </p>
-            <p className="mt-1 text-xs text-[#8C715C]">クローゼット内</p>
-          </CardContent>
-        </Card>
+        <Link
+          href="/clothes"
+          className="block h-full cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F6F63] focus-visible:ring-offset-2"
+        >
+          <Card className="h-full rounded-lg border border-[#E8DED4] shadow-sm transition-colors hover:bg-[#F8F2EC]">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Shirt aria-hidden="true" size={16} className="text-[#6B4F3A]" />
+                服登録件数
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-[#2B2926]">
+                {isLoading ? "-" : clothesCount}
+              </p>
+              <p className="mt-1 text-xs text-[#8C715C]">クローゼット内</p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="rounded-lg border border-[#E8DED4] shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Heart aria-hidden="true" size={16} className="text-[#B76559]" />
-              お気に入りコーデ
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-[#2B2926]">
-              {isLoading ? "-" : favoriteCount}
-            </p>
-            <p className="mt-1 text-xs text-[#8C715C]">保存したコーデ</p>
-          </CardContent>
-        </Card>
+        <Link
+          href="/favorites"
+          className="block h-full cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F6F63] focus-visible:ring-offset-2"
+        >
+          <Card className="h-full rounded-lg border border-[#E8DED4] shadow-sm transition-colors hover:bg-[#F8F2EC]">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Heart aria-hidden="true" size={16} className="text-[#B76559]" />
+                お気に入りコーデ
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-[#2B2926]">
+                {isLoading ? "-" : favoriteCount}
+              </p>
+              <p className="mt-1 text-xs text-[#8C715C]">保存したコーデ</p>
+            </CardContent>
+          </Card>
+        </Link>
       </section>
 
       <Button
