@@ -86,6 +86,22 @@ function formatCreatedAt(value: string) {
   }).format(date);
 }
 
+function getOutfitImageUrl(outfit: SuggestedOutfit) {
+  if (outfit.coordinate_image_url) {
+    return outfit.coordinate_image_url;
+  }
+
+  const imageItem = outfit.items.find(
+    (item) => item.clothing_item?.thumbnail_url ?? item.clothing_item?.image_url,
+  );
+
+  return (
+    imageItem?.clothing_item?.thumbnail_url ??
+    imageItem?.clothing_item?.image_url ??
+    null
+  );
+}
+
 export function OutfitPreviewContent() {
   const searchParams = useSearchParams();
   const session = useAuthStore((state) => state.session);
@@ -206,6 +222,7 @@ export function OutfitPreviewContent() {
   const commentText = formatComment(outfit?.comment);
   const outfitItems =
     outfit?.items.toSorted((a, b) => a.display_order - b.display_order) ?? [];
+  const outfitImageUrl = outfit ? getOutfitImageUrl(outfit) : null;
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] px-5 py-6 text-[#2F2925]">
@@ -265,6 +282,17 @@ export function OutfitPreviewContent() {
 
         {outfit ? (
           <>
+            {outfitImageUrl ? (
+              <Card className="overflow-hidden border-[#E7DDD3] bg-white/90 shadow-sm">
+                <div
+                  aria-label={`${sceneLabel}のコーデ画像`}
+                  className="aspect-[4/3] w-full bg-[#F4EEE8] bg-contain bg-center bg-no-repeat"
+                  role="img"
+                  style={{ backgroundImage: `url(${outfitImageUrl})` }}
+                />
+              </Card>
+            ) : null}
+
             <Card className="border-[#E7DDD3] bg-white/90 shadow-sm">
               <CardHeader className="space-y-3">
                 <div className="flex items-center justify-between gap-3">

@@ -153,6 +153,22 @@ function formatComment(comment: string | null | undefined) {
     .trim();
 }
 
+function getOutfitImageUrl(outfit: SuggestedOutfit) {
+  if (outfit.coordinate_image_url) {
+    return outfit.coordinate_image_url;
+  }
+
+  const imageItem = outfit.items.find(
+    (item) => item.clothing_item?.thumbnail_url ?? item.clothing_item?.image_url,
+  );
+
+  return (
+    imageItem?.clothing_item?.thumbnail_url ??
+    imageItem?.clothing_item?.image_url ??
+    null
+  );
+}
+
 export function OutfitDetailContent() {
   const user = useAuthStore((state) => state.user);
   const isInitialized = useAuthStore((state) => state.isInitialized);
@@ -238,6 +254,7 @@ export function OutfitDetailContent() {
   const outfitItems = [...(outfit?.items ?? [])].sort(
     (a, b) => a.display_order - b.display_order,
   );
+  const outfitImageUrl = outfit ? getOutfitImageUrl(outfit) : null;
   // 未保存の /outfits/suggest 結果には source がないため PATCH 対象外にする。
   const canUpdateFavorite = Boolean(outfit?.source);
 
@@ -319,6 +336,17 @@ export function OutfitDetailContent() {
                 今日の天気と予定に合わせたコーデ提案です。
               </p>
             </section>
+
+            {outfitImageUrl ? (
+              <Card className="overflow-hidden border-[#E7DDD3] bg-white/90 shadow-sm">
+                <div
+                  aria-label={`${sceneLabel}のコーデ画像`}
+                  className="aspect-[4/3] w-full bg-[#F4EEE8] bg-contain bg-center bg-no-repeat"
+                  role="img"
+                  style={{ backgroundImage: `url(${outfitImageUrl})` }}
+                />
+              </Card>
+            ) : null}
 
             <Card className="border-[#E7DDD3] bg-white/90 shadow-sm">
               <CardHeader className="space-y-3">
