@@ -117,8 +117,12 @@ export default function MypagePage() {
       ) : null}
 
       <section aria-label="アカウント概要" className="grid grid-cols-2 gap-3">
-        <Link href="/clothes" aria-label="服一覧ページへ移動">
-          <Card className="h-full cursor-pointer rounded-lg border border-[#E8DED4] shadow-sm transition hover:bg-[#F8F2EC]">
+        <Link
+          href="/clothes"
+          aria-label="服一覧ページへ移動"
+          className="block h-full cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F6F63] focus-visible:ring-offset-2"
+        >
+          <Card className="h-full rounded-lg border border-[#E8DED4] shadow-sm transition-colors hover:bg-[#F8F2EC]">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Shirt aria-hidden="true" size={16} className="text-[#6B4F3A]" />
@@ -134,8 +138,12 @@ export default function MypagePage() {
           </Card>
         </Link>
 
-        <Link href="/favorites" aria-label="お気に入りコーデページへ移動">
-          <Card className="h-full cursor-pointer rounded-lg border border-[#E8DED4] shadow-sm transition hover:bg-[#F8F2EC]">
+        <Link
+          href="/favorites"
+          aria-label="お気に入りコーデページへ移動"
+          className="block h-full cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F6F63] focus-visible:ring-offset-2"
+        >
+          <Card className="h-full rounded-lg border border-[#E8DED4] shadow-sm transition-colors hover:bg-[#F8F2EC]">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Heart aria-hidden="true" size={16} className="text-[#B76559]" />
