@@ -75,7 +75,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="Closet Management API",  # TODO:アプリ名のAPIに変更
+    title="Climo API",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
