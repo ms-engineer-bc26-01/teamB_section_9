@@ -19,9 +19,13 @@
 
 ---
 
-## 1. 必要な環境変数（`backend/.env`）
+## 1. 必要な環境変数（リポジトリルートの `.env`）
 
+`docker-compose.yml` は frontend / backend とも **リポジトリルートの `.env`**（`env_file: .env`）を読む。
 代表者（C）から Slack DM で受け取る値を設定（`docs/setup.md` 参照）。本スモークで必須なのは以下。
+
+> backend 起動に必須の `DATABASE_URL` などは `.env.example` の既定値が前提（`cp .env.example .env` で引き継がれる）。
+> 本表は画像生成スモークに直接効く変数のみを抜粋。
 
 | 変数 | 用途 | 既定 / 例 |
 |---|---|---|
@@ -36,7 +40,7 @@
 | `APP_ENV` | 開発判定 | `development` |
 | `AUTH_BYPASS_ENABLED` | 認証バイパス（ローカル検証用） | `true`（後述） |
 
-> いずれか未設定だと best-effort 経路で握り潰され、`coordinate_image_url` が **null のまま**になる（[§4 切り分け](#4-失敗時の切り分けbest-effort)）。
+> いずれか未設定だと best-effort 経路で握り潰され、`coordinate_image_url` が **null のまま**になる（[§5 切り分け](#5-失敗時の切り分けbest-effort)）。
 
 ---
 
@@ -147,8 +151,10 @@ PY
 - 追加確認（任意）: 公開 URL を `curl` し、2 回目にアップした **青** の内容（Content-Length が RED と異なる）になっていれば上書き成立。
 
   ```bash
+  # SUPABASE_URL / SUPABASE_STORAGE_BUCKET は .env の値に置換（バケットを変えている環境にも追従）
+  BUCKET="${SUPABASE_STORAGE_BUCKET:-clothes-images}"
   curl -s -o /tmp/upsert.png -w "HTTP=%{http_code} SIZE=%{size_download}\n" \
-    "$SUPABASE_URL/storage/v1/object/public/clothes-images/outfits/SMOKE-UPSERT-TEST.png"
+    "$SUPABASE_URL/storage/v1/object/public/$BUCKET/outfits/SMOKE-UPSERT-TEST.png"
   ```
 
 - 後始末（任意）: 検証オブジェクトを Storage（Supabase ダッシュボード）から削除。
