@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
-  title: クローゼット管理アプリ API
+  title: Climo API
   version: 1.1.0
   description: |
-    クローゼット管理アプリのバックエンドAPI仕様。
+    Climo（コーデ提案アプリ）のバックエンドAPI仕様。
     - LLM: OpenAI（プロバイダ抽象化レイヤ経由。将来 Gemini / Claude へ切替可能）
     - 天気: Open-Meteo
     - 決済: Stripe Checkout / Webhook
