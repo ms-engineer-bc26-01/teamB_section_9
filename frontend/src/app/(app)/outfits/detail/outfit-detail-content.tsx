@@ -55,6 +55,9 @@ type OutfitDetailState = {
   isLoading: boolean;
 };
 
+const COORDINATE_IMAGE_REFRESH_ATTEMPTS = 6;
+const COORDINATE_IMAGE_REFRESH_INTERVAL_MS = 2000;
+
 function loadOutfitSuggestion(
   userId: string,
   outfitId: string,
@@ -118,6 +121,12 @@ function getOutfitIdFromCurrentUrl() {
   return searchParams.get("outfitId");
 }
 
+function waitForCoordinateImageRefresh() {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, COORDINATE_IMAGE_REFRESH_INTERVAL_MS);
+  });
+}
+
 function formatTemperature(value: number | null | undefined) {
   if (value === null || value === undefined) {
     return null;
@@ -169,6 +178,15 @@ function getOutfitImageUrl(outfit: SuggestedOutfit) {
   );
 }
 
+function cacheOutfitSuggestion(outfit: SuggestedOutfit) {
+  window.sessionStorage.setItem(
+    getOutfitSuggestionStorageKey(outfit.user_id, outfit.id),
+    JSON.stringify({
+      outfits: [outfit],
+    } satisfies SavedSuggestionResult),
+  );
+}
+
 export function OutfitDetailContent() {
   const user = useAuthStore((state) => state.user);
   const isInitialized = useAuthStore((state) => state.isInitialized);
@@ -185,6 +203,8 @@ export function OutfitDetailContent() {
     if (!isInitialized) {
       return;
     }
+
+    let isCancelled = false;
 
     const timeoutId = window.setTimeout(async () => {
       if (!user) {
@@ -208,9 +228,48 @@ export function OutfitDetailContent() {
       }
 
       const sessionStorageState = loadOutfitSuggestion(user.id, outfitId);
+      const cachedOutfit = sessionStorageState.outfit;
 
-      if (sessionStorageState.outfit) {
+      if (cachedOutfit) {
         setDetailState(sessionStorageState);
+      }
+
+      if (cachedOutfit) {
+        const refreshAttempts = cachedOutfit.coordinate_image_url
+          ? 1
+          : COORDINATE_IMAGE_REFRESH_ATTEMPTS;
+
+        for (let attempt = 0; attempt < refreshAttempts; attempt += 1) {
+          if (attempt > 0) {
+            await waitForCoordinateImageRefresh();
+          }
+
+          if (isCancelled) {
+            return;
+          }
+
+          try {
+            const foundOutfit = await getOutfit(outfitId);
+
+            if (isCancelled) {
+              return;
+            }
+
+            cacheOutfitSuggestion(foundOutfit);
+            setDetailState({
+              outfit: foundOutfit,
+              errorMessage: null,
+              isLoading: false,
+            });
+
+            if (foundOutfit.coordinate_image_url) {
+              return;
+            }
+          } catch {
+            return;
+          }
+        }
+
         return;
       }
 
@@ -231,7 +290,10 @@ export function OutfitDetailContent() {
       }
     }, 0);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeoutId);
+    };
   }, [isInitialized, user]);
 
   const outfitTitle = outfit ? tpoLabels[outfit.tpo] ?? "おすすめコーデ" : "";
@@ -274,12 +336,7 @@ export function OutfitDetailContent() {
         is_favorite: !outfit.is_favorite,
       });
 
-      window.sessionStorage.setItem(
-        getOutfitSuggestionStorageKey(updatedOutfit.user_id, updatedOutfit.id),
-        JSON.stringify({
-          outfits: [updatedOutfit],
-        } satisfies SavedSuggestionResult),
-      );
+      cacheOutfitSuggestion(updatedOutfit);
 
       setDetailState((current) => ({
         ...current,
