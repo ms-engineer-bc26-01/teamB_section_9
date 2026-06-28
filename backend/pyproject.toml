@@ -1,7 +1,7 @@
 [project]
 name = "closet-management-backend"
 version = "0.1.0"
-description = "Backend API for Closet Management"
+description = "Backend API for Climo"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "alembic>=1.18.4",
