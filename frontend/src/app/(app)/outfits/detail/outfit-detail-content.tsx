@@ -55,8 +55,8 @@ type OutfitDetailState = {
   isLoading: boolean;
 };
 
-const COORDINATE_IMAGE_REFRESH_ATTEMPTS = 6;
-const COORDINATE_IMAGE_REFRESH_INTERVAL_MS = 2000;
+const COORDINATE_IMAGE_REFRESH_ATTEMPTS = 20;
+const COORDINATE_IMAGE_REFRESH_INTERVAL_MS = 3000;
 
 function loadOutfitSuggestion(
   userId: string,
@@ -281,6 +281,47 @@ export function OutfitDetailContent() {
           errorMessage: null,
           isLoading: false,
         });
+
+        cacheOutfitSuggestion(foundOutfit);
+
+        if (foundOutfit.coordinate_image_url) {
+          return;
+        }
+
+        for (
+          let attempt = 1;
+          attempt < COORDINATE_IMAGE_REFRESH_ATTEMPTS;
+          attempt += 1
+        ) {
+          await waitForCoordinateImageRefresh();
+
+          if (isCancelled) {
+            return;
+          }
+
+          let refreshedOutfit: SuggestedOutfit;
+
+          try {
+            refreshedOutfit = await getOutfit(outfitId);
+          } catch {
+            return;
+          }
+
+          if (isCancelled) {
+            return;
+          }
+
+          cacheOutfitSuggestion(refreshedOutfit);
+          setDetailState({
+            outfit: refreshedOutfit,
+            errorMessage: null,
+            isLoading: false,
+          });
+
+          if (refreshedOutfit.coordinate_image_url) {
+            return;
+          }
+        }
       } catch {
         setDetailState({
           outfit: null,
