@@ -58,9 +58,10 @@
 
 ## 返却ルール
 
-- `role` は次の英語の語彙から選んでください: `tops` / `bottoms` / `outer` / `onepiece` / `shoes` / `bag` / `accessory`
-- `color` と `pattern` が不明な場合は null にしてください。
-- すべてのアイテムで `clothes_id` は null にしてください。
+- `role` は以下の英語の語彙から選んでください:
+  　 `tops` / `bottoms` / `outer` / `onepiece` / `shoes` / `bag` / `accessory`
+- `color` と `pattern` が不明な場合は `null` にしてください。
+- すべてのアイテムで `clothes_id` は `null` にしてください。
 - 必ず JSON オブジェクトのみを返し、Markdown やコードブロック（``` など）は含めないでください。
 
 ## 返却形式（下記は構造の例です。この例文自体は出力に含めないでください）
