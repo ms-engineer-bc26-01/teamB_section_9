@@ -55,6 +55,9 @@ type OutfitDetailState = {
   isLoading: boolean;
 };
 
+const COORDINATE_IMAGE_REFRESH_ATTEMPTS = 20;
+const COORDINATE_IMAGE_REFRESH_INTERVAL_MS = 3000;
+
 function loadOutfitSuggestion(
   userId: string,
   outfitId: string,
@@ -118,6 +121,12 @@ function getOutfitIdFromCurrentUrl() {
   return searchParams.get("outfitId");
 }
 
+function waitForCoordinateImageRefresh() {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, COORDINATE_IMAGE_REFRESH_INTERVAL_MS);
+  });
+}
+
 function formatTemperature(value: number | null | undefined) {
   if (value === null || value === undefined) {
     return null;
@@ -153,6 +162,31 @@ function formatComment(comment: string | null | undefined) {
     .trim();
 }
 
+function getOutfitImageUrl(outfit: SuggestedOutfit) {
+  if (outfit.coordinate_image_url) {
+    return outfit.coordinate_image_url;
+  }
+
+  const imageItem = outfit.items.find(
+    (item) => item.clothing_item?.thumbnail_url ?? item.clothing_item?.image_url,
+  );
+
+  return (
+    imageItem?.clothing_item?.thumbnail_url ??
+    imageItem?.clothing_item?.image_url ??
+    null
+  );
+}
+
+function cacheOutfitSuggestion(outfit: SuggestedOutfit) {
+  window.sessionStorage.setItem(
+    getOutfitSuggestionStorageKey(outfit.user_id, outfit.id),
+    JSON.stringify({
+      outfits: [outfit],
+    } satisfies SavedSuggestionResult),
+  );
+}
+
 export function OutfitDetailContent() {
   const user = useAuthStore((state) => state.user);
   const isInitialized = useAuthStore((state) => state.isInitialized);
@@ -169,6 +203,8 @@ export function OutfitDetailContent() {
     if (!isInitialized) {
       return;
     }
+
+    let isCancelled = false;
 
     const timeoutId = window.setTimeout(async () => {
       if (!user) {
@@ -192,9 +228,48 @@ export function OutfitDetailContent() {
       }
 
       const sessionStorageState = loadOutfitSuggestion(user.id, outfitId);
+      const cachedOutfit = sessionStorageState.outfit;
 
-      if (sessionStorageState.outfit) {
+      if (cachedOutfit) {
         setDetailState(sessionStorageState);
+      }
+
+      if (cachedOutfit) {
+        const refreshAttempts = cachedOutfit.coordinate_image_url
+          ? 1
+          : COORDINATE_IMAGE_REFRESH_ATTEMPTS;
+
+        for (let attempt = 0; attempt < refreshAttempts; attempt += 1) {
+          if (attempt > 0) {
+            await waitForCoordinateImageRefresh();
+          }
+
+          if (isCancelled) {
+            return;
+          }
+
+          try {
+            const foundOutfit = await getOutfit(outfitId);
+
+            if (isCancelled) {
+              return;
+            }
+
+            cacheOutfitSuggestion(foundOutfit);
+            setDetailState({
+              outfit: foundOutfit,
+              errorMessage: null,
+              isLoading: false,
+            });
+
+            if (foundOutfit.coordinate_image_url) {
+              return;
+            }
+          } catch {
+            return;
+          }
+        }
+
         return;
       }
 
@@ -206,6 +281,47 @@ export function OutfitDetailContent() {
           errorMessage: null,
           isLoading: false,
         });
+
+        cacheOutfitSuggestion(foundOutfit);
+
+        if (foundOutfit.coordinate_image_url) {
+          return;
+        }
+
+        for (
+          let attempt = 1;
+          attempt < COORDINATE_IMAGE_REFRESH_ATTEMPTS;
+          attempt += 1
+        ) {
+          await waitForCoordinateImageRefresh();
+
+          if (isCancelled) {
+            return;
+          }
+
+          let refreshedOutfit: SuggestedOutfit;
+
+          try {
+            refreshedOutfit = await getOutfit(outfitId);
+          } catch {
+            return;
+          }
+
+          if (isCancelled) {
+            return;
+          }
+
+          cacheOutfitSuggestion(refreshedOutfit);
+          setDetailState({
+            outfit: refreshedOutfit,
+            errorMessage: null,
+            isLoading: false,
+          });
+
+          if (refreshedOutfit.coordinate_image_url) {
+            return;
+          }
+        }
       } catch {
         setDetailState({
           outfit: null,
@@ -215,7 +331,10 @@ export function OutfitDetailContent() {
       }
     }, 0);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeoutId);
+    };
   }, [isInitialized, user]);
 
   const outfitTitle = outfit ? tpoLabels[outfit.tpo] ?? "おすすめコーデ" : "";
@@ -238,6 +357,7 @@ export function OutfitDetailContent() {
   const outfitItems = [...(outfit?.items ?? [])].sort(
     (a, b) => a.display_order - b.display_order,
   );
+  const outfitImageUrl = outfit ? getOutfitImageUrl(outfit) : null;
   // 未保存の /outfits/suggest 結果には source がないため PATCH 対象外にする。
   const canUpdateFavorite = Boolean(outfit?.source);
 
@@ -257,12 +377,7 @@ export function OutfitDetailContent() {
         is_favorite: !outfit.is_favorite,
       });
 
-      window.sessionStorage.setItem(
-        getOutfitSuggestionStorageKey(updatedOutfit.user_id, updatedOutfit.id),
-        JSON.stringify({
-          outfits: [updatedOutfit],
-        } satisfies SavedSuggestionResult),
-      );
+      cacheOutfitSuggestion(updatedOutfit);
 
       setDetailState((current) => ({
         ...current,
@@ -319,6 +434,17 @@ export function OutfitDetailContent() {
                 今日の天気と予定に合わせたコーデ提案です。
               </p>
             </section>
+
+            {outfitImageUrl ? (
+              <Card className="overflow-hidden border-[#E7DDD3] bg-white/90 shadow-sm">
+                <div
+                  aria-label={`${sceneLabel}のコーデ画像`}
+                  className="aspect-[4/3] w-full bg-[#F4EEE8] bg-contain bg-center bg-no-repeat"
+                  role="img"
+                  style={{ backgroundImage: `url(${outfitImageUrl})` }}
+                />
+              </Card>
+            ) : null}
 
             <Card className="border-[#E7DDD3] bg-white/90 shadow-sm">
               <CardHeader className="space-y-3">
